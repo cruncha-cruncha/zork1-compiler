@@ -237,7 +237,7 @@ fn tokenize (reader: BufReader<File>, token_names: &std::collections::HashMap<ch
 }
 
 fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
-    let mut stack: Vec<Box<NodeWrapper>> = Vec::new();
+    let mut stack: Vec<NodeWrapper> = Vec::new();
 
     // stack = Vec<Box<NodeWrapper>>
     // NodeWrapper {data: TokenOrNode}
@@ -245,18 +245,18 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
     // Node {name: NodeType, children: Vec<NodeWrapper>}
     // Token {name: TokenType, value: String}
 
-    fn parse_tokens (tokens: &mut LinkedList<Token>, stack: &mut Vec<Box<NodeWrapper>>) {
+    fn parse_tokens (tokens: &mut LinkedList<Token>, stack: &mut Vec<NodeWrapper>) {
         let mut i: usize = 0;
         while tokens.len() > 0 {
             let t = match tokens.pop_front() {
                 Some(t) => t,
                 None => panic!()
             };
-            stack.push(Box::new(NodeWrapper{data: TokenOrNode::Token(t)}));
+            stack.push(NodeWrapper{data: TokenOrNode::Token(t)});
             i = parse_stack(stack, i);
         }
 
-        fn parse_stack (stack: &mut Vec<Box<NodeWrapper>>, mut i: usize) -> usize {
+        fn parse_stack (stack: &mut Vec<NodeWrapper>, mut i: usize) -> usize {
             let mut matched_rule = false;
             while stack.len() > 1 {
                 if i >= stack.len() {
@@ -324,13 +324,12 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Token(TokenType::Period), _) |
                         (TokenOrNodeType::Token(TokenType::Percent), _) => {
                             let tmp = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::AccessModifier,
                                                 children: Vec::new()
-                                })}));
+                                })});
 
                             let tmp = match tmp.data {
                                 TokenOrNode::Node(_) => panic!(),
@@ -351,20 +350,19 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Node(NodeType::AccessModifier), Some(TokenOrNodeType::Token(TokenType::Percent))) |
                         (TokenOrNodeType::Node(NodeType::AccessModifier), Some(TokenOrNodeType::Token(TokenType::Space))) => {
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
                         // WORD -> part_word
                         (TokenOrNodeType::Token(TokenType::Word), _) => {
                             let tmp = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::PartWord,
                                                 children: Vec::new()
-                                })}));
+                                })});
 
                             let tmp = match tmp.data {
                                 TokenOrNode::Node(_) => panic!(),
@@ -381,17 +379,16 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         // access_modifier + WORD -> part_word
                         (TokenOrNodeType::Node(NodeType::AccessModifier), Some(TokenOrNodeType::Token(TokenType::Word))) => {
                             let tmp1 = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::PartWord,
                                                 children: Vec::new()
-                                })}));
+                                })});
                             let tmp2 = stack.remove(i+1);
 
-                            stack[i].add_child(*tmp1);
-                            stack[i].add_child(*tmp2);
+                            stack[i].add_child(tmp1);
+                            stack[i].add_child(tmp2);
 
                             matched_rule = true;
                             break;
@@ -400,7 +397,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Node(NodeType::AccessModifier), Some(TokenOrNodeType::Node(NodeType::PointyFunc))) |
                         (TokenOrNodeType::Node(NodeType::AccessModifier), Some(TokenOrNodeType::Node(NodeType::SmoothFunc))) => {
                             let tmp = stack.remove(i);
-                            stack[i].prepend_child(*tmp);
+                            stack[i].prepend_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -408,7 +405,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Node(NodeType::PartWord), Some(TokenOrNodeType::Token(TokenType::Question))) |
                         (TokenOrNodeType::Node(NodeType::PartWord), Some(TokenOrNodeType::Token(TokenType::Word))) => {
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -430,13 +427,12 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         // COMMENT -> comment_builder
                         (TokenOrNodeType::Token(TokenType::Comment), _) => {
                             let tmp = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::CommentBuilder,
                                                 children: Vec::new()
-                                })}));
+                                })});
 
                             let tmp = match tmp.data {
                                 TokenOrNode::Node(_) => panic!(),
@@ -453,13 +449,12 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         // QUOTE -> quote_builder
                         (TokenOrNodeType::Token(TokenType::Quote), _) => {
                             let tmp = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::QuoteBuilder,
                                                 children: Vec::new()
-                                })}));
+                                })});
 
                             let tmp = match tmp.data {
                                 TokenOrNode::Node(_) => panic!(),
@@ -476,13 +471,12 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         // LEFT_ARROW -> pointy_builder
                         (TokenOrNodeType::Token(TokenType::LeftArrow), _) => {
                             let tmp = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::PointyBuilder,
                                                 children: Vec::new()
-                                })}));
+                                })});
 
                             let tmp = match tmp.data {
                                 TokenOrNode::Node(_) => panic!(),
@@ -499,13 +493,12 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         // LEFT_PAREN -> smooth_builder
                         (TokenOrNodeType::Token(TokenType::LeftParen), _) => {
                             let tmp = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::SmoothBuilder,
                                                 children: Vec::new()
-                                })}));
+                                })});
 
                             let tmp = match tmp.data {
                                 TokenOrNode::Node(_) => panic!(),
@@ -522,7 +515,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         // comment_builder + SPACE -> comment_builder
                         (TokenOrNodeType::Node(NodeType::CommentBuilder), Some(TokenOrNodeType::Token(TokenType::Space))) => {
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -540,7 +533,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                                 TokenOrNode::Token(_) => panic!()
                             }
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -566,7 +559,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                                 TokenOrNode::Token(_) => panic!()
                             }
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -575,7 +568,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         // quote_builder + [anything] -> quote_builder
                         (TokenOrNodeType::Node(NodeType::QuoteBuilder), Some(_)) => {
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -588,7 +581,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                                 TokenOrNode::Token(_) => panic!()
                             }
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -601,7 +594,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Node(NodeType::PointyBuilder), Some(TokenOrNodeType::Node(NodeType::PointyFunc))) |
                         (TokenOrNodeType::Node(NodeType::PointyBuilder), Some(TokenOrNodeType::Node(NodeType::SmoothFunc))) => {
                            let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -614,7 +607,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                                 TokenOrNode::Token(_) => panic!()
                             }
                             let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -627,7 +620,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Node(NodeType::SmoothBuilder), Some(TokenOrNodeType::Node(NodeType::PointyFunc))) |
                         (TokenOrNodeType::Node(NodeType::SmoothBuilder), Some(TokenOrNodeType::Node(NodeType::SmoothFunc))) => {
                            let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -640,7 +633,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Node(NodeType::FunkyBunch), Some(TokenOrNodeType::Node(NodeType::PointyFunc))) |
                         (TokenOrNodeType::Node(NodeType::FunkyBunch), Some(TokenOrNodeType::Node(NodeType::SmoothFunc))) => {
                            let tmp = stack.remove(i+1);
-                            stack[i].add_child(*tmp);
+                            stack[i].add_child(tmp);
                             matched_rule = true;
                             break;
                         },
@@ -697,17 +690,16 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                         (TokenOrNodeType::Node(NodeType::SmoothFunc), Some(TokenOrNodeType::Node(NodeType::PointyFunc))) |
                         (TokenOrNodeType::Node(NodeType::SmoothFunc), Some(TokenOrNodeType::Node(NodeType::SmoothFunc))) => {
                             let tmp1 = std::mem::replace(&mut stack[i],
-                                Box::new(
                                     NodeWrapper{
                                         data: TokenOrNode::Node(
                                             Node {
                                                 name: NodeType::FunkyBunch,
                                                 children: Vec::new()
-                                })}));
+                                })});
                             let tmp2 = stack.remove(i+1);
 
-                            stack[i].add_child(*tmp1);
-                            stack[i].add_child(*tmp2);
+                            stack[i].add_child(tmp1);
+                            stack[i].add_child(tmp2);
 
                             matched_rule = true;
                             break;
@@ -740,7 +732,7 @@ fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
     }
 
     match stack.pop() {
-        Some(b) => *b,
+        Some(nw) => nw,
         None => panic!()
     }
 }
@@ -767,5 +759,7 @@ fn main() {
     let root = parse(&mut token_list);
 
     //root.describe(String::new());
+
+    // https://doc.rust-lang.org/1.30.0/book/second-edition/ch16-00-concurrency.html
 }
 
