@@ -485,7 +485,7 @@ pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
 
     parse_tokens(tokens, &mut stack);
 
-    println!("{}", stack.len());
+    //println!("{}", stack.len());
 
     /*
     for s in &stack {
@@ -501,4 +501,52 @@ pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
         Some(nw) => nw,
         None => panic!()
     }
+}
+
+pub fn clean_tree (mut root: NodeWrapper) -> NodeWrapper {
+    match clean_tree_recursively(root) {
+        Some(nw) => nw,
+        None => panic!()
+    }
+}
+
+fn clean_tree_recursively(mut nw: NodeWrapper) -> Option<NodeWrapper> {
+    if nw.is_token() {
+        let tmp_token = nw.borrow_token();
+        match &tmp_token.name {
+            TokenType::Space | TokenType::Nl | TokenType::Quote |
+            TokenType::LeftArrow | TokenType::RightArrow |
+            TokenType::LeftParen | TokenType::RightParen => {
+                return None;
+            },
+            _ => {} 
+        }
+    }
+
+    if nw.is_node() {
+        match nw.data {
+            TokenOrNode::Node(n) => {
+                match &n.name {
+                    NodeType::FullComment => { 
+                        nw.data = TokenOrNode::Node(n); 
+                    },
+                    _ => {
+                        let node_type = n.name;
+                        let mut recycle = Vec::new();
+                        for child_nw in n.children {
+                            match clean_tree_recursively(child_nw) {
+                                Some(r) => recycle.push(r),
+                                None => {}
+                            }
+                        }
+                        nw.data = TokenOrNode::Node(Node { name: node_type, children: recycle });
+                    }
+                }
+                
+            },
+            TokenOrNode::Token(_) => {}
+        };
+    }
+
+    Some(nw)
 }
