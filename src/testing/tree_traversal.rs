@@ -1,7 +1,11 @@
 use std::fs::File;
+use std::path::Path;
+use std::io::BufReader;
 use std::collections::HashMap;
 
 use crate::tokens_and_nodes::*;
+use crate::tokenizer::*;
+use crate::parse_tree_generator::*;
 
 macro_rules! matching {
     ($a: expr, $b: pat) => {
@@ -47,21 +51,16 @@ pub fn tree_compare(real: &NodeWrapper, fake: &NodeWrapper) -> bool {
 }
 
 pub fn combine_files(root: &NodeWrapper) {
-    let mut fake = NodeWrapper { data: TokenOrNode::Node( Node { name: NodeType::PointyFunc, children: Vec::new() })};
-
-    let mut n1 = Node { name: NodeType::FullWord, children: Vec::new() };
-    n1.children.push( NodeWrapper { data: TokenOrNode::Token( Token { name: TokenType::Word, value: "INSERT-FILE".to_string() })});
-    let n1 = NodeWrapper { data: TokenOrNode::Node(n1) };
-    fake.add_child(n1);
-
-    let mut n2 = Node { name: NodeType::FullQuote, children: Vec::new() };
-    let n2 = NodeWrapper { data: TokenOrNode::Node(n2) };
-    fake.add_child(n2);
-
-    let mut n3 = Node { name: NodeType::FullWord, children: Vec::new() };
-    n3.children.push( NodeWrapper { data: TokenOrNode::Token( Token { name: TokenType::Word, value: "T".to_string() })});
-    let n3 = NodeWrapper { data: TokenOrNode::Node(n3) };
-    fake.add_child(n3);
+    let token_map = TokenType::get_map();
+    let input_path = Path::new(".").join("src").join("testing").join("insert-file.zil");
+    let file = match File::open(input_path) {
+        Ok(file) => file,
+        Err(_) => panic!()
+    };
+    let reader = BufReader::new(file);
+    let mut token_list = tokenize(reader, &token_map);
+    let mut fake = clean_tree(parse(&mut token_list));
+    fake = fake.remove_child(0);
 
     combine_recursive(root, &fake);
 }

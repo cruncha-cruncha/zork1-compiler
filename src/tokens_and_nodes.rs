@@ -158,7 +158,7 @@ impl NodeWrapper {
     pub fn add_child(&mut self, node_wrapper: NodeWrapper) {
         match self.data {
             TokenOrNode::Node(ref mut n) => {
-                n.add_node_wrapper(node_wrapper);
+                n.add_child(node_wrapper);
             },
             TokenOrNode::Token(_) => panic!()
         };
@@ -167,10 +167,19 @@ impl NodeWrapper {
     pub fn prepend_child(&mut self, node_wrapper: NodeWrapper) {
         match self.data {
             TokenOrNode::Node(ref mut n) => {
-                n.prepend_node_wrapper(node_wrapper);
+                n.prepend_child(node_wrapper);
             },
             TokenOrNode::Token(_) => panic!()
         };
+    }
+
+    pub fn remove_child(&mut self, i: usize) -> NodeWrapper {
+        match self.data {
+            TokenOrNode::Node(ref mut n) => {
+                n.remove_child(i)
+            },
+            TokenOrNode::Token(_) => panic!()
+        }
     }
 }
 
@@ -192,13 +201,17 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn add_node_wrapper (&mut self, node_wrapper: NodeWrapper) {
+    pub fn add_child (&mut self, node_wrapper: NodeWrapper) {
         self.children.push(node_wrapper)
     }
 
-    pub fn prepend_node_wrapper (&mut self, node_wrapper: NodeWrapper) {
+    pub fn prepend_child (&mut self, node_wrapper: NodeWrapper) {
         self.children.insert(0, node_wrapper)
     }
+
+    pub fn remove_child (&mut self, i: usize) -> NodeWrapper {
+        self.children.remove(i)
+    } 
 }
 
 impl Describe for Node {
