@@ -14,31 +14,65 @@ macro_rules! matching {
 
 // root
 // NodeType::PointyFunc
-// TokenType::LeftArrow, NodeType::FullWord (TokenType::Word .value == "INSERT-FILE"), NodeType::FullQuote, NodeType::FullWord (TokenType::Word .value == "T"), TokenType::RightArrow
+// NodeType::FullWord (TokenType::Word .value == "INSERT-FILE"), NodeType::FullQuote, NodeType::FullWord (TokenType::Word .value == "T")
 
-pub fn combine_files(root: &NodeWrapper) {
-    if !root.is_node() {
-        return;
-    }
-
-    let children = &root.borrow_node().children;
-
-    for child in children {
-        if child.is_node() {
-            let tmp_node = child.borrow_node();
-            if matching!(&tmp_node.name, NodeType::PointyFunc) {
-                for i in 0..tmp_node.children.len() {
-                    if tmp_node.children[i].is_node() {
-                        let tmp_node = tmp_node.children[i].borrow_node();
-                        if matching!(&tmp_node.name, NodeType::FullWord) {
-                            let tmp_token = tmp_node.children[0].borrow_token();
-                            if tmp_token.value == "INSERT-FILE" {
-                                //
-                            }
+// returns true as long as all the NodeWrappers in fake are identical to the corresponding NodeWrappers in real
+// (real can be larger than fake and this function may still return true)
+pub fn tree_compare(real: &NodeWrapper, fake: &NodeWrapper) -> bool {
+    if real.is_node() && fake.is_node() {
+        let tmp_name = &fake.borrow_node().name;
+        match &real.borrow_node().name {
+            tmp_name => {
+                let fake_len = fake.borrow_node().children.len();
+                if real.borrow_node().children.len() >= fake_len {
+                    for i in 0..fake_len {
+                        if !tree_compare(&real.borrow_node().children[i], &fake.borrow_node().children[i]) {
+                            return false;
                         }
                     }
+                    return true;
                 }
-            }
+            }, 
+            _ => return false
+        };
+    } else if real.is_token() && fake.is_token() {
+        let tmp_name = &fake.borrow_token().name;
+        match &real.borrow_token().name {
+            tmp_name => return (real.borrow_token().value == fake.borrow_token().value),
+            _ => return false
+        };
+    }
+
+    false
+}
+
+pub fn combine_files(root: &NodeWrapper) {
+    let mut fake = NodeWrapper { data: TokenOrNode::Node( Node { name: NodeType::PointyFunc, children: Vec::new() })};
+
+    let mut n1 = Node { name: NodeType::FullWord, children: Vec::new() };
+    n1.children.push( NodeWrapper { data: TokenOrNode::Token( Token { name: TokenType::Word, value: "INSERT-FILE".to_string() })});
+    let n1 = NodeWrapper { data: TokenOrNode::Node(n1) };
+    fake.add_child(n1);
+
+    let mut n2 = Node { name: NodeType::FullQuote, children: Vec::new() };
+    let n2 = NodeWrapper { data: TokenOrNode::Node(n2) };
+    fake.add_child(n2);
+
+    let mut n3 = Node { name: NodeType::FullWord, children: Vec::new() };
+    n3.children.push( NodeWrapper { data: TokenOrNode::Token( Token { name: TokenType::Word, value: "T".to_string() })});
+    let n3 = NodeWrapper { data: TokenOrNode::Node(n3) };
+    fake.add_child(n3);
+
+    combine_recursive(root, &fake);
+}
+
+fn combine_recursive(root: &NodeWrapper, fake: &NodeWrapper) {
+    if tree_compare(root, fake) {
+        // will have to track line and character numbers
+        root.borrow_node().children[1].borrow_node().describe(String::new());
+    } else if root.is_node() {
+        for i in 0..root.borrow_node().children.len() {
+            combine_recursive(&root.borrow_node().children[i], &fake);
         }
     }
 }

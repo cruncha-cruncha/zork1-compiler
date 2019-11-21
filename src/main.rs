@@ -29,10 +29,10 @@ fn main() {
 
     root = clean_tree(root);
 
-    root.describe(String::new());
+    //root.describe(String::new());
 
     //print_functions(&root);
-    //combine_files(&root);
+    combine_files(&root);
 
     // https://doc.rust-lang.org/1.30.0/book/second-edition/ch16-00-concurrency.html
 }

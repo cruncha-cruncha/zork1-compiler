@@ -531,7 +531,6 @@ fn clean_tree_recursively(mut nw: NodeWrapper) -> Option<NodeWrapper> {
                         nw.data = TokenOrNode::Node(n); 
                     },
                     _ => {
-                        let node_type = n.name;
                         let mut recycle = Vec::new();
                         for child_nw in n.children {
                             match clean_tree_recursively(child_nw) {
@@ -539,7 +538,7 @@ fn clean_tree_recursively(mut nw: NodeWrapper) -> Option<NodeWrapper> {
                                 None => {}
                             }
                         }
-                        nw.data = TokenOrNode::Node(Node { name: node_type, children: recycle });
+                        nw.data = TokenOrNode::Node(Node { name: n.name, children: recycle });
                     }
                 }
                 
