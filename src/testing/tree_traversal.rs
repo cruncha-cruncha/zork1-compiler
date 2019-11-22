@@ -49,14 +49,17 @@ pub fn combine_files(mut root: NodeWrapper) -> NodeWrapper {
     let mut fake = read_file_to_tree(&input_path).unwrap();
     fake = fake.remove_child(0);
 
-    // compare root and fake
-    if tree_compare(&root, &fake) {
-        // return the combine_files of the other file
-    } else {
-        root = combine_recursive(root, &fake);
+    loop {
+        if tree_compare(&root, &fake) {
+            let file_name = format!("{}{}", root.borrow_node().children[1].borrow_node().children[0].borrow_token().value, ".zil");
+            let new_input_path = Path::new(".").join("edited-zork").join(file_name);
+            root = read_file_to_tree(&new_input_path).unwrap().remove_child(0);
+        } else {
+            break;
+        }
     }
 
-    root
+    combine_recursive(root, &fake)
 }
 
 #[allow(dead_code)]
