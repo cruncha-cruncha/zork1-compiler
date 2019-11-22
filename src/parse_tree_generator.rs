@@ -1,6 +1,10 @@
+use std::fs::File;
+use std::path::Path;
+use std::io::BufReader;
 use std::collections::LinkedList;
 
 use crate::tokens_and_nodes::*;
+use crate::tokenizer::*;
 
 pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
     let mut stack: Vec<NodeWrapper> = Vec::new();
@@ -16,7 +20,7 @@ pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
         while tokens.len() > 0 {
             let t = match tokens.pop_front() {
                 Some(t) => t,
-                None => panic!()
+                None => return
             };
             stack.push(NodeWrapper{data: TokenOrNode::Token(t)});
             i = parse_stack(stack, i);
@@ -43,6 +47,7 @@ pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                                 TokenOrNode::Node(_) => panic!(),
                                 TokenOrNode::Token(ref mut t) => {
                                     t.name = TokenType::Word;
+                                    t.value = format!("{}{}", "\\", t.value);
                                 }
                             }
                             stack.remove(i);
@@ -303,19 +308,6 @@ pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
                             matched_rule = true;
                             break;
                         },
-                        /*
-                        // comment_builder + None -> full_comment
-                        (TokenOrNodeType::Node(NodeType::CommentBuilder), None) => {
-                            match stack[i].data {
-                                TokenOrNode::Node(ref mut n) => {
-                                    n.name = NodeType::FullComment;
-                                },
-                                TokenOrNode::Token(_) => panic!()
-                            }
-                            matched_rule = true;
-                            break;
-                        }
-                        */
                         // quote_builder + QUOTE -> full_quote
                         (TokenOrNodeType::Node(NodeType::QuoteBuilder), Some(TokenOrNodeType::Token(TokenType::Quote))) => {
                             match stack[i].data {
@@ -503,14 +495,7 @@ pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
     }
 }
 
-pub fn clean_tree (mut root: NodeWrapper) -> NodeWrapper {
-    match clean_tree_recursively(root) {
-        Some(nw) => nw,
-        None => panic!()
-    }
-}
-
-fn clean_tree_recursively(mut nw: NodeWrapper) -> Option<NodeWrapper> {
+pub fn clean_tree(mut nw: NodeWrapper) -> Option<NodeWrapper> {
     if nw.is_token() {
         let tmp_token = nw.borrow_token();
         match &tmp_token.name {
@@ -533,7 +518,7 @@ fn clean_tree_recursively(mut nw: NodeWrapper) -> Option<NodeWrapper> {
                     _ => {
                         let mut recycle = Vec::new();
                         for child_nw in n.children {
-                            match clean_tree_recursively(child_nw) {
+                            match clean_tree(child_nw) {
                                 Some(r) => recycle.push(r),
                                 None => {}
                             }
@@ -548,4 +533,15 @@ fn clean_tree_recursively(mut nw: NodeWrapper) -> Option<NodeWrapper> {
     }
 
     Some(nw)
+}
+
+pub fn read_file_to_tree(input_path: &Path) -> Option<NodeWrapper> {
+    let file = match File::open(input_path) {
+        Ok(file) => file,
+        Err(_) => return None
+    };
+    let reader = BufReader::new(file);
+    let token_map = TokenType::get_map();
+    let mut token_list = tokenize(reader, &token_map);
+    clean_tree(parse(&mut token_list))
 }

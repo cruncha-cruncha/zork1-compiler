@@ -1,10 +1,8 @@
-use std::fs::File;
 use std::path::Path;
-use std::io::BufReader;
 use std::collections::HashMap;
+use std::mem::discriminant;
 
 use crate::tokens_and_nodes::*;
-use crate::tokenizer::*;
 use crate::parse_tree_generator::*;
 
 macro_rules! matching {
@@ -16,18 +14,13 @@ macro_rules! matching {
     }
 }
 
-// root
-// NodeType::PointyFunc
-// NodeType::FullWord (TokenType::Word .value == "INSERT-FILE"), NodeType::FullQuote, NodeType::FullWord (TokenType::Word .value == "T")
-
 // returns true as long as all the NodeWrappers in fake are identical to the corresponding NodeWrappers in real
 // (real can be larger than fake and this function may still return true)
+#[allow(dead_code)]
 pub fn tree_compare(real: &NodeWrapper, fake: &NodeWrapper) -> bool {
     if real.is_node() && fake.is_node() {
-        let tmp_name = &fake.borrow_node().name;
-        match &real.borrow_node().name {
-            tmp_name => {
-                let fake_len = fake.borrow_node().children.len();
+        if discriminant(&real.borrow_node().name) == discriminant(&fake.borrow_node().name) {
+            let fake_len = fake.borrow_node().children.len();
                 if real.borrow_node().children.len() >= fake_len {
                     for i in 0..fake_len {
                         if !tree_compare(&real.borrow_node().children[i], &fake.borrow_node().children[i]) {
@@ -36,49 +29,66 @@ pub fn tree_compare(real: &NodeWrapper, fake: &NodeWrapper) -> bool {
                     }
                     return true;
                 }
-            }, 
-            _ => return false
-        };
+        } else {
+            return false;
+        }
     } else if real.is_token() && fake.is_token() {
-        let tmp_name = &fake.borrow_token().name;
-        match &real.borrow_token().name {
-            tmp_name => return (real.borrow_token().value == fake.borrow_token().value),
-            _ => return false
-        };
+        if discriminant(&real.borrow_token().name) == discriminant(&fake.borrow_token().name) {
+            return real.borrow_token().value == fake.borrow_token().value;
+        } else {
+            return false;
+        }
     }
 
     false
 }
 
-pub fn combine_files(root: &NodeWrapper) {
-    let token_map = TokenType::get_map();
+#[allow(dead_code)]
+pub fn combine_files(mut root: NodeWrapper) -> NodeWrapper {
     let input_path = Path::new(".").join("src").join("testing").join("insert-file.zil");
-    let file = match File::open(input_path) {
-        Ok(file) => file,
-        Err(_) => panic!()
-    };
-    let reader = BufReader::new(file);
-    let mut token_list = tokenize(reader, &token_map);
-    let mut fake = clean_tree(parse(&mut token_list));
+    let mut fake = read_file_to_tree(&input_path).unwrap();
     fake = fake.remove_child(0);
 
-    combine_recursive(root, &fake);
+    // compare root and fake
+    if tree_compare(&root, &fake) {
+        // return the combine_files of the other file
+    } else {
+        root = combine_recursive(root, &fake);
+    }
+
+    root
 }
 
-fn combine_recursive(root: &NodeWrapper, fake: &NodeWrapper) {
-    if tree_compare(root, fake) {
-        // will have to track line and character numbers
-        root.borrow_node().children[1].borrow_node().describe(String::new());
-    } else if root.is_node() {
-        for i in 0..root.borrow_node().children.len() {
-            combine_recursive(&root.borrow_node().children[i], &fake);
-        }
-    }
+#[allow(dead_code)]
+fn combine_recursive(mut root: NodeWrapper, fake: &NodeWrapper) -> NodeWrapper {
+    match root.data {
+        TokenOrNode::Node(mut n) => {
+            let mut recycle = Vec::new();
+            for _ in 0..n.children.len() {
+                let mut child = n.children.remove(0);
+                loop {
+                    if tree_compare(&child, fake) {
+                        let file_name = format!("{}{}", child.borrow_node().children[1].borrow_node().children[0].borrow_token().value, ".zil");
+                        let new_input_path = Path::new(".").join("edited-zork").join(file_name);
+                        child = read_file_to_tree(&new_input_path).unwrap().remove_child(0);
+                    } else {
+                        break;
+                    }
+                }
+                recycle.push(combine_recursive(child, fake));
+            }
+            root.data = TokenOrNode::Node(Node { name: n.name, children: recycle });
+        },
+        TokenOrNode::Token(_) => {}
+    };
+
+    root
 }
 
 // need to find functions defined within the source files, by looking
 // at the FullWords that come after ROUTINE
 
+#[allow(dead_code)]
 pub fn print_functions(root: &NodeWrapper) {
     let mut out = HashMap::new();
     out = find_functions_recursively(root, out);
@@ -103,6 +113,7 @@ pub fn print_functions(root: &NodeWrapper) {
     }
 }
 
+#[allow(dead_code)]
 fn find_functions_recursively(nw: &NodeWrapper, mut out: HashMap<String, usize>) -> HashMap<String, usize> {
     if nw.is_node() {
         let tmp_node = nw.borrow_node();
