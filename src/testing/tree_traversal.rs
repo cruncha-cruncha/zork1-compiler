@@ -14,9 +14,9 @@ macro_rules! matching {
     }
 }
 
+#[allow(dead_code)]
 // returns true as long as all the NodeWrappers in fake are identical to the corresponding NodeWrappers in real
 // (real can be larger than fake and this function may still return true)
-#[allow(dead_code)]
 pub fn tree_compare(real: &NodeWrapper, fake: &NodeWrapper) -> bool {
     if real.is_node() && fake.is_node() {
         if discriminant(&real.borrow_node().name) == discriminant(&fake.borrow_node().name) {
@@ -48,16 +48,6 @@ pub fn combine_files(mut root: NodeWrapper) -> NodeWrapper {
     let input_path = Path::new(".").join("src").join("testing").join("insert-file.zil");
     let mut fake = read_file_to_tree(&input_path).unwrap();
     fake = fake.remove_child(0);
-
-    loop {
-        if tree_compare(&root, &fake) {
-            let file_name = format!("{}{}", root.borrow_node().children[1].borrow_node().children[0].borrow_token().value, ".zil");
-            let new_input_path = Path::new(".").join("edited-zork").join(file_name);
-            root = read_file_to_tree(&new_input_path).unwrap().remove_child(0);
-        } else {
-            break;
-        }
-    }
 
     combine_recursive(root, &fake)
 }
