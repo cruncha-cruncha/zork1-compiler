@@ -67,13 +67,29 @@ fn combine_recursive(mut root: NodeWrapper, fake: &NodeWrapper) -> NodeWrapper {
     match root.data {
         TokenOrNode::Node(mut n) => {
             let mut recycle = Vec::new();
-            for _ in 0..n.children.len() {
+            while n.children.len() > 0 {
                 let mut child = n.children.remove(0);
                 loop {
                     if tree_compare(&child, fake) {
                         let file_name = format!("{}{}", child.borrow_node().children[1].borrow_node().children[0].borrow_token().value, ".zil");
                         let new_input_path = Path::new(".").join("edited-zork").join(file_name);
-                        child = read_file_to_tree(&new_input_path).unwrap().remove_child(0);
+                        let new_tree = read_file_to_tree(&new_input_path).unwrap();
+                        match new_tree.data {
+                            TokenOrNode::Node(mut new_n) => {
+                                match new_n.name {
+                                    NodeType::FunkyBunch => {
+                                        child = new_n.children.remove(0);
+                                        if new_n.children.len() > 0 {
+                                            for i in (new_n.children.len() - 1)..=0 {
+                                                n.children.push(new_n.children.remove(i));
+                                            }
+                                        }
+                                    },
+                                    _ => panic!()
+                                };
+                            },
+                            _ => panic!()
+                        };
                     } else {
                         break;
                     }
