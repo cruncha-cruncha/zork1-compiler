@@ -44,7 +44,7 @@ pub fn tree_compare(real: &NodeWrapper, fake: &NodeWrapper) -> bool {
 }
 
 #[allow(dead_code)]
-pub fn combine_files(mut root: NodeWrapper) -> NodeWrapper {
+pub fn combine_files(root: NodeWrapper) -> NodeWrapper {
     let input_path = Path::new(".").join("src").join("testing").join("insert-file.zil");
     let mut fake = read_file_to_tree(&input_path).unwrap();
     fake = fake.remove_child(0);
@@ -53,6 +53,7 @@ pub fn combine_files(mut root: NodeWrapper) -> NodeWrapper {
 }
 
 #[allow(dead_code)]
+// does not guard against cyclic INSERT-FILEs
 fn combine_recursive(mut root: NodeWrapper, fake: &NodeWrapper) -> NodeWrapper {
     match root.data {
         TokenOrNode::Node(mut n) => {
@@ -62,7 +63,8 @@ fn combine_recursive(mut root: NodeWrapper, fake: &NodeWrapper) -> NodeWrapper {
                 loop {
                     if tree_compare(&child, fake) {
                         let file_name = format!("{}{}", child.borrow_node().children[1].borrow_node().children[0].borrow_token().value, ".zil");
-                        let new_input_path = Path::new(".").join("edited-zork").join(file_name);
+                        //let new_input_path = Path::new(".").join("edited-zork").join(file_name);
+                        let new_input_path = Path::new(".").join("zork1-master").join(file_name);
                         let new_tree = read_file_to_tree(&new_input_path).unwrap();
                         match new_tree.data {
                             TokenOrNode::Node(mut new_n) => {
@@ -94,11 +96,12 @@ fn combine_recursive(mut root: NodeWrapper, fake: &NodeWrapper) -> NodeWrapper {
     root
 }
 
-// need to find functions defined within the source files, by looking
-// at the FullWords that come after ROUTINE
-
 #[allow(dead_code)]
-pub fn print_functions(root: &NodeWrapper) {
+pub fn get_functions(root: &NodeWrapper) -> HashMap<String, usize> {
+    let out = HashMap::new();
+    find_functions_recursively(root, out)
+
+    /*
     let mut out = HashMap::new();
     out = find_functions_recursively(root, out);
 
@@ -120,41 +123,122 @@ pub fn print_functions(root: &NodeWrapper) {
     for kv in &sorted {
         println!("{} {}", kv.occur, kv.func);
     }
+    */
 }
 
 #[allow(dead_code)]
 fn find_functions_recursively(nw: &NodeWrapper, mut out: HashMap<String, usize>) -> HashMap<String, usize> {
     if nw.is_node() {
-        let tmp_node = nw.borrow_node();
-        if matching!(&tmp_node.name, NodeType::PointyFunc) {
-            for i in 0..tmp_node.children.len() {
-                if tmp_node.children[i].is_node() {
-                    let tmp_node = tmp_node.children[i].borrow_node();
-                    if matching!(&tmp_node.name, NodeType::FullWord) {
-                        let mut key = String::new();
-                        for nw in &tmp_node.children {
-                            let tmp_token = nw.borrow_token();
-                            key.push_str(&tmp_token.value);
+        match &nw.borrow_node().name {
+            NodeType::PointyFunc => {
+                if nw.borrow_node().children.len() == 0 {
+                    let key = "<empty>".to_string();
+                    match out.get(&key) {
+                        Some(_) => {
+                            *out.get_mut(&key).unwrap() += 1;
+                        },
+                        None => {
+                            out.insert(key, 1);
                         }
-                        match out.get(&key) {
-                            Some(_) => {
-                                *out.get_mut(&key).unwrap() += 1;
-                            },
-                            None => {
-                                out.insert(key, 1);
-                            }
-                        }
-                        break;
                     }
+                } else {
+                    let tmp_node = nw.borrow_node().children[0].borrow_node();
+                    let mut key = String::new();
+                    for nw in &tmp_node.children {
+                        let tmp_token = nw.borrow_token();
+                        key.push_str(&tmp_token.value);
+                    }
+                    match out.get(&key) {
+                        Some(_) => {
+                            *out.get_mut(&key).unwrap() += 1;
+                        },
+                        None => {
+                            out.insert(key, 1);
+                        }
+                    }
+                }
+            },
+            _ => {}
+        }
+    }
+
+    if nw.is_node() {
+        match &nw.borrow_node().name {
+            NodeType::FullComment => {},
+            _ => {
+                for nw in &nw.borrow_node().children {
+                    out = find_functions_recursively(nw, out);
+                }
+            }
+        }
+    }
+
+    out
+}
+
+#[allow(dead_code)]
+pub fn get_routines(root: &NodeWrapper) -> HashMap<String, usize> {
+    let input_path = Path::new(".").join("src").join("testing").join("routine.zil");
+    let mut fake = read_file_to_tree(&input_path).unwrap();
+    fake = fake.remove_child(0);
+
+    let out = HashMap::new();
+    find_routines_recursively(root, &fake, out)
+
+    /*
+    let mut out = HashMap::new();
+    out = find_routines_recursively(root, &fake, out);
+
+    struct RoutineOccur {
+        routine: String,
+        occur: usize
+    }
+
+    let mut sorted = Vec::new();
+    for (k, v) in out.iter() {
+        sorted.push(RoutineOccur{ routine: k.to_string(), occur: *v });
+    }
+    out.clear();
+
+    println!("found {} routines", sorted.len());
+    println!("");
+
+    sorted.sort_by(|a, b| b.occur.cmp(&a.occur));
+    for kv in &sorted {
+        println!("{} {}", kv.occur, kv.routine);
+    }
+    */
+}
+
+#[allow(dead_code)]
+fn find_routines_recursively(nw: &NodeWrapper, fake: &NodeWrapper, mut out: HashMap<String, usize>) -> HashMap<String, usize> {
+    if nw.is_node() {
+        if tree_compare(&nw, fake) {
+            let tmp_node = nw.borrow_node().children[1].borrow_node();
+            let mut key = String::new();
+            for nw in &tmp_node.children {
+                let tmp_token = nw.borrow_token();
+                key.push_str(&tmp_token.value);
+            }
+            match out.get(&key) {
+                Some(_) => {
+                    *out.get_mut(&key).unwrap() += 1;
+                },
+                None => {
+                    out.insert(key, 1);
                 }
             }
         }
     }
 
     if nw.is_node() {
-        let children = &nw.borrow_node().children;
-        for nw in children {
-            out = find_functions_recursively(nw, out);
+        match &nw.borrow_node().name {
+            NodeType::FullComment => {},
+            _ => {
+                for nw in &nw.borrow_node().children {
+                    out = find_routines_recursively(nw, fake, out);
+                }
+            }
         }
     }
 

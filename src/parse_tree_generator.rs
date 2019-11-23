@@ -497,14 +497,13 @@ pub fn parse (tokens: &mut LinkedList<Token>) -> NodeWrapper {
 
 pub fn clean_tree(mut nw: NodeWrapper) -> Option<NodeWrapper> {
     if nw.is_token() {
-        let tmp_token = nw.borrow_token();
-        match &tmp_token.name {
+        match &nw.borrow_token().name {
             TokenType::Space | TokenType::Nl | TokenType::Quote |
             TokenType::LeftArrow | TokenType::RightArrow |
             TokenType::LeftParen | TokenType::RightParen => {
                 return None;
             },
-            _ => {} 
+            _ => return Some(nw) 
         }
     }
 
