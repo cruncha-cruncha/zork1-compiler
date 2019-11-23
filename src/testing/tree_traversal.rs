@@ -81,7 +81,7 @@ fn combine_recursive(mut root: NodeWrapper, fake: &NodeWrapper) -> NodeWrapper {
                                         child = new_n.children.remove(0);
                                         if new_n.children.len() > 0 {
                                             for i in (new_n.children.len() - 1)..=0 {
-                                                n.children.push(new_n.children.remove(i));
+                                                n.children.insert(0, new_n.children.remove(i));
                                             }
                                         }
                                     },
