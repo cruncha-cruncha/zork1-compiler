@@ -70,7 +70,7 @@ fn combine_recursive(mut root: NodeWrapper, fake: &NodeWrapper) -> NodeWrapper {
                                     NodeType::FunkyBunch => {
                                         child = new_n.children.remove(0);
                                         if new_n.children.len() > 0 {
-                                            for i in (new_n.children.len() - 1)..=0 {
+                                            for i in (0..new_n.children.len()).rev() {
                                                 n.children.insert(0, new_n.children.remove(i));
                                             }
                                         }
