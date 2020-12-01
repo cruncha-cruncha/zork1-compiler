@@ -1,236 +1,157 @@
-use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+use std::io::BufRead;
+use std::io;
+
+// tokenizer should get rid of comments
 
 #[derive(Copy, Clone)]
 pub enum TokenType {
-    Escape,
-    Quote,
-    Single,
     LeftArrow,
     RightArrow,
     LeftParen,
     RightParen,
-    Space,
-    Tab,
-    Comment,
-    Period,
-    Comma,
-    Question,
-    Percent,
     Word,
-    Nl // newline
+    Text
 }
 
 impl TokenType {
     pub fn to_str(&self) -> String {
         match *self {
-            TokenType::Escape => "ESCAPE".to_string(),
-            TokenType::Quote => "QUOTE".to_string(),
-            TokenType::Single => "SINGLE".to_string(),
-            TokenType::LeftArrow => "LEFT_ARROW".to_string(),
-            TokenType::RightArrow => "RIGHT_ARROW".to_string(),
-            TokenType::LeftParen => "LEFT_PAREN".to_string(),
-            TokenType::RightParen => "RIGHT_PAREN".to_string(),
-            TokenType::Space => "SPACE".to_string(),
-            TokenType::Tab => "TAB".to_string(),
-            TokenType::Comment => "COMMENT".to_string(),
-            TokenType::Period => "PERIOD".to_string(),
-            TokenType::Comma => "COMMA".to_string(),
-            TokenType::Question => "QUESTION".to_string(),
-            TokenType::Percent => "PERCENT".to_string(),
+            TokenType::LeftArrow => "L_ARROW".to_string(),
+            TokenType::RightArrow => "R_ARROW".to_string(),
+            TokenType::LeftParen => "L_PAREN".to_string(),
+            TokenType::RightParen => "R_PAREN".to_string(),
             TokenType::Word => "WORD".to_string(),
-            TokenType::Nl => "NL".to_string()
-        }
-    }
-
-    pub fn get_map () -> HashMap<char, TokenType> {
-        let mut token_map = HashMap::new();
-
-        token_map.insert('\\', TokenType::Escape);
-        token_map.insert('"', TokenType::Quote);
-        token_map.insert('\'', TokenType::Single);
-        token_map.insert('<', TokenType::LeftArrow);
-        token_map.insert('>', TokenType::RightArrow);
-        token_map.insert('(', TokenType::LeftParen);
-        token_map.insert(')', TokenType::RightParen);
-        token_map.insert(' ', TokenType::Space);
-        token_map.insert('\t', TokenType::Tab);
-        token_map.insert(';', TokenType::Comment);
-        token_map.insert('.', TokenType::Period);
-        token_map.insert(',', TokenType::Comma);
-        token_map.insert('?', TokenType::Question);
-        token_map.insert('%', TokenType::Percent);
-
-        token_map
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum NodeType {
-    AccessModifier,
-    PartWord,
-    FullWord,
-    CommentBuilder,
-    FullComment,
-    QuoteBuilder,
-    FullQuote,
-    PointyBuilder,
-    PointyFunc,
-    SmoothBuilder,
-    SmoothFunc,
-    FunkyBunch
-}
-
-impl NodeType {
-    pub fn to_str(&self) -> String {
-        match *self {
-            NodeType::AccessModifier => "access_modifier".to_string(),
-            NodeType::PartWord => "part_word".to_string(),
-            NodeType::FullWord => "full_word".to_string(),
-            NodeType::CommentBuilder => "comment_builder".to_string(),
-            NodeType::FullComment => "full_comment".to_string(),
-            NodeType::QuoteBuilder => "quote_builder".to_string(),
-            NodeType::FullQuote => "full_quote".to_string(),
-            NodeType::PointyBuilder => "pointy_builder".to_string(),
-            NodeType::PointyFunc => "pointy_func".to_string(),
-            NodeType::SmoothBuilder => "smooth_builder".to_string(),
-            NodeType::SmoothFunc => "smooth_func".to_string(),
-            NodeType::FunkyBunch => "funky_bunch".to_string()
-        }
-    }
-}
-
-pub enum TokenOrNode {
-    Node(Node),
-    Token(Token)
-}
-
-pub enum TokenOrNodeType {
-    Node(NodeType),
-    Token(TokenType)
-}
-
-pub trait Describe {
-    fn describe(&self, offset: String);
-}
-
-pub struct NodeWrapper {
-    pub data: TokenOrNode
-}
-
-impl NodeWrapper {
-    #[allow(dead_code)]
-    pub fn is_token (&self) -> bool {
-        match self.data {
-            TokenOrNode::Node(_) => false,
-            TokenOrNode::Token(_) => true
-        }
-    }
-
-    pub fn borrow_token (&self) -> &Token {
-        match self.data {
-            TokenOrNode::Node(_) => panic!(),
-            TokenOrNode::Token(ref t) => return t
-        };
-    }
-
-    #[allow(dead_code)]
-    pub fn is_node (&self) -> bool {
-        match self.data {
-            TokenOrNode::Node(_) => true,
-            TokenOrNode::Token(_) => false
-        }
-    }
-
-    pub fn borrow_node (&self) -> &Node {
-        match self.data {
-            TokenOrNode::Node(ref n) => return n,
-            TokenOrNode::Token(_) => panic!()
-        };
-    }
-
-    pub fn get_type(&self) -> TokenOrNodeType {
-        match self.data {
-            TokenOrNode::Node(ref n) => TokenOrNodeType::Node(n.name),
-            TokenOrNode::Token(ref t) => TokenOrNodeType::Token(t.name)
-        }
-    }
-
-    pub fn add_child(&mut self, node_wrapper: NodeWrapper) {
-        match self.data {
-            TokenOrNode::Node(ref mut n) => {
-                n.add_child(node_wrapper);
-            },
-            TokenOrNode::Token(_) => panic!()
-        };
-    }
-
-    pub fn prepend_child(&mut self, node_wrapper: NodeWrapper) {
-        match self.data {
-            TokenOrNode::Node(ref mut n) => {
-                n.prepend_child(node_wrapper);
-            },
-            TokenOrNode::Token(_) => panic!()
-        };
-    }
-
-    pub fn remove_child(&mut self, i: usize) -> NodeWrapper {
-        match self.data {
-            TokenOrNode::Node(ref mut n) => {
-                n.remove_child(i)
-            },
-            TokenOrNode::Token(_) => panic!()
-        }
-    }
-}
-
-impl Describe for NodeWrapper {
-    fn describe(&self, offset: String) {
-        match self.data {
-            TokenOrNode::Node(ref n) => n.describe(offset),
-            TokenOrNode::Token(ref t) => t.describe(offset)
-        }
-    }
-}
-
-pub struct Node {
-    pub name: NodeType,
-    pub children: Vec<NodeWrapper>
-    // cannot have a parent ref, as that would be circular
-    // could implement using unsafe pointers?
-    // or use some sort of id lookup table thingy?
-}
-
-impl Node {
-    pub fn add_child (&mut self, node_wrapper: NodeWrapper) {
-        self.children.push(node_wrapper)
-    }
-
-    pub fn prepend_child (&mut self, node_wrapper: NodeWrapper) {
-        self.children.insert(0, node_wrapper)
-    }
-
-    pub fn remove_child (&mut self, i: usize) -> NodeWrapper {
-        self.children.remove(i)
-    } 
-}
-
-impl Describe for Node {
-    fn describe(&self, mut offset: String) {
-        println!("{}{}", offset, self.name.to_str());
-        offset.push_str("  ");  
-        for nw in &self.children {
-            nw.describe(offset.clone());
+            TokenType::Text => "TEXT".to_string()
         }
     }
 }
 
 pub struct Token {
-    pub name: TokenType,
-    pub value: String
+    pub kind: TokenType,
+    pub value: String,
+    pub line_number: u64
 }
 
-impl Describe for Token {
-    fn describe(&self, offset: String) {
-        println!("{}{}, {}", offset, self.name.to_str(), &self.value);
+pub fn tokenize(reader: BufReader<File>) -> Result<Vec<Token>, io::Error>  {
+    let mut out = Vec::new();
+    let mut line_number = 1;
+    let mut in_comment = false;
+    let mut in_string = false;
+    let mut escape = 0;
+    for maybe_line in reader.lines() {
+        let spacey_line = match maybe_line {
+            Ok(v) => v,
+            Err(e) => return Err(e)
+        };
+
+        let line = spacey_line.trim();
+        if line.starts_with(";") {
+            in_comment = true;
+        }
+
+        //line.push(" ");
+        let mut buf = String::new();
+        for c in line.chars() {
+            match c {
+                '<' => {
+                    if in_string || in_comment {
+                        buf.push('<');
+                    } else {
+                        out.push(Token {kind: TokenType::LeftArrow, value: String::from("<"), line_number: line_number});
+                    }
+                },
+                '>' => {
+                    if in_string || in_comment {
+                        buf.push('<');
+                    } else {
+                        if buf.trim() != "" {
+                            out.push(Token {kind: TokenType::Word, value: buf.to_string(), line_number: line_number});
+                        }
+                        out.push(Token {kind: TokenType::RightArrow, value: String::from(">"), line_number: line_number});
+                        buf.clear();
+                    } 
+                },
+                '(' => {
+                    if in_string || in_comment {
+                        buf.push('<');
+                    } else {
+                        out.push(Token {kind: TokenType::LeftParen, value: String::from("("), line_number: line_number});
+                    } 
+                },
+                ')' => {
+                    if in_string || in_comment {
+                        buf.push('<');
+                    } else {
+                        if buf.trim() != "" {
+                            out.push(Token {kind: TokenType::Word, value: buf.to_string(), line_number: line_number});
+                        }
+                        out.push(Token {kind: TokenType::RightParen, value: String::from(")"), line_number: line_number});
+                        buf.clear();
+                    } 
+                },
+                '\\' => {
+                    if in_string && escape <= 0 {
+                        escape = 2;
+                    } else {
+                        buf.push('\\');
+                    }
+                },
+                '"' => {
+                    if in_string && escape > 0 {
+                        buf.push('"');
+                    } else if in_string && in_comment {
+                        buf.clear();
+                        in_comment = false;
+                        in_string = false;
+                    } else if in_string {
+                        out.push(Token {kind: TokenType::Text, value: buf.to_string(), line_number: line_number});
+                        buf.clear();
+                        in_string = false;
+                    } else {
+                        buf.clear();
+                        in_string = true;
+                    }
+                },
+                ';' => {
+                    if in_string {
+                        buf.push(';');
+                    } else {
+                        in_comment = true;
+                    }
+                }
+                ' ' => {
+                    if in_string {
+                        buf.push(' ');
+                    } else if !in_comment {
+                        if buf.trim() != "" {
+                            out.push(Token {kind: TokenType::Word, value: buf.to_string(), line_number: line_number});
+                        }
+                        buf.clear();
+                    }
+                },
+                x => buf.push(x)
+            }
+
+            if escape > 0 {
+                escape -= 1;
+            }
+        }
+
+        if !in_string {
+            if in_comment {
+                buf.clear();
+                in_comment = false;
+            } else if buf.trim() != "" {
+                out.push(Token {kind: TokenType::Word, value: buf.to_string(), line_number: line_number});
+            }
+        }
+        
+        
+        
+        line_number += 1;
     }
+
+    return Ok(out)
 }
