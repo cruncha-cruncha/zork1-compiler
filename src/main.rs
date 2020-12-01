@@ -15,16 +15,16 @@ use crate::tokens_and_nodes::*;
 // use Result for error handling
 
 fn main() {
-    let input_path = Path::new(".").join("dummy-data").join("1dungeon.zil");
+    let file_path = Path::new(".").join("dummy-data").join("1dungeon.zil");
 
-    let reader = match open_file(&input_path) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("Error opening input_path file: {:?}", e);
-            return
-        }
+    let mut generator = match TokenGenerator::new(&file_path) {
+        Some(v) => v,
+        None => return,
     };
 
+    println!("{}", generator.next().unwrap().unwrap().value);
+
+    /*
     let tokens = match tokenize(reader) {
         Ok(v) => v,
         Err(e) => {
@@ -37,6 +37,7 @@ fn main() {
         println!("{0: <10} {1}", t.kind.to_str(), t.value);
     }
     println!();
+    */
 
     /*
 
@@ -70,9 +71,4 @@ fn main() {
 
     //root.describe(String::new());
     */
-}
-
-pub fn open_file(input_path: &Path) -> Result<BufReader<File>, io::Error> {
-    let file = File::open(input_path)?;
-    return Ok(BufReader::new(file));
 }
