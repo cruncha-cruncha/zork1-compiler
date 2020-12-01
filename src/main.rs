@@ -1,7 +1,4 @@
 use std::path::Path;
-use std::fs::File;
-use std::io::BufReader;
-use std::io;
 
 mod tokens_and_nodes;
 //mod tokenizer;
@@ -17,12 +14,15 @@ use crate::tokens_and_nodes::*;
 fn main() {
     let file_path = Path::new(".").join("dummy-data").join("1dungeon.zil");
 
-    let mut generator = match TokenGenerator::new(&file_path) {
+    let generator = match TokenGenerator::new(&file_path) {
         Some(v) => v,
         None => return,
     };
 
-    println!("{}", generator.next().unwrap().unwrap().value);
+    for mt in generator {
+        let t = mt.unwrap();
+        println!("{0: <10} {1}", t.kind.to_str(), t.value);
+    }
 
     /*
     let tokens = match tokenize(reader) {
