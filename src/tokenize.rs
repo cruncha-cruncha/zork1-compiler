@@ -13,8 +13,8 @@ pub enum TokenType {
     RightArrow,
     LeftParen,
     RightParen,
-    Word,
-    Text
+    Text,
+    Word
 }
 
 pub fn open_file(file_path: &Path) -> Result<BufReader<File>, io::Error> {

@@ -1,11 +1,13 @@
 use std::path::Path;
 
-mod tokens_and_nodes;
+mod tokenize;
+mod zil_ast;
 //mod tokenizer;
 //mod parse_tree_generator;
 //mod testing;
 
-use crate::tokens_and_nodes::*;
+use crate::tokenize::*;
+use crate::zil_ast::*;
 //use crate::parse_tree_generator::*;
 //use crate::testing::tree_traversal::*;
 
