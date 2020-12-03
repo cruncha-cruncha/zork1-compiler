@@ -36,7 +36,7 @@ impl TokenType {
 pub struct Token {
     pub kind: TokenType,
     pub value: String,
-    pub file_key: u64,
+    pub file_key: u32,
     pub line_number: u64
 }
 
@@ -84,15 +84,15 @@ pub struct TokenGenerator{
     char_gen: CharGenerator,
     str_buf: String,
     out_buf: VecDeque<Token>,
-    file_key: u64,
+    file_key: u32,
     line_number: u64,
     in_comment: bool,
     in_string: bool,
-    escape: u64
+    escape: u32
 }
 
 impl TokenGenerator {
-    pub fn new(file_key: u64, file_path: &Path) -> Option<TokenGenerator> {
+    pub fn new(file_key: u32, file_path: &Path) -> Option<TokenGenerator> {
         let reader = match open_file(&file_path) {
             Ok(v) => v,
             Err(e) => {

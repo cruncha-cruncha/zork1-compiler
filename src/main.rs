@@ -13,8 +13,8 @@ use crate::zil_ast::*;
 //use crate::testing::tree_traversal::*;
 
 struct FileNameTable {
-    key: u64,
-    table: HashMap<u64, String>,
+    key: u32,
+    table: HashMap<u32, String>,
 }
 
 impl FileNameTable {
@@ -22,7 +22,7 @@ impl FileNameTable {
         FileNameTable {key: 0, table: HashMap::new()}
     }
 
-    pub fn insert(&mut self, v: String) -> u64 {
+    pub fn insert(&mut self, v: String) -> u32 {
         self.key += 1;
         self.table.insert(
             self.key,
@@ -31,14 +31,14 @@ impl FileNameTable {
         self.key
     }
 
-    pub fn get(&mut self, k: u64) -> Option<String> {
+    pub fn get(&mut self, k: u32) -> Option<String> {
         match self.table.get(&k) {
             Some(v) => Some(v.clone()),
             None => None,
         }
     }
 
-    pub fn find_key(&mut self, v: String) -> Option<u64> {
+    pub fn find_key(&mut self, v: String) -> Option<u32> {
         for (key, value) in self.table.iter() {
             if *value == v {
                 return Some(*key);
