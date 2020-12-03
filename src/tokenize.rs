@@ -5,8 +5,6 @@ use std::io::BufRead;
 use std::io;
 use std::collections::VecDeque;
 
-// tokenizer should get rid of comments
-
 #[derive(Copy, Clone)]
 pub enum TokenType {
     LeftArrow,
@@ -19,7 +17,7 @@ pub enum TokenType {
 
 pub fn open_file(file_path: &Path) -> Result<BufReader<File>, io::Error> {
     let file = File::open(file_path)?;
-    return Ok(BufReader::new(file));
+    Ok(BufReader::new(file))
 }
 
 impl TokenType {
@@ -38,6 +36,7 @@ impl TokenType {
 pub struct Token {
     pub kind: TokenType,
     pub value: String,
+    pub file_key: u64,
     pub line_number: u64
 }
 
@@ -49,11 +48,11 @@ struct CharGenerator {
 
 impl CharGenerator {
     pub fn new(reader: BufReader<File>) -> Option<CharGenerator> {
-        return Some(CharGenerator{
+        Some(CharGenerator{
             reader: reader,
             char_buf: Vec::new(),
             buf_index: 0,
-        });
+        })
     }
 }
 
@@ -77,7 +76,7 @@ impl Iterator for CharGenerator {
         }
 
         self.buf_index += 1;
-        return Some(Ok(self.char_buf[self.buf_index-1]));
+        Some(Ok(self.char_buf[self.buf_index-1]))
     }
 }
 
@@ -85,6 +84,7 @@ pub struct TokenGenerator{
     char_gen: CharGenerator,
     str_buf: String,
     out_buf: VecDeque<Token>,
+    file_key: u64,
     line_number: u64,
     in_comment: bool,
     in_string: bool,
@@ -92,7 +92,7 @@ pub struct TokenGenerator{
 }
 
 impl TokenGenerator {
-    pub fn new(file_path: &Path) -> Option<TokenGenerator> {
+    pub fn new(file_key: u64, file_path: &Path) -> Option<TokenGenerator> {
         let reader = match open_file(&file_path) {
             Ok(v) => v,
             Err(e) => {
@@ -110,15 +110,16 @@ impl TokenGenerator {
             }
         };
 
-        return Some(TokenGenerator {
+        Some(TokenGenerator {
             char_gen: char_gen,
             str_buf: String::new(),
             out_buf: VecDeque::new(),
+            file_key: file_key,
             line_number: 1,
             in_comment: false,
             in_string: false,
             escape: 0,
-        });
+        })
     }   
 }
 
@@ -144,9 +145,17 @@ impl Iterator for TokenGenerator {
                         self.str_buf.push('<');
                     } else {
                         if self.str_buf.trim() != "" {
-                            self.out_buf.push_back(Token {kind: TokenType::Word, value: self.str_buf.to_string(), line_number: self.line_number});
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number});
                         }
-                        self.out_buf.push_back(Token {kind: TokenType::LeftArrow, value: String::from("<"), line_number: self.line_number});
+                        self.out_buf.push_back(Token {
+                            kind: TokenType::LeftArrow,
+                            value: String::from("<"),
+                            file_key: self.file_key.clone(),
+                            line_number: self.line_number});
                         self.str_buf.clear();
                     }
                 },
@@ -155,9 +164,17 @@ impl Iterator for TokenGenerator {
                         self.str_buf.push('<');
                     } else {
                         if self.str_buf.trim() != "" {
-                            self.out_buf.push_back(Token {kind: TokenType::Word, value: self.str_buf.to_string(), line_number: self.line_number});
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number});
                         }
-                        self.out_buf.push_back(Token {kind: TokenType::RightArrow, value: String::from(">"), line_number: self.line_number});
+                        self.out_buf.push_back(Token {
+                            kind: TokenType::RightArrow,
+                            value: String::from(">"),
+                            file_key: self.file_key.clone(),
+                            line_number: self.line_number});
                         self.str_buf.clear();
                     } 
                 },
@@ -166,9 +183,17 @@ impl Iterator for TokenGenerator {
                         self.str_buf.push('<');
                     } else {
                         if self.str_buf.trim() != "" {
-                            self.out_buf.push_back(Token {kind: TokenType::Word, value: self.str_buf.to_string(), line_number: self.line_number});
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number});
                         }
-                        self.out_buf.push_back(Token {kind: TokenType::LeftParen, value: String::from("("), line_number: self.line_number});
+                        self.out_buf.push_back(Token {
+                            kind: TokenType::LeftParen,
+                            value: String::from("("),
+                            file_key: self.file_key.clone(),
+                            line_number: self.line_number});
                         self.str_buf.clear();
                     } 
                 },
@@ -177,9 +202,17 @@ impl Iterator for TokenGenerator {
                         self.str_buf.push('<');
                     } else {
                         if self.str_buf.trim() != "" {
-                            self.out_buf.push_back(Token {kind: TokenType::Word, value: self.str_buf.to_string(), line_number: self.line_number});
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number});
                         }
-                        self.out_buf.push_back(Token {kind: TokenType::RightParen, value: String::from(")"), line_number: self.line_number});
+                        self.out_buf.push_back(Token {
+                            kind: TokenType::RightParen,
+                            value: String::from(")"),
+                            file_key: self.file_key.clone(),
+                            line_number: self.line_number});
                         self.str_buf.clear();
                     } 
                 },
@@ -198,12 +231,20 @@ impl Iterator for TokenGenerator {
                         self.in_comment = false;
                         self.in_string = false;
                     } else if self.in_string {
-                        self.out_buf.push_back(Token {kind: TokenType::Text, value: self.str_buf.to_string(), line_number: self.line_number});
+                        self.out_buf.push_back(Token {
+                            kind: TokenType::Text,
+                            value: self.str_buf.to_string(),
+                            file_key: self.file_key.clone(),
+                            line_number: self.line_number});
                         self.str_buf.clear();
                         self.in_string = false;
                     } else {
                         if self.str_buf.trim() != "" {
-                            self.out_buf.push_back(Token {kind: TokenType::Word, value: self.str_buf.to_string(), line_number: self.line_number});
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number});
                         }
                         self.str_buf.clear();
                         self.in_string = true;
@@ -221,7 +262,11 @@ impl Iterator for TokenGenerator {
                         self.str_buf.push(' ');
                     } else if !self.in_comment {
                         if self.str_buf.trim() != "" {
-                            self.out_buf.push_back(Token {kind: TokenType::Word, value: self.str_buf.to_string(), line_number: self.line_number});
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number});
                         }
                         self.str_buf.clear();
                     }
@@ -234,7 +279,11 @@ impl Iterator for TokenGenerator {
                         self.in_comment = false;
                     } else {
                         if self.str_buf.trim() != "" {
-                            self.out_buf.push_back(Token {kind: TokenType::Word, value: self.str_buf.to_string(), line_number: self.line_number});
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number});
                         }
                         self.str_buf.clear(); 
                     }
@@ -258,6 +307,6 @@ impl Iterator for TokenGenerator {
             }
         }
 
-        return Some(Ok(self.out_buf.pop_front().unwrap()));
+        Some(Ok(self.out_buf.pop_front().unwrap()))
     }
 }

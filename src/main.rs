@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::collections::HashMap;
 
 mod tokenize;
 mod zil_ast;
@@ -11,12 +12,50 @@ use crate::zil_ast::*;
 //use crate::parse_tree_generator::*;
 //use crate::testing::tree_traversal::*;
 
-// use Result for error handling
+struct FileNameTable {
+    key: u64,
+    table: HashMap<u64, String>,
+}
+
+impl FileNameTable {
+    pub fn new() -> FileNameTable {
+        FileNameTable {key: 0, table: HashMap::new()}
+    }
+
+    pub fn insert(&mut self, v: String) -> u64 {
+        self.key += 1;
+        self.table.insert(
+            self.key,
+            v,
+        );
+        self.key
+    }
+
+    pub fn get(&mut self, k: u64) -> Option<String> {
+        match self.table.get(&k) {
+            Some(v) => Some(v.clone()),
+            None => None,
+        }
+    }
+
+    pub fn find_key(&mut self, v: String) -> Option<u64> {
+        for (key, value) in self.table.iter() {
+            if *value == v {
+                return Some(*key);
+            }
+        }
+
+        None
+    }
+}
 
 fn main() {
-    let file_path = Path::new(".").join("dummy-data").join("1dungeon.zil");
+    let mut files_lookup = FileNameTable::new();
 
-    let generator = match TokenGenerator::new(&file_path) {
+    let file_path = Path::new(".").join("dummy-data").join("1dungeon.zil");
+    let file_key = files_lookup.insert(file_path.to_str().unwrap().to_string());
+
+    let generator = match TokenGenerator::new(file_key, &file_path) {
         Some(v) => v,
         None => return,
     };

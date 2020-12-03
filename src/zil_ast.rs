@@ -16,29 +16,15 @@ impl Node {
         self.values.push(t);
     }
 
-    pub fn take_value(&mut self, i: usize) -> Option<Token> {
-        if i >= self.values.len() {
-            return None;
-        } else {
-            return Some(self.values.remove(i));
-        }
-    }
-
     pub fn push_child(&mut self, n: Node) { 
         self.children.push(n);
     }
-
-    pub fn take_child(&mut self, i: usize) -> Option<Node> {
-        if i >= self.children.len() {
-            return None;
-        } else {
-            return Some(self.children.remove(i));
-        }
-    }
 }
 
+// validate the tree by checking each node: if it has left arrow, then it has a right arrow and nothing else in values
+// same for parenthesis
 pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Error> {
-    while true {
+    loop {
         let t = match tokens.next() {
             Some(Ok(v)) => v,
             Some(Err(e)) => return Some(e),
@@ -63,6 +49,4 @@ pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Er
             }
         }
     }
-
-    return None;
 }
