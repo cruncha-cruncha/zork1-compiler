@@ -7,6 +7,15 @@ pub trait TreeStat {
     fn calc(&self, root: &Node, collector: &mut HashSet<String>);
 }
 
+fn set_to_str(collector: &HashSet<String>) -> String {
+    let mut out = String::new();
+    for s in collector.iter() {
+        out.push_str(s);
+        out.push_str(", ");
+    }
+    out
+}
+
 pub fn run_stats(root: &Node) {
     let mut stats: Vec<Box<dyn TreeStat>> = Vec::new();
     stats.push(Box::new(Stat01{}));
@@ -25,8 +34,25 @@ pub fn run_stats(root: &Node) {
         collector = HashSet::new();
         println!("\n{}", b.desc());
         b.calc(&root, &mut collector);
-        println!("{}", collector.into_iter().collect::<Vec<String>>().join(", "));
+        println!("{}", set_to_str(&collector));
     }
+}
+
+pub fn dot_comma_stats(root: &Node) {
+    let dot_stats = Stat09{};
+    println!("\n{}", dot_stats.desc());
+    let mut dot_collector: HashSet<String> = HashSet::new();
+    dot_stats.calc(&root, &mut dot_collector);
+    println!("{}", set_to_str(&dot_collector));
+
+    let comma_stats = Stat11{};
+    println!("\n{}", comma_stats.desc());
+    let mut comma_collector: HashSet<String> = HashSet::new();
+    comma_stats.calc(&root, &mut comma_collector);
+    println!("{}", set_to_str(&comma_collector));
+
+    println!("\nIntersection");
+    println!("{}", set_to_str(&dot_collector.intersection(&comma_collector).cloned().collect()));
 }
 
 pub struct Stat01;
@@ -150,21 +176,22 @@ impl TreeStat for Stat06 {
 pub struct Stat07;
 impl TreeStat for Stat07 {
     fn desc(&self) -> String {
-        String::from("< ... (X ... ) ... > but not <COND ... (X ... ) ... >")
+        String::from("(X ... ) but not <COND ... (X ... ) ... >")
     }
 
     fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
-        if root.is_routine() &&
-           root.has_children() &&
-           root.children[0].is_word() &&
-           root.children[0].tokens[0].value != String::from("COND") {
-            for n in root.children.iter() {
-                if n.is_grouping() &&
-                n.has_children() {
-                    collector.insert(String::from(&n.children[0].tokens[0].value));
+        if root.has_children() {
+            if !root.children[0].is_word() ||
+               root.children[0].tokens[0].value != String::from("COND") {
+                for n in root.children.iter() {
+                    if n.is_grouping() &&
+                    n.has_children() {
+                        collector.insert(String::from(&n.children[0].tokens[0].value));
+                    }
                 }
             }
         }
+
         for n in root.children.iter() {
             self.calc(n, collector);
         }
@@ -204,7 +231,7 @@ impl TreeStat for Stat09 {
     fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
         if root.is_word() &&
            root.tokens[0].value.starts_with(".") {
-            collector.insert(String::from(&root.tokens[0].value));
+            collector.insert(String::from(&root.tokens[0].value[1..]));
         }
         for n in root.children.iter() {
             self.calc(n, collector);
@@ -221,7 +248,7 @@ impl TreeStat for Stat11 {
     fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
         if root.is_word() &&
            root.tokens[0].value.starts_with(",") {
-            collector.insert(String::from(&root.tokens[0].value));
+            collector.insert(String::from(&root.tokens[0].value[1..]));
         }
         for n in root.children.iter() {
             self.calc(n, collector);

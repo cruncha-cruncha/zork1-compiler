@@ -69,17 +69,20 @@ fn main() {
 
     let mut root = Node::new();
     build_tree(&mut generator, &mut root);
-    clean_tree(&mut root);
+    retain_child_routines(&mut root);
+    remove_comments(&mut root);
 
     match validate_tree(&root, 0, &mut files_lookup) {
         Ok(()) => println!("ok"),
         Err(()) => {
             println!("ERROR");
-            print_tree(&root, 0);
+            //print_tree(&root, 0);
+            return;
         },
     }
 
-    run_stats(&root);
+    //run_stats(&root);
+    dot_comma_stats(&root);
 }
 
 /*

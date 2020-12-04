@@ -33,6 +33,11 @@ impl Node {
         self.tokens[1].kind == TokenType::RightParen
     }
 
+    pub fn is_comment(&self) -> bool {
+        self.tokens.len() == 1 &&
+        self.tokens[0].kind == TokenType::Comment
+    }
+
     pub fn is_text(&self) -> bool {
         self.tokens.len() == 1 &&
         self.tokens[0].kind == TokenType::Text
@@ -45,6 +50,15 @@ impl Node {
 
     pub fn has_children(&self) -> bool {
         self.children.len() > 0
+    }
+
+    pub fn for_each_child(&mut self, f: &mut dyn FnMut(&mut Node)) {
+        let len = self.children.len();
+        for i in 0..len {
+            let mut child = self.children.remove(i);
+            f(&mut child);
+            self.children.insert(i, child);
+        }
     }
 }
 
@@ -67,6 +81,11 @@ pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Er
                 root.push_token(t);
                 return None;
             },
+            TokenType::Comment => {
+                let mut child = Node::new();
+                child.push_token(t);
+                root.push_child(child);
+            },
             TokenType::Text | TokenType::Word => {
                 let mut child = Node::new();
                 child.push_token(t);
@@ -76,9 +95,23 @@ pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Er
     }
 }
 
-// we only care about things inside a <>
-pub fn clean_tree(root: &mut Node) {
+// at the top level, we only care about things inside a <>
+pub fn retain_child_routines(root: &mut Node) {
     root.children.retain(|n| n.is_routine());
+}
+
+pub fn remove_comments(root: &mut Node) {
+    let mut to_remove = Vec::new();
+    for (i, n) in root.children.iter().enumerate() {
+        if n.is_comment() {
+            to_remove.push(i);
+            to_remove.push(i+1);
+        }
+    }
+    for i in to_remove.iter().rev() {
+        root.children.remove(*i);
+    }
+    root.for_each_child(&mut remove_comments);
 }
 
 pub fn print_tree(root: &Node, depth: u64) {

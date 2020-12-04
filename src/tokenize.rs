@@ -11,6 +11,7 @@ pub enum TokenType {
     RightArrow,
     LeftParen,
     RightParen,
+    Comment,
     Text,
     Word
 }
@@ -27,6 +28,7 @@ impl TokenType {
             TokenType::RightArrow => "R_ARROW".to_string(),
             TokenType::LeftParen => "L_PAREN".to_string(),
             TokenType::RightParen => "R_PAREN".to_string(),
+            TokenType::Comment => "COMMENT".to_string(),
             TokenType::Word => "WORD".to_string(),
             TokenType::Text => "TEXT".to_string()
         }
@@ -86,7 +88,6 @@ pub struct TokenGenerator{
     out_buf: VecDeque<Token>,
     file_key: u32,
     line_number: u64,
-    in_comment: bool,
     in_string: bool,
     escape: u32
 }
@@ -116,7 +117,6 @@ impl TokenGenerator {
             out_buf: VecDeque::new(),
             file_key: file_key,
             line_number: 1,
-            in_comment: false,
             in_string: false,
             escape: 0,
         })
@@ -141,7 +141,7 @@ impl Iterator for TokenGenerator {
 
             match c {
                 '<' => {
-                    if self.in_string || self.in_comment {
+                    if self.in_string {
                         self.str_buf.push('<');
                     } else {
                         if self.str_buf.trim() != "" {
@@ -160,8 +160,8 @@ impl Iterator for TokenGenerator {
                     }
                 },
                 '>' => {
-                    if self.in_string || self.in_comment {
-                        self.str_buf.push('<');
+                    if self.in_string {
+                        self.str_buf.push('>');
                     } else {
                         if self.str_buf.trim() != "" {
                             self.out_buf.push_back(Token {
@@ -179,8 +179,8 @@ impl Iterator for TokenGenerator {
                     } 
                 },
                 '(' => {
-                    if self.in_string || self.in_comment {
-                        self.str_buf.push('<');
+                    if self.in_string {
+                        self.str_buf.push('(');
                     } else {
                         if self.str_buf.trim() != "" {
                             self.out_buf.push_back(Token {
@@ -198,8 +198,8 @@ impl Iterator for TokenGenerator {
                     } 
                 },
                 ')' => {
-                    if self.in_string || self.in_comment {
-                        self.str_buf.push('<');
+                    if self.in_string {
+                        self.str_buf.push(')');
                     } else {
                         if self.str_buf.trim() != "" {
                             self.out_buf.push_back(Token {
@@ -226,10 +226,6 @@ impl Iterator for TokenGenerator {
                 '"' => {
                     if self.in_string && self.escape > 0 {
                         self.str_buf.push('"');
-                    } else if self.in_string && self.in_comment {
-                        self.str_buf.clear();
-                        self.in_comment = false;
-                        self.in_string = false;
                     } else if self.in_string {
                         self.out_buf.push_back(Token {
                             kind: TokenType::Text,
@@ -254,13 +250,25 @@ impl Iterator for TokenGenerator {
                     if self.in_string {
                         self.str_buf.push(';');
                     } else {
-                        self.in_comment = true;
+                        if self.str_buf.trim() != "" {
+                            self.out_buf.push_back(Token {
+                                kind: TokenType::Word,
+                                value: self.str_buf.to_string(),
+                                file_key: self.file_key.clone(),
+                                line_number: self.line_number}); 
+                        }
+                        self.out_buf.push_back(Token {
+                            kind: TokenType::Comment,
+                            value: String::from(";"),
+                            file_key: self.file_key.clone(),
+                            line_number: self.line_number});
+                        self.str_buf.clear();
                     }
                 }
                 ' ' | '\t' => {
                     if self.in_string {
                         self.str_buf.push(' ');
-                    } else if !self.in_comment {
+                    } else {
                         if self.str_buf.trim() != "" {
                             self.out_buf.push_back(Token {
                                 kind: TokenType::Word,
@@ -274,9 +282,6 @@ impl Iterator for TokenGenerator {
                 '\n' => {
                     if self.in_string {
                         self.str_buf.push(' ');
-                    } else if self.in_comment {
-                        self.str_buf.clear();
-                        self.in_comment = false;
                     } else {
                         if self.str_buf.trim() != "" {
                             self.out_buf.push_back(Token {
