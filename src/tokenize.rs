@@ -257,7 +257,7 @@ impl Iterator for TokenGenerator {
                         self.in_comment = true;
                     }
                 }
-                ' ' => {
+                ' ' | '\t' => {
                     if self.in_string {
                         self.str_buf.push(' ');
                     } else if !self.in_comment {

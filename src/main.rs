@@ -1,14 +1,17 @@
 use std::path::Path;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 mod tokenize;
 mod zil_ast;
+mod zil_ast_stats;
 //mod tokenizer;
 //mod parse_tree_generator;
 //mod testing;
 
 use crate::tokenize::*;
 use crate::zil_ast::*;
+use crate::zil_ast_stats::*;
 //use crate::parse_tree_generator::*;
 //use crate::testing::tree_traversal::*;
 
@@ -49,10 +52,14 @@ impl FileNameTable {
     }
 }
 
+// two passes through the tree?
+// #1 collect info
+// #2 print
+
 fn main() {
     let mut files_lookup = FileNameTable::new();
 
-    let file_path = Path::new(".").join("dummy-data").join("1dungeon.zil");
+    let file_path = Path::new(".").join("dummy-data").join("testing.zil");
     let file_key = files_lookup.insert(file_path.to_str().unwrap().to_string());
 
     let mut generator = match TokenGenerator::new(file_key, &file_path) {
@@ -62,6 +69,7 @@ fn main() {
 
     let mut root = Node::new();
     build_tree(&mut generator, &mut root);
+    clean_tree(&mut root);
 
     match validate_tree(&root, 0, &mut files_lookup) {
         Ok(()) => println!("ok"),
@@ -71,51 +79,100 @@ fn main() {
         },
     }
 
-    /*
-    let tokens = match tokenize(reader) {
-        Ok(v) => v,
-        Err(e) => {
-            println!("Error tokenizing file, {:?}", e);
-            return
-        }
-    };
+    let mut collector: HashSet<String>;
 
-    for t in tokens.iter() {
-        println!("{0: <10} {1}", t.kind.to_str(), t.value);
-    }
-    println!();
-    */
-
-    /*
-
-    root = combine_files(root);
-
-    let functions = get_functions(&root);
-    let routines = get_routines(&root);
-
-    struct FuncOccur {
-        func: String,
-        occur: usize
+    collector = HashSet::new();
+    println!("\n<X ... >");
+    stat_a(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
     }
 
-    let mut sorted = Vec::new();
-
-    for (k, v) in &functions {
-        //println!("{}", k);
-        match routines.get(k) {
-            Some(_) => {},
-            None => sorted.push(FuncOccur{ func: k.to_string(), occur: *v })
-        }
+    collector = HashSet::new();
+    println!("\n<ROUTINE X ... >");
+    stat_b(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
     }
 
-    println!("found {} functions", sorted.len());
-    println!("");
+    collector = HashSet::new();
+    println!("\n<GLOBAL X ... >");
+    stat_c(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
+    } 
 
-    sorted.sort_by(|a, b| b.occur.cmp(&a.occur));
-    for kv in &sorted {
-        println!("{} {}", kv.occur, kv.func);
+    collector = HashSet::new();
+    println!("\n<OBJECT X ... >");
+    stat_d(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
     }
 
-    //root.describe(String::new());
-    */
+    collector = HashSet::new();
+    println!("\n(X ... )");
+    stat_e(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
+    } 
+
+    collector = HashSet::new();
+    println!("\n<COND ... (X ... ) ... >");
+    stat_f(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
+    } 
+
+    collector = HashSet::new();
+    println!("\n<OBJECT ... (X ... ) ... >");
+    stat_g(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
+    } 
+
+    collector = HashSet::new();
+    println!("\nall WORDs that start with \".\"");
+    stat_h(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
+    } 
+
+    collector = HashSet::new();
+    println!("\nall WORDs that start with \",\"");
+    stat_i(&root, &mut collector);
+    for s in collector.iter() {
+        println!("{}", s);
+    } 
 }
+
+/*
+<OBJECT ATTIC-TABLE
+	(IN ATTIC)
+	(SYNONYM TABLE)
+	(DESC "table")
+	(FLAGS NDESCBIT CONTBIT OPENBIT SURFACEBIT)
+    (CAPACITY 40)>
+
+// (IN ATTIC) and (SYNONTM TABLE) are handled elsewhere?
+
+class ATTIC-TABLE:
+  ndescbit = false
+  contbit = false
+  openbit = false
+  surfacebit = false
+  def describe():
+    return "table"
+  def capacity():
+    40
+
+<COND (<EQUAL? .NG .G> <RFALSE>)
+      (<EQUAL? .NG 2> <TELL "Your sword has begun to glow very brightly." CR>)
+      (<0? .NG> <TELL "Your sword is no longer glowing." CR>)>
+      
+if EQUAL?(.NG, .G):
+  RFALSE()
+elif EQUAL?(.NG, 2):
+  TELL("Your sword has begun to glow very brightly.", CR)
+elif 0?(.NG):
+  TELL("Your sword is no longer glowing.", CR)
+*/

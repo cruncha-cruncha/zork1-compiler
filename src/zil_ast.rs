@@ -4,21 +4,47 @@ use crate::FileNameTable;
 use crate::tokenize::*;
 
 pub struct Node {
-    values: Vec<Token>,
-    children: Vec<Node>,
+    pub tokens: Vec<Token>,
+    pub children: Vec<Node>,
 }
 
 impl Node {
     pub fn new() -> Node {
-        return Node {values: Vec::new(), children: Vec::new()};
+        return Node {tokens: Vec::new(), children: Vec::new()};
     }
 
-    pub fn push_value(&mut self, t: Token) {
-        self.values.push(t);
+    pub fn push_token(&mut self, t: Token) {
+        self.tokens.push(t);
     }
 
     pub fn push_child(&mut self, n: Node) { 
         self.children.push(n);
+    }
+
+    pub fn is_routine(&self) -> bool {
+        self.tokens.len() == 2 &&
+        self.tokens[0].kind == TokenType::LeftArrow &&
+        self.tokens[1].kind == TokenType::RightArrow
+    }
+
+    pub fn is_grouping(&self) -> bool {
+        self.tokens.len() == 2 &&
+        self.tokens[0].kind == TokenType::LeftParen &&
+        self.tokens[1].kind == TokenType::RightParen
+    }
+
+    pub fn is_text(&self) -> bool {
+        self.tokens.len() == 1 &&
+        self.tokens[0].kind == TokenType::Text
+    }
+
+    pub fn is_word(&self) -> bool {
+        self.tokens.len() == 1 &&
+        self.tokens[0].kind == TokenType::Word
+    }
+
+    pub fn has_children(&self) -> bool {
+        self.children.len() > 0
     }
 }
 
@@ -33,21 +59,26 @@ pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Er
         match t.kind {
             TokenType::LeftArrow | TokenType::LeftParen => {
                 let mut child = Node::new();
-                child.push_value(t);
+                child.push_token(t);
                 build_tree(tokens, &mut child);
                 root.push_child(child);
             },
             TokenType::RightArrow | TokenType::RightParen => {
-                root.push_value(t);
+                root.push_token(t);
                 return None;
             },
             TokenType::Text | TokenType::Word => {
                 let mut child = Node::new();
-                child.push_value(t);
+                child.push_token(t);
                 root.push_child(child);
             }
         }
     }
+}
+
+// we only care about things inside a <>
+pub fn clean_tree(root: &mut Node) {
+    root.children.retain(|n| n.is_routine());
 }
 
 pub fn print_tree(root: &Node, depth: u64) {
@@ -56,8 +87,8 @@ pub fn print_tree(root: &Node, depth: u64) {
     for _ in 0..depth {
         out.push_str(&spacer);
     }
-    for v in root.values.iter() {
-        out.push_str(&v.value);
+    for t in root.tokens.iter() {
+        out.push_str(&t.value);
         out.push_str(", ");
     }   
     println!("{}", out);
@@ -67,26 +98,26 @@ pub fn print_tree(root: &Node, depth: u64) {
 }
 
 pub fn validate_tree(root: &Node, depth: u64, files_lookup: &mut FileNameTable) -> Result<(), ()> {
-    match root.values.len() {
+    match root.tokens.len() {
         0 => {
             if depth != 0 {
                 return Err(());
             }
         },
         1 => {
-            match root.values[0].kind {
+            match root.tokens[0].kind {
                 TokenType::Text | TokenType::Word => (),
                 _ => return Err(()),
             }
         },
         2 => {
-            match (root.values[0].kind, root.values[1].kind) {
+            match (root.tokens[0].kind, root.tokens[1].kind) {
                 (TokenType::LeftArrow, TokenType::RightArrow) => (),
                 (TokenType::LeftParen, TokenType::RightParen) => (),
                 _ => return Err(()),
             }
         },
-        n => return Err(()),
+        _ => return Err(()),
     }
 
     for n in root.children.iter() {
