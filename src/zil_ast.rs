@@ -50,3 +50,52 @@ pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Er
         }
     }
 }
+
+pub fn print_tree(root: &Node, depth: u64) {
+    let spacer = String::from("  ");
+    let mut out = String::new();
+    for _ in 0..depth {
+        out.push_str(&spacer);
+    }
+    for v in root.values.iter() {
+        out.push_str(&v.value);
+        out.push_str(", ");
+    }   
+    println!("{}", out);
+    for n in root.children.iter() {
+        print_tree(n, depth+1);
+    }
+}
+
+pub fn validate_tree(root: &Node) -> Result<String, String> {
+    if root.values.len() > 0 {
+        match root.values[0].kind {
+            TokenType::LeftArrow => {
+                if root.values.len() != 2 {
+                    return Err(String::from("first"))
+                } else if root.values[1].kind != TokenType::RightArrow {
+                    return Err(String::from("second"))
+                }
+            },
+            TokenType::LeftParen => {
+                if root.values.len() != 2 {
+                    return Err(String::from("third"));
+                } else if root.values[1].kind != TokenType::RightParen {
+                    return Err(String::from("fourth"))
+                }
+            },
+            TokenType::RightArrow => return Err(String::from("fifth")),
+            TokenType::RightParen => return Err(String::from("sixth")),
+            _ => (),
+        }
+    }
+
+    for n in root.children.iter() {
+        match validate_tree(n) {
+            Err(e) => return Err(e),
+            _ => ()
+        }
+    }
+
+    Ok(String::from("ok"))
+}

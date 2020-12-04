@@ -55,14 +55,25 @@ fn main() {
     let file_path = Path::new(".").join("dummy-data").join("1dungeon.zil");
     let file_key = files_lookup.insert(file_path.to_str().unwrap().to_string());
 
-    let generator = match TokenGenerator::new(file_key, &file_path) {
+    let mut generator = match TokenGenerator::new(file_key, &file_path) {
         Some(v) => v,
         None => return,
     };
 
+    /*
     for mt in generator {
         let t = mt.unwrap();
         println!("{0: <10} {1}", t.kind.to_str(), t.value);
+    }
+    */
+
+    let mut root = Node::new();
+    build_tree(&mut generator, &mut root);
+    //print_tree(&root, 0);
+
+    match validate_tree(&root) {
+        Ok(s) => println!("{}", s),
+        Err(e) => println!("ERROR: {}", e)
     }
 
     /*

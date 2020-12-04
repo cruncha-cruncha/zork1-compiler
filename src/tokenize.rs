@@ -5,7 +5,7 @@ use std::io::BufRead;
 use std::io;
 use std::collections::VecDeque;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum TokenType {
     LeftArrow,
     RightArrow,

@@ -1,4 +1,6 @@
-<BUT "yes all of
-this" DON'T IGNORE THIS>
-; IGNORE
-<NOT THIS>
+<FUNC ARG
+  <COND
+    (HUH SOME
+    (T YA)
+  >
+>
