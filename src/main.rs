@@ -12,7 +12,7 @@ use crate::zil_ast::*;
 //use crate::parse_tree_generator::*;
 //use crate::testing::tree_traversal::*;
 
-struct FileNameTable {
+pub struct FileNameTable {
     key: u32,
     table: HashMap<u32, String>,
 }
@@ -60,20 +60,15 @@ fn main() {
         None => return,
     };
 
-    /*
-    for mt in generator {
-        let t = mt.unwrap();
-        println!("{0: <10} {1}", t.kind.to_str(), t.value);
-    }
-    */
-
     let mut root = Node::new();
     build_tree(&mut generator, &mut root);
-    //print_tree(&root, 0);
 
-    match validate_tree(&root) {
-        Ok(s) => println!("{}", s),
-        Err(e) => println!("ERROR: {}", e)
+    match validate_tree(&root, 0, &mut files_lookup) {
+        Ok(()) => println!("ok"),
+        Err(()) => {
+            println!("ERROR");
+            print_tree(&root, 0);
+        },
     }
 
     /*

@@ -1,5 +1,6 @@
 use std::io;
 
+use crate::FileNameTable;
 use crate::tokenize::*;
 
 pub struct Node {
@@ -21,8 +22,6 @@ impl Node {
     }
 }
 
-// validate the tree by checking each node: if it has left arrow, then it has a right arrow and nothing else in values
-// same for parenthesis
 pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Error> {
     loop {
         let t = match tokens.next() {
@@ -67,35 +66,35 @@ pub fn print_tree(root: &Node, depth: u64) {
     }
 }
 
-pub fn validate_tree(root: &Node) -> Result<String, String> {
-    if root.values.len() > 0 {
-        match root.values[0].kind {
-            TokenType::LeftArrow => {
-                if root.values.len() != 2 {
-                    return Err(String::from("first"))
-                } else if root.values[1].kind != TokenType::RightArrow {
-                    return Err(String::from("second"))
-                }
-            },
-            TokenType::LeftParen => {
-                if root.values.len() != 2 {
-                    return Err(String::from("third"));
-                } else if root.values[1].kind != TokenType::RightParen {
-                    return Err(String::from("fourth"))
-                }
-            },
-            TokenType::RightArrow => return Err(String::from("fifth")),
-            TokenType::RightParen => return Err(String::from("sixth")),
-            _ => (),
-        }
+pub fn validate_tree(root: &Node, depth: u64, files_lookup: &mut FileNameTable) -> Result<(), ()> {
+    match root.values.len() {
+        0 => {
+            if depth != 0 {
+                return Err(());
+            }
+        },
+        1 => {
+            match root.values[0].kind {
+                TokenType::Text | TokenType::Word => (),
+                _ => return Err(()),
+            }
+        },
+        2 => {
+            match (root.values[0].kind, root.values[1].kind) {
+                (TokenType::LeftArrow, TokenType::RightArrow) => (),
+                (TokenType::LeftParen, TokenType::RightParen) => (),
+                _ => return Err(()),
+            }
+        },
+        n => return Err(()),
     }
 
     for n in root.children.iter() {
-        match validate_tree(n) {
-            Err(e) => return Err(e),
+        match validate_tree(n, depth+1, files_lookup) {
+            Err(_) => return Err(()),
             _ => ()
         }
     }
 
-    Ok(String::from("ok"))
+    Ok(())
 }
