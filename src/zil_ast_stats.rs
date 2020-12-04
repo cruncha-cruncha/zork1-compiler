@@ -2,125 +2,230 @@ use std::collections::HashSet;
 
 use crate::zil_ast::*;
 
-// <X ... >
-pub fn stat_a(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_routine() &&
-       root.has_children() {
-        collector.insert(String::from(&root.children[0].tokens[0].value));
-    }
-    for n in root.children.iter() {
-        stat_a(n, collector);
+pub trait TreeStat {
+    fn desc(&self) -> String;
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>);
+}
+
+pub fn run_stats(root: &Node) {
+    let mut stats: Vec<Box<dyn TreeStat>> = Vec::new();
+    stats.push(Box::new(Stat01{}));
+    stats.push(Box::new(Stat02{}));
+    stats.push(Box::new(Stat03{}));
+    stats.push(Box::new(Stat04{}));
+    stats.push(Box::new(Stat05{}));
+    stats.push(Box::new(Stat06{}));
+    stats.push(Box::new(Stat07{}));
+    stats.push(Box::new(Stat08{}));
+    stats.push(Box::new(Stat09{}));
+    stats.push(Box::new(Stat11{}));
+
+    let mut collector: HashSet<String>;
+    for b in stats.iter() {
+        collector = HashSet::new();
+        println!("\n{}", b.desc());
+        b.calc(&root, &mut collector);
+        println!("{}", collector.into_iter().collect::<Vec<String>>().join(", "));
     }
 }
 
-// <ROUTINE X ... >
-pub fn stat_b(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_routine() &&
-       root.has_children() &&
-       root.children[0].is_word() &&
-       root.children[0].tokens[0].value == String::from("ROUTINE") && 
-       root.children.len() >= 2 {
-        collector.insert(String::from(&root.children[1].tokens[0].value));
+pub struct Stat01;
+impl TreeStat for Stat01 {
+    fn desc(&self) -> String {
+        String::from("<X ... >")
     }
-    for n in root.children.iter() {
-        stat_b(n, collector);
-    }
-}
 
-// <GLOBAL X ... >
-pub fn stat_c(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_routine() &&
-       root.has_children() &&
-       root.children[0].is_word() &&
-       root.children[0].tokens[0].value == String::from("GLOBAL") && 
-       root.children.len() >= 2 {
-        collector.insert(String::from(&root.children[1].tokens[0].value));
-    }
-    for n in root.children.iter() {
-        stat_c(n, collector);
-    }
-}
-
-// <OBJECT X ... >
-pub fn stat_d(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_routine() &&
-       root.has_children() &&
-       root.children[0].is_word() &&
-       root.children[0].tokens[0].value == String::from("OBJECT") && 
-       root.children.len() >= 2 {
-        collector.insert(String::from(&root.children[1].tokens[0].value));
-    }
-    for n in root.children.iter() {
-        stat_d(n, collector);
-    }
-}
-
-// (X ... )
-pub fn stat_e(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_grouping() &&
-       root.has_children() {
-        collector.insert(String::from(&root.children[0].tokens[0].value));
-    }
-    for n in root.children.iter() {
-        stat_e(n, collector);
-    }
-}
-
-// <COND ... (X ... ) ... >
-pub fn stat_f(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_routine() &&
-       root.has_children() &&
-       root.children[0].is_word() &&
-       root.children[0].tokens[0].value == String::from("COND") {
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() {
+            collector.insert(String::from(&root.children[0].tokens[0].value));
+        }
         for n in root.children.iter() {
-            if n.is_grouping() &&
-               n.has_children() {
-                collector.insert(String::from(&n.children[0].tokens[0].value));
-            }
+            self.calc(n, collector);
         }
     }
-    for n in root.children.iter() {
-        stat_f(n, collector);
-    }
 }
 
-// <OBJECT ... (X ... ) ... >
-pub fn stat_g(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_routine() &&
-       root.has_children() &&
-       root.children[0].is_word() &&
-       root.children[0].tokens[0].value == String::from("OBJECT") {
+pub struct Stat02;
+impl TreeStat for Stat02 {
+    fn desc(&self) -> String {
+        String::from("<ROUTINE X ... >")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value == String::from("ROUTINE") && 
+           root.children.len() >= 2 {
+            collector.insert(String::from(&root.children[1].tokens[0].value));
+        }
         for n in root.children.iter() {
-            if n.is_grouping() &&
-               n.has_children() {
-                collector.insert(String::from(&n.children[0].tokens[0].value));
-            }
+            self.calc(n, collector);
         }
     }
-    for n in root.children.iter() {
-        stat_g(n, collector);
+}
+
+pub struct Stat03;
+impl TreeStat for Stat03 {
+    fn desc(&self) -> String {
+        String::from("<GLOBAL X ... >")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value == String::from("GLOBAL") && 
+           root.children.len() >= 2 {
+            collector.insert(String::from(&root.children[1].tokens[0].value));
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
     }
 }
 
-// all WORDs that start with "."
-pub fn stat_h(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_word() &&
-       root.tokens[0].value.starts_with(".") {
-        collector.insert(String::from(&root.tokens[0].value));
+pub struct Stat04;
+impl TreeStat for Stat04 {
+    fn desc(&self) -> String {
+        String::from("<OBJECT X ... >")
     }
-    for n in root.children.iter() {
-        stat_h(n, collector);
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value == String::from("OBJECT") && 
+           root.children.len() >= 2 {
+            collector.insert(String::from(&root.children[1].tokens[0].value));
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
     }
 }
 
-// all WORDs that start with ","
-pub fn stat_i(root: &Node, collector: &mut HashSet<String>) {
-    if root.is_word() &&
-       root.tokens[0].value.starts_with(",") {
-        collector.insert(String::from(&root.tokens[0].value));
+pub struct Stat05;
+impl TreeStat for Stat05 {
+    fn desc(&self) -> String {
+        String::from("(X ... )")
     }
-    for n in root.children.iter() {
-        stat_i(n, collector);
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_grouping() &&
+           root.has_children() {
+            collector.insert(String::from(&root.children[0].tokens[0].value));
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
+    }
+}
+
+pub struct Stat06;
+impl TreeStat for Stat06 {
+    fn desc(&self) -> String {
+        String::from("<COND ... (X ... ) ... >")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value == String::from("COND") {
+            for n in root.children.iter() {
+                if n.is_grouping() &&
+                n.has_children() {
+                    collector.insert(String::from(&n.children[0].tokens[0].value));
+                }
+            }
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
+    }
+}
+
+pub struct Stat07;
+impl TreeStat for Stat07 {
+    fn desc(&self) -> String {
+        String::from("< ... (X ... ) ... > but not <COND ... (X ... ) ... >")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value != String::from("COND") {
+            for n in root.children.iter() {
+                if n.is_grouping() &&
+                n.has_children() {
+                    collector.insert(String::from(&n.children[0].tokens[0].value));
+                }
+            }
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
+    }
+}
+
+pub struct Stat08;
+impl TreeStat for Stat08 {
+    fn desc(&self) -> String {
+        String::from("<OBJECT ... (X ... ) ... >")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value == String::from("OBJECT") {
+            for n in root.children.iter() {
+                if n.is_grouping() &&
+                n.has_children() {
+                    collector.insert(String::from(&n.children[0].tokens[0].value));
+                }
+            }
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
+    }
+}
+
+pub struct Stat09;
+impl TreeStat for Stat09 {
+    fn desc(&self) -> String {
+        String::from("WORDs that start with \".\"")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_word() &&
+           root.tokens[0].value.starts_with(".") {
+            collector.insert(String::from(&root.tokens[0].value));
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
+    }
+}
+
+pub struct Stat11;
+impl TreeStat for Stat11 {
+    fn desc(&self) -> String {
+        String::from("WORDs that start with \",\"")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_word() &&
+           root.tokens[0].value.starts_with(",") {
+            collector.insert(String::from(&root.tokens[0].value));
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
     }
 }
 

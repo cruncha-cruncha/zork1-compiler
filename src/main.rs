@@ -79,70 +79,7 @@ fn main() {
         },
     }
 
-    let mut collector: HashSet<String>;
-
-    collector = HashSet::new();
-    println!("\n<X ... >");
-    stat_a(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    }
-
-    collector = HashSet::new();
-    println!("\n<ROUTINE X ... >");
-    stat_b(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    }
-
-    collector = HashSet::new();
-    println!("\n<GLOBAL X ... >");
-    stat_c(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    } 
-
-    collector = HashSet::new();
-    println!("\n<OBJECT X ... >");
-    stat_d(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    }
-
-    collector = HashSet::new();
-    println!("\n(X ... )");
-    stat_e(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    } 
-
-    collector = HashSet::new();
-    println!("\n<COND ... (X ... ) ... >");
-    stat_f(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    } 
-
-    collector = HashSet::new();
-    println!("\n<OBJECT ... (X ... ) ... >");
-    stat_g(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    } 
-
-    collector = HashSet::new();
-    println!("\nall WORDs that start with \".\"");
-    stat_h(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    } 
-
-    collector = HashSet::new();
-    println!("\nall WORDs that start with \",\"");
-    stat_i(&root, &mut collector);
-    for s in collector.iter() {
-        println!("{}", s);
-    } 
+    run_stats(&root);
 }
 
 /*
