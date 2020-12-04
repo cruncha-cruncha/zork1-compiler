@@ -21,6 +21,7 @@ pub fn run_stats(root: &Node) {
     stats.push(Box::new(Stat01{}));
     stats.push(Box::new(Stat02{}));
     stats.push(Box::new(Stat03{}));
+    stats.push(Box::new(Stat12{}));
     stats.push(Box::new(Stat04{}));
     stats.push(Box::new(Stat05{}));
     stats.push(Box::new(Stat06{}));
@@ -249,6 +250,26 @@ impl TreeStat for Stat11 {
         if root.is_word() &&
            root.tokens[0].value.starts_with(",") {
             collector.insert(String::from(&root.tokens[0].value[1..]));
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
+    }
+}
+
+pub struct Stat12;
+impl TreeStat for Stat12 {
+    fn desc(&self) -> String {
+        String::from("<CONSTANT X ... >")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value == String::from("CONSTANT") && 
+           root.children.len() >= 2 {
+            collector.insert(String::from(&root.children[1].tokens[0].value));
         }
         for n in root.children.iter() {
             self.calc(n, collector);
