@@ -1,6 +1,5 @@
 use std::io;
 
-use crate::FileNameTable;
 use crate::zil::tokenize::*;
 
 pub struct Node {
@@ -123,7 +122,7 @@ pub fn print_tree(root: &Node, depth: u64) {
     }
 }
 
-pub fn validate_tree(root: &Node, depth: u64, files_lookup: &mut FileNameTable) -> Result<(), ()> {
+pub fn validate_tree(root: &Node, depth: u64) -> Result<(), ()> {
     match root.tokens.len() {
         0 => {
             if depth != 0 {
@@ -147,7 +146,7 @@ pub fn validate_tree(root: &Node, depth: u64, files_lookup: &mut FileNameTable) 
     }
 
     for n in root.children.iter() {
-        match validate_tree(n, depth+1, files_lookup) {
+        match validate_tree(n, depth+1) {
             Err(_) => return Err(()),
             _ => ()
         }
