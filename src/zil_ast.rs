@@ -51,13 +51,6 @@ impl Node {
     pub fn has_children(&self) -> bool {
         self.children.len() > 0
     }
-
-    pub fn for_each_mut_child(&mut self, f: &mut dyn FnMut(&mut Node)) {
-        let len = self.children.len();
-        for i in 0..len {
-            f(&mut self.children[i]);
-        }
-    }
 }
 
 pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Error> {
@@ -109,7 +102,9 @@ pub fn remove_comments(root: &mut Node) {
     for i in to_remove.iter().rev() {
         root.children.remove(*i);
     }
-    root.for_each_mut_child(&mut remove_comments);
+    for i in 0..root.children.len() {
+        remove_comments(&mut root.children[i]);
+    }
 }
 
 pub fn print_tree(root: &Node, depth: u64) {
