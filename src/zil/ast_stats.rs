@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::zil_ast::*;
+use crate::zil::ast::*;
 
 pub trait TreeStat {
     fn desc(&self) -> String;

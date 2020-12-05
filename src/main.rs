@@ -2,16 +2,22 @@ use std::path::Path;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-mod tokenize;
-mod zil_ast;
-mod zil_ast_stats;
+//mod tokenize;
+//mod zil_ast;
+//mod zil_ast_stats;
 //mod tokenizer;
 //mod parse_tree_generator;
 //mod testing;
 
-use crate::tokenize::*;
-use crate::zil_ast::*;
-use crate::zil_ast_stats::*;
+mod zil;
+
+use crate::zil::tokenize::*;
+use crate::zil::ast::*;
+use crate::zil::ast_stats::*;
+
+//use crate::tokenize::*;
+//use crate::zil_ast::*;
+//use crate::zil_ast_stats::*;
 //use crate::parse_tree_generator::*;
 //use crate::testing::tree_traversal::*;
 

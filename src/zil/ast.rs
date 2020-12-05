@@ -1,7 +1,7 @@
 use std::io;
 
 use crate::FileNameTable;
-use crate::tokenize::*;
+use crate::zil::tokenize::*;
 
 pub struct Node {
     pub tokens: Vec<Token>,
