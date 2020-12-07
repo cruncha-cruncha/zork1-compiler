@@ -156,14 +156,26 @@ pub fn validate_tree(root: &Node, depth: u64) -> Result<(), ()> {
         },
         1 => {
             match root.tokens[0].kind {
-                TokenType::Text | TokenType::Word => (),
+                TokenType::Text | TokenType::Word => {
+                    if root.children.len() > 0 {
+                        return Err(());
+                    }
+                },
                 _ => return Err(()),
             }
         },
         2 => {
             match (root.tokens[0].kind, root.tokens[1].kind) {
-                (TokenType::LeftArrow, TokenType::RightArrow) => (),
-                (TokenType::LeftParen, TokenType::RightParen) => (),
+                (TokenType::LeftArrow, TokenType::RightArrow) => {
+                    if root.children.len() != 0 && !root.children[0].is_word() {
+                        return Err(());
+                    }
+                },
+                (TokenType::LeftParen, TokenType::RightParen) => {
+                    if root.children.len() == 1 {
+                        return Err(());
+                    }
+                },
                 _ => return Err(()),
             }
         },

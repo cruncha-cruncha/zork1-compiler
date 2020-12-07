@@ -47,7 +47,13 @@ fn main() {
 
     let output_file_path = Path::new(".").join("out").join("testing.py");
     let writer = get_BufWriter(&output_file_path).unwrap();
-    py::parse::parse(&root, writer);
+    match py::parse::parse(&root, writer) {
+      Ok(()) => println!("ok"),
+      Err(()) => {
+        println!("ERROR");
+        return;
+      }
+    };
 }
 
 

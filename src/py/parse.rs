@@ -9,7 +9,7 @@ pub fn parse(root: &Node, mut writer: BufWriter<File>) -> Result<(), ()> {
         if !root.children[i].is_routine() {
             return Err(());
         } else {
-            handle_r(&root.children[i], 0, &mut writer);
+            handle_r(&root.children[i], 0, &mut writer)?;
         }
     }
 

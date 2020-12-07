@@ -1,4 +1,2 @@
-<COND
-  (<A "Hello"> <RFALSE>)
-  (B <RTRUE>)
->
+<ROUTINE TREASURE-ROOM-FCN (RARG "OPTIONAL" (H <>) "AUX" (TL "huh"))
+	 <RFALSE>>
