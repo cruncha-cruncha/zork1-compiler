@@ -16,7 +16,7 @@ fn set_to_str(collector: &HashSet<String>) -> String {
     out
 }
 
-pub fn run_stats(root: &Node) {
+pub fn run_all(root: &Node) {
     let mut stats: Vec<Box<dyn TreeStat>> = Vec::new();
     stats.push(Box::new(Stat01{}));
     stats.push(Box::new(Stat02{}));
@@ -39,7 +39,7 @@ pub fn run_stats(root: &Node) {
     }
 }
 
-pub fn dot_comma_stats(root: &Node) {
+pub fn dot_comma(root: &Node) {
     let dot_stats = Stat09{};
     println!("\n{}", dot_stats.desc());
     let mut dot_collector: HashSet<String> = HashSet::new();

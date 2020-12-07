@@ -1,8 +1,11 @@
 use std::path::Path;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::fs::File;
+use std::io::BufReader;
+use std::io::BufWriter;
+use std::io;
 
 mod zil;
+mod py;
 mod file_table;
 
 use crate::file_table::FileTable;
@@ -17,7 +20,9 @@ fn main() {
     let file_path = Path::new(".").join("dummy-data").join("testing.zil");
     let file_key = files_lookup.insert(file_path.to_str().unwrap().to_string());
 
-    let mut generator = match zil::tokenize::TokenGenerator::new(file_key, &file_path) {
+    let reader = get_BufReader(&file_path).unwrap();
+
+    let mut generator = match zil::tokenize::TokenGenerator::new(file_key, reader) {
         Some(v) => v,
         None => return,
     };
@@ -31,13 +36,41 @@ fn main() {
         Ok(()) => println!("ok"),
         Err(()) => {
             println!("ERROR");
-            //print_tree(&root, 0);
+            //zil::ast::print_tree(&root, 0);
             return;
         },
     }
 
-    //run_stats(&root);
-    zil::ast_stats::dot_comma_stats(&root);
+    //zil::ast::print_tree(&root, 0);
+
+    //zil::ast_stats::run_stats(&root);
+
+    let output_file_path = Path::new(".").join("out").join("testing.py");
+    let writer = get_BufWriter(&output_file_path).unwrap();
+    py::parse::parse(&root, writer);
+}
+
+
+pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
+  match File::open(file_path) {
+    Ok(f) => Some(BufReader::new(f)),
+    Err(e) => {
+      println!("Failed to open file {}", file_path.to_str().unwrap());
+      println!("{:?}", e);
+      None
+    },
+  }
+}
+
+pub fn get_BufWriter(file_path: &Path) -> Option<BufWriter<File>> {
+  match File::create(file_path) {
+    Ok(f) => Some(BufWriter::new(f)),
+    Err(e) => {
+      println!("Failed to create file {}", file_path.to_str().unwrap());
+      println!("{:?}", e);
+      None
+    },
+  }
 }
 
 /*

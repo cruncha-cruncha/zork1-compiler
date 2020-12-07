@@ -2,6 +2,15 @@ use std::io;
 
 use crate::zil::tokenize::*;
 
+#[derive(Copy, Clone, PartialEq)]
+pub enum NodeType {
+    Routine,
+    Grouping,
+    Comment,
+    Text,
+    Word
+}
+
 pub struct Node {
     pub tokens: Vec<Token>,
     pub children: Vec<Node>,
@@ -14,6 +23,22 @@ impl Node {
 
     pub fn push_token(&mut self, t: Token) {
         self.tokens.push(t);
+    }
+
+    pub fn kind(&self) -> NodeType {
+        if self.is_routine() {
+            NodeType::Routine
+        } else if self.is_grouping() {
+            NodeType::Grouping
+        } else if self.is_comment() {
+            NodeType::Comment
+        } else if self.is_text() {
+            NodeType::Text
+        } else if self.is_word() {
+            NodeType::Word
+        } else {
+            panic!("Don't know what NodeType");
+        }
     }
 
     pub fn push_child(&mut self, n: Node) { 

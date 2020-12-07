@@ -16,11 +16,6 @@ pub enum TokenType {
     Word
 }
 
-pub fn open_file(file_path: &Path) -> Result<BufReader<File>, io::Error> {
-    let file = File::open(file_path)?;
-    Ok(BufReader::new(file))
-}
-
 impl TokenType {
     pub fn to_str(&self) -> String {
         match *self {
@@ -93,16 +88,7 @@ pub struct TokenGenerator{
 }
 
 impl TokenGenerator {
-    pub fn new(file_key: u32, file_path: &Path) -> Option<TokenGenerator> {
-        let reader = match open_file(&file_path) {
-            Ok(v) => v,
-            Err(e) => {
-                println!("Failed to create TokenGenerator from path {}", file_path.to_str().unwrap());
-                println!("{:?}", e);
-                return None;
-            }
-        };
-
+    pub fn new(file_key: u32, reader: BufReader<File>) -> Option<TokenGenerator> {
         let char_gen = match CharGenerator::new(reader) {
             Some(v) => v,
             None => {
