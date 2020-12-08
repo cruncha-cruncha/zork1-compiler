@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::BufWriter;
 
 use crate::zil::ast::*;
-use crate::py::handle::*;
+use crate::js::handle::*;
 
 pub fn parse(root: &Node, mut writer: BufWriter<File>) -> Result<(), ()> {
     for i in 0..root.children.len() {

@@ -5,7 +5,7 @@ use std::io::BufWriter;
 use std::io;
 
 mod zil;
-mod py;
+mod js;
 mod file_table;
 
 use crate::file_table::FileTable;
@@ -45,9 +45,9 @@ fn main() {
 
     //zil::ast_stats::run_stats(&root);
 
-    let output_file_path = Path::new(".").join("out").join("testing.py");
+    let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_BufWriter(&output_file_path).unwrap();
-    match py::parse::parse(&root, writer) {
+    match js::parse::parse(&root, writer) {
       Ok(()) => println!("ok"),
       Err(()) => {
         println!("ERROR");

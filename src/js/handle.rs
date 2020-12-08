@@ -5,6 +5,14 @@ use std::io::Write;
 //use crate::zil::tokenize::*;
 use crate::zil::ast::*;
 
+// <FIRST? ... > = is it the first time we've encountered this object? (return: bool)
+// <MOVE ,X ,Y> = put object X IN object Y
+// <LOC ,X> = what object is object X IN? (return: object)
+// <IN? ,X ,Y> = is object X IN object Y? (return: bool)
+// <SET X Y> = set X to Y (return: Y, or maybe a bool?)
+// <REPEAT () ... > = repeat the following code until a COND returns
+//      can return using <RFALSE>, <RTRUE>, or <RETURN X>
+
 pub fn handle_r(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
     if !root.is_routine() {
         return Err(());
@@ -21,6 +29,14 @@ pub fn handle_r(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> R
         "COND" => handle_r_COND(&root, indent, &mut writer),
         "TELL" => handle_r_TELL(&root, indent, &mut writer),
         "ROUTINE" => handle_r_ROUTINE(&root, indent, &mut writer),
+        "EQUAL?" | "=?" => handle_r_EQUAL(&root, indent, &mut writer),
+        "AND" => handle_r_AND(&root, indent, &mut writer),
+        "OR" => handle_r_OR(&root, indent, &mut writer),
+        "NOT" => handle_r_NOT(&root, indent, &mut writer),
+        "+" => handle_r_add(&root, indent, &mut writer),
+        "-" => handle_r_subtract(&root, indent, &mut writer),
+        "*" => handle_r_multiply(&root, indent, &mut writer),
+        "/" => handle_r_divide(&root, indent, &mut writer),
         v => {
             writer.write(format!("{}{}(", spacer, v).as_bytes());
             for i in 1..root.children.len() {
@@ -86,15 +102,18 @@ fn handle_w(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Resul
     }
 
     let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
-    writer.write(format!("{}{}", spacer, root.tokens[0].value).as_bytes());
+    match &root.tokens[0].value[..] {
+        "T" => writer.write(format!("{}true", spacer).as_bytes()),
+        v => writer.write(format!("{}{}", spacer, root.tokens[0].value).as_bytes()),
+    };
 
     Ok(())
 }
 
 fn handle_r_COND(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
-    if root.children.len() <= 1 ||
+    if root.children.len() < 2 ||
        !root.children[1].is_grouping() || 
-       root.children[1].children.len() <= 1 {
+       root.children[1].children.len() < 2 {
         return Err(());
     }
 
@@ -102,12 +121,13 @@ fn handle_r_COND(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> 
     writer.write(format!("{}if ", spacer).as_bytes());
 
     for g in 1..root.children.len() {
+        writer.write(b"(");
         match root.children[g].children[0].kind() {
             NodeType::Routine => handle_r(&root.children[g].children[0], 0, &mut writer),       
             NodeType::Word => handle_w(&root.children[g].children[0], 0, &mut writer),
             _ => Err(()),
         }?;
-        writer.write(b":\n");
+        writer.write(b") {\n");
     
         for i in 1..root.children[g].children.len() {
             match root.children[g].children[i].kind() {
@@ -119,15 +139,17 @@ fn handle_r_COND(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> 
         }
 
         if g+1 < root.children.len() {
-            writer.write(format!("{}elif ", spacer).as_bytes());
+            writer.write(format!("{}}} else if ", spacer).as_bytes());
         }
     }
+
+    writer.write(format!("{}}}\n", spacer).as_bytes());
     
     Ok(())
 }
 
 fn handle_r_TELL(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
-    if root.children.len() <= 1 {
+    if root.children.len() < 2 {
         return Err(());
     }
 
@@ -136,9 +158,9 @@ fn handle_r_TELL(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> 
 
     for i in 1..root.children.len() {
         match root.children[i].kind() {
-            NodeType::Routine => handle_r(&root.children[i], 0, &mut writer), // handle_r_in_r_TELL
-            NodeType::Text => handle_t(&root.children[i], 0, &mut writer), // handle_t_in_r_TELL
-            NodeType::Word => handle_w(&root.children[i], 0, &mut writer), // handle_w_in_r_TELL
+            NodeType::Routine => handle_r(&root.children[i], 0, &mut writer),
+            NodeType::Text => handle_t(&root.children[i], 0, &mut writer),
+            NodeType::Word => handle_w(&root.children[i], 0, &mut writer),
             _ => Err(()),
         }?;
         if i+1 < root.children.len() {
@@ -151,23 +173,13 @@ fn handle_r_TELL(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> 
     Ok(())
 }
 
-/*
-<ROUTINE OTVAL-FROB ("OPTIONAL" (O ,TROPHY-CASE) "AUX" F (SCORE 0))
-	 <SET F <FIRST? .O>>
-	 <REPEAT ()
-		 <COND (<NOT .F> <RETURN .SCORE>)>
-		 <SET SCORE <+ .SCORE <GETP .F ,P?TVALUE>>>
-		 <COND (<FIRST? .F> <OTVAL-FROB .F>)>
-         <SET F <NEXT? .F>>>>
-*/
-
 fn handle_r_ROUTINE(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
     if root.children.len() < 4 || !root.children[1].is_word() || !root.children[2].is_grouping() {
         return Err(());
     }
 
     let spacer = (0..indent).map(|_| "  ").collect::<String>();
-    writer.write(format!("{0}\n{0}def {1}(", spacer, root.children[1].tokens[0].value).as_bytes());
+    writer.write(format!("{0}\n{0}function {1}(", spacer, root.children[1].tokens[0].value).as_bytes());
 
     enum ArgState {
         INITIAL,
@@ -231,7 +243,7 @@ fn handle_r_ROUTINE(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) 
             match optional_param_buf[i].kind() {
                 NodeType::Grouping => {
                     handle_w(&optional_param_buf[i].children[0], 0, &mut writer)?;
-                    writer.write(b"=");
+                    writer.write(b" = ");
                     match optional_param_buf[i].children[1].kind() {
                         NodeType::Routine => handle_r(&optional_param_buf[i].children[1], 0, &mut writer),
                         NodeType::Text => handle_t(&optional_param_buf[i].children[1], 0, &mut writer),
@@ -241,7 +253,7 @@ fn handle_r_ROUTINE(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) 
                 },
                 NodeType::Word => {
                     handle_w(&optional_param_buf[i], 0, &mut writer)?;
-                    writer.write(b"=None");
+                    writer.write(b" = None");
                 },
                 _ => return Err(()),
             };
@@ -251,7 +263,7 @@ fn handle_r_ROUTINE(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) 
         }
     }
 
-    writer.write(b"):\n");
+    writer.write(b") {\n");
 
     if body_buf.len() > 0 {
         for i in 0..body_buf.len() {
@@ -283,6 +295,199 @@ fn handle_r_ROUTINE(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) 
             _ => Err(()),
         }?;
     }
+
+    writer.write(format!("{}}}\n", spacer).as_bytes());
+
+    Ok(())
+}
+
+fn handle_r_EQUAL(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() < 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}", spacer).as_bytes());
+
+    for i in 2..root.children.len() {
+        writer.write(format!("{} == ", root.children[1].tokens[0].value).as_bytes());
+        match root.children[i].kind() {
+            NodeType::Routine => handle_r(&root.children[i], 0, &mut writer),
+            NodeType::Text => handle_t(&root.children[i], 0, &mut writer),
+            NodeType::Word => handle_w(&root.children[i], 0, &mut writer),
+            _ => Err(()),
+        }?;
+        if i+1 < root.children.len() {
+            writer.write(b" || ");
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_r_OR(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() < 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}(", spacer).as_bytes());
+
+    for i in 1..root.children.len() {
+        match root.children[i].kind() {
+            NodeType::Routine => handle_r(&root.children[i], 0, &mut writer),
+            NodeType::Word => handle_w(&root.children[i], 0, &mut writer),
+            _ => Err(()),
+        }?;
+        if i+1 < root.children.len() {
+            writer.write(b" || ");
+        }
+    }
+
+    writer.write(b")");
+
+    Ok(())
+}
+
+fn handle_r_AND(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() < 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}(", spacer).as_bytes());
+
+    for i in 1..root.children.len() {
+        match root.children[i].kind() {
+            NodeType::Routine => handle_r(&root.children[i], 0, &mut writer),
+            NodeType::Word => handle_w(&root.children[i], 0, &mut writer),
+            _ => Err(()),
+        }?;
+        if i+1 < root.children.len() {
+            writer.write(b" && ");
+        }
+    }
+
+    writer.write(b")");
+
+    Ok(())
+}
+
+fn handle_r_NOT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() != 2 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}!", spacer).as_bytes());
+
+    match root.children[1].kind() {
+        NodeType::Routine => handle_r(&root.children[1], 0, &mut writer),
+        NodeType::Word => handle_w(&root.children[1], 0, &mut writer),
+        _ => Err(()),
+    }?;
+
+    Ok(())
+}
+
+fn handle_r_add(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() < 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}(", spacer).as_bytes());
+
+    for i in 1..root.children.len() {
+        match root.children[i].kind() {
+            NodeType::Routine => handle_r(&root.children[i], 0, &mut writer),
+            NodeType::Word => handle_w(&root.children[i], 0, &mut writer),
+            _ => Err(()),
+        }?;
+        if i+1 < root.children.len() {
+            writer.write(b" + ");
+        }
+    }
+
+    writer.write(b")");
+
+    Ok(())
+}
+
+fn handle_r_subtract(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() != 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}(", spacer).as_bytes());
+
+    match root.children[1].kind() {
+        NodeType::Routine => handle_r(&root.children[1], 0, &mut writer),
+        NodeType::Word => handle_w(&root.children[1], 0, &mut writer),
+        _ => Err(()),
+    }?;
+
+    writer.write(b" - ");
+
+    match root.children[2].kind() {
+        NodeType::Routine => handle_r(&root.children[2], 0, &mut writer),
+        NodeType::Word => handle_w(&root.children[2], 0, &mut writer),
+        _ => Err(()),
+    }?;
+
+    writer.write(b")");
+
+    Ok(())
+}
+
+fn handle_r_multiply(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() < 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}(", spacer).as_bytes());
+
+    for i in 1..root.children.len() {
+        match root.children[i].kind() {
+            NodeType::Routine => handle_r(&root.children[i], 0, &mut writer),
+            NodeType::Word => handle_w(&root.children[i], 0, &mut writer),
+            _ => Err(()),
+        }?;
+        if i+1 < root.children.len() {
+            writer.write(b" * ");
+        }
+    }
+
+    writer.write(b")");
+
+    Ok(())
+}
+
+fn handle_r_divide(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() != 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}(", spacer).as_bytes());
+
+    match root.children[1].kind() {
+        NodeType::Routine => handle_r(&root.children[1], 0, &mut writer),
+        NodeType::Word => handle_w(&root.children[1], 0, &mut writer),
+        _ => Err(()),
+    }?;
+
+    writer.write(b" / ");
+
+    match root.children[2].kind() {
+        NodeType::Routine => handle_r(&root.children[2], 0, &mut writer),
+        NodeType::Word => handle_w(&root.children[2], 0, &mut writer),
+        _ => Err(()),
+    }?;
+
+    writer.write(b")");
 
     Ok(())
 }
