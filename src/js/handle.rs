@@ -2,15 +2,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::io::Write;
 
-//use crate::zil::tokenize::*;
 use crate::zil::ast::*;
-
-// <FIRST? ... > = is it the first time we've encountered this object? (return: bool)
-// <MOVE ,X ,Y> = put object X IN object Y
-// <LOC ,X> = what object is object X IN? (return: object)
-// <IN? ,X ,Y> = is object X IN object Y? (return: bool)
-// <REPEAT () ... > = repeat the following code until a COND returns
-//      can return using <RFALSE>, <RTRUE>, or <RETURN X>
 
 pub fn handle_r(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
     if !root.is_routine() {
@@ -26,9 +18,12 @@ pub fn handle_r(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> R
 
     match &root.children[0].tokens[0].value[..] {
         "COND" => handle_r_COND(&root, indent, &mut writer),
-        "TELL" => handle_r_TELL(&root, indent, &mut writer),
         "ROUTINE" => handle_r_ROUTINE(&root, indent, &mut writer),
-        "EQUAL?" | "=?" => handle_r_EQUAL(&root, indent, &mut writer),
+        "REPEAT" => handle_r_REPEAT(&root, indent, &mut writer),
+        "OBJECT" => handle_r_OBJECT(&root, indent, &mut writer),
+        "TELL" => handle_r_TELL(&root, indent, &mut writer),
+        "SET" => handle_r_SET(&root, indent, &mut writer),
+        "EQUAL?" | "==?" | "=?" => handle_r_EQUAL(&root, indent, &mut writer),
         "AND" => handle_r_AND(&root, indent, &mut writer),
         "OR" => handle_r_OR(&root, indent, &mut writer),
         "NOT" => handle_r_NOT(&root, indent, &mut writer),
@@ -36,7 +31,6 @@ pub fn handle_r(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> R
         "-" => handle_r_subtract(&root, indent, &mut writer),
         "*" => handle_r_multiply(&root, indent, &mut writer),
         "/" => handle_r_divide(&root, indent, &mut writer),
-        "SET" => handle_r_SET(&root, indent, &mut writer),
         _ => {
             writer.write(format!("{}", spacer).as_bytes());
             handle_w(&root.children[0], 0, &mut writer);
@@ -523,6 +517,63 @@ fn handle_r_SET(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> R
     }?;
 
     writer.write(b")");
+
+    Ok(())
+}
+
+fn handle_r_REPEAT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() < 3 {
+        return Err(());
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}(() => {{\n", spacer).as_bytes());
+    writer.write(format!("{}  while (true) {{\n", spacer).as_bytes());
+
+    for i in 2..root.children.len() {
+        match root.children[i].kind() {
+            NodeType::Routine => handle_r(&root.children[i], indent+2, &mut writer),
+            _ => Err(()),
+        }?;
+        writer.write(b"\n");
+    }
+
+    writer.write(format!("{}  }}\n", spacer).as_bytes());
+    writer.write(format!("{}}})()\n", spacer).as_bytes());
+
+    Ok(())
+}
+
+fn handle_r_OBJECT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    if root.children.len() < 2 {
+        return Err(())
+    }
+
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+    writer.write(format!("{}let ", spacer).as_bytes());
+    handle_w(&root.children[1], 0, &mut writer)?;
+    writer.write(b" = {\n");
+
+    for i in 2..root.children.len() {
+        if !root.children[i].is_grouping() ||
+           root.children[i].children.len() < 2 ||
+           !root.children[i].children[0].is_word() {
+            return Err(());
+        }
+
+        match &root.children[i].children[0].tokens[0].value[..] {
+            "IN" => (), // function, returns string
+            "SYNONYM" => (), // function, returns array
+            "DESC" => (), // function, returns string
+            "FLAGS" => (), // dictionary
+            "CAPACITY" => (), // function, returns number
+            _ => (),
+        };
+
+        // DESC, TEXT, VTYPE, IN, VALUE, CAPACITY, SYNONYM, TVALUE, ADJECTIVE, SIZE, ACTION, LDESC, STRENGTH, FLAGS, DESCFCN, FDESC, 
+    }
+
+    writer.write(format!("{}}}\n", spacer).as_bytes());
 
     Ok(())
 }

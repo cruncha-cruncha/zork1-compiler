@@ -171,11 +171,7 @@ pub fn validate_tree(root: &Node, depth: u64) -> Result<(), ()> {
                         return Err(());
                     }
                 },
-                (TokenType::LeftParen, TokenType::RightParen) => {
-                    if root.children.len() == 1 {
-                        return Err(());
-                    }
-                },
+                (TokenType::LeftParen, TokenType::RightParen) => (),
                 _ => return Err(()),
             }
         },
