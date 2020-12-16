@@ -6,7 +6,6 @@ use crate::zil::ast::*;
 
 use crate::js::handle::generic_tokens::*;
 
-
 pub fn handle_OBJECT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
   if root.children.len() < 2 {
       return Err(())
@@ -27,28 +26,21 @@ pub fn handle_OBJECT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>)
       match &root.children[i].children[0].tokens[0].value[..] {
           "IN" | "TEXT" | "DESC" | "LDESC" | "FDESC" => return_string(&root.children[i], indent+1, &mut writer),
           "CAPACITY" | "SIZE" | "STRENGTH" | "VALUE" | "TVALUE" => return_int(&root.children[i], indent+1, &mut writer),
-          "SYNONYM" => return_string_array(&root.children[i], indent+1, &mut writer),
+          "SYNONYM" | "ADJECTIVE" => return_string_array(&root.children[i], indent+1, &mut writer),
+          "FLAGS" => dictionary(&root.children[i], indent+1, &mut writer),
           "ACTION" => Ok(()), // ?? function to run when encountered?, might require state
-          "ADJECTIVE" => Ok(()), // ?? dictionary?
           "DESCFCN" => Ok(()), // ?? only used once
-          "VTYPE" => Ok(()), // ?? only used once
-          "FLAGS" => Ok(()), // dictionary <String, bool>, requires state!
+          "VTYPE" => Ok(()), // vehicle type??
           _ => Err(()),
       }?;
   }
 
-  writer.write(format!("{}}};\n", spacer).as_bytes());
+  writer.write(format!("{}}};\n\n", spacer).as_bytes());
 
   Ok(())
 }
 
 fn return_string(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
-    if !root.is_grouping() ||
-       root.children.len() < 2 ||
-       !root.children[0].is_word() {
-        return Err(());
-    }
-
     let spacer = (0..indent).map(|_| "  ").collect::<String>();
 
     writer.write(format!("{}", spacer).as_bytes());
@@ -75,12 +67,6 @@ fn return_string(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> 
 }
 
 fn return_string_array(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
-    if !root.is_grouping() ||
-        root.children.len() < 2 ||
-        !root.children[0].is_word() {
-        return Err(());
-    }
-
     let spacer = (0..indent).map(|_| "  ").collect::<String>();
 
     writer.write(format!("{}", spacer).as_bytes());
@@ -89,10 +75,6 @@ fn return_string_array(root: &Node, indent: u64, mut writer: &mut BufWriter<File
 
     for i in 1..root.children.len() {
         match root.children[i].kind() {
-            NodeType::Text => {
-                handle_t(&root.children[i], 0, &mut writer)?;
-                Ok(())
-            },
             NodeType::Word => {
                 writer.write(b"\"");
                 handle_w(&root.children[i], 0, &mut writer)?;
@@ -113,12 +95,6 @@ fn return_string_array(root: &Node, indent: u64, mut writer: &mut BufWriter<File
 }
 
 fn return_int(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
-    if !root.is_grouping() ||
-       root.children.len() < 2 ||
-       !root.children[0].is_word() {
-        return Err(());
-    }
-
     let spacer = (0..indent).map(|_| "  ").collect::<String>();
 
     writer.write(format!("{}", spacer).as_bytes());
@@ -137,4 +113,31 @@ fn return_int(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Res
     writer.write(b",\n");
 
     Ok(())
+}
+
+fn dictionary(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+
+    writer.write(format!("{}", spacer).as_bytes());
+    handle_w(&root.children[0], 0, &mut writer)?;
+    writer.write(format!(": {{ ").as_bytes());
+
+    for i in 1..root.children.len() {
+        match root.children[i].kind() {
+            NodeType::Word => {
+                handle_w(&root.children[i], 0, &mut writer)?;
+                writer.write(b": true");
+                Ok(())
+            },
+            _ => Err(()),
+        }?;
+
+        if i+1 < root.children.len() {
+            writer.write(b", ");
+        }
+    }
+
+    writer.write(b" },\n");
+
+    Ok(()) 
 }

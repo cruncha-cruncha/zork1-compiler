@@ -4,6 +4,9 @@ use std::io::Write;
 
 use crate::zil::ast::*;
 
+// <ROOM ... >
+// <INSERT-FILE ... > // literally just "import ..."
+
 pub fn handle_r(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
     if !root.is_routine() {
         return Err(());
