@@ -45,9 +45,8 @@ fn main() {
 
     //zil::ast::print_tree(&root, 0);
 
-    zil::ast_stats::run_all(&root);
+    //zil::ast_stats::run_all(&root);
 
-    /*
     let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_BufWriter(&output_file_path).unwrap();
     match js::parse::parse(&root, writer) {
@@ -57,7 +56,6 @@ fn main() {
         return;
       }
     };
-    */
 }
 
 
