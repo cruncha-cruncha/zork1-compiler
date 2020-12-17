@@ -6,6 +6,7 @@ use crate::zil::ast::*;
 
 use crate::js::handle::generic_tokens::*;
 
+#[allow(non_snake_case)]
 pub fn handle_TELL(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
   if root.children.len() < 2 {
       return Err(());

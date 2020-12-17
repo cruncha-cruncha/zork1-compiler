@@ -4,6 +4,8 @@ use std::io::Write;
 
 use crate::zil::ast::*;
 
+use crate::js::helpers::*;
+
 // <ROOM ... >
 // <INSERT-FILE ... > // literally just "import ..."
 
@@ -45,7 +47,7 @@ pub fn handle_r(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> R
                     NodeType::Text => handle_t(&root.children[i], 0, &mut writer),
                     NodeType::Word => handle_w(&root.children[i], 0, &mut writer),
                     _ => Err(()),
-                };
+                }?;
                 if i+1 < root.children.len() {
                     writer.write(b", ");
                 }
@@ -90,8 +92,7 @@ pub fn handle_t(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> R
     }
 
     let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
-    let escaped = root.tokens[0].value.replace("\"", "\\\"");
-    writer.write(format!("{}\"{}\"", spacer, escaped).as_bytes());
+    writer.write(format!("{}{}", spacer, format_string(&root)?).as_bytes());
 
     Ok(())
 }
@@ -105,8 +106,7 @@ pub fn handle_w(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> R
     match &root.tokens[0].value[..] {
         "T" => writer.write(format!("{}true", spacer).as_bytes()),
         v => {
-            let word = &root.tokens[0].value.replace("-", "_").replace(".", "_2").replace(",", "_3").replace("?", "_4");
-            writer.write(format!("{}{}", spacer, word).as_bytes())
+            writer.write(format!("{}{}", spacer, format_keyword(&root)?).as_bytes())
         },
     };
 

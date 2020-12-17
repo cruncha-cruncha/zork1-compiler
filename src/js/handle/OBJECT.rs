@@ -6,6 +6,7 @@ use crate::zil::ast::*;
 
 use crate::js::handle::generic_tokens::*;
 
+#[allow(non_snake_case)]
 pub fn handle_OBJECT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
   if root.children.len() < 2 {
       return Err(())
@@ -27,8 +28,8 @@ pub fn handle_OBJECT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>)
           "TEXT" | "DESC" | "LDESC" | "FDESC" | "ACTION" | "DESCFCN" => return_string(&root.children[i], indent+1, &mut writer),
           "CAPACITY" | "SIZE" | "VALUE" | "TVALUE" => return_int(&root.children[i], indent+1, &mut writer),
           "SYNONYM" | "ADJECTIVE" => return_string_array(&root.children[i], indent+1, &mut writer),
-          "FLAGS" | "VTYPE" => mut_bools(&root.children[i], indent+1, &mut writer),
-          "STRENGTH" => mut_int(&root.children[i], indent+1, &mut writer),
+          "FLAGS" | "VTYPE" => mut_bools(&root.children[i], indent+1, &mut writer), // not sure if should be mutable
+          "STRENGTH" => mut_int(&root.children[i], indent+1, &mut writer), // not sure if should be mutable
           "IN" => mut_string(&root.children[i], indent+1, &mut writer),
           _ => Err(()),
       }?;
