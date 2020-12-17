@@ -24,13 +24,12 @@ pub fn handle_OBJECT(root: &Node, indent: u64, mut writer: &mut BufWriter<File>)
       }
 
       match &root.children[i].children[0].tokens[0].value[..] {
-          "IN" | "TEXT" | "DESC" | "LDESC" | "FDESC" => return_string(&root.children[i], indent+1, &mut writer),
-          "CAPACITY" | "SIZE" | "STRENGTH" | "VALUE" | "TVALUE" => return_int(&root.children[i], indent+1, &mut writer),
+          "TEXT" | "DESC" | "LDESC" | "FDESC" | "ACTION" | "DESCFCN" => return_string(&root.children[i], indent+1, &mut writer),
+          "CAPACITY" | "SIZE" | "VALUE" | "TVALUE" => return_int(&root.children[i], indent+1, &mut writer),
           "SYNONYM" | "ADJECTIVE" => return_string_array(&root.children[i], indent+1, &mut writer),
-          "FLAGS" => dictionary(&root.children[i], indent+1, &mut writer),
-          "ACTION" => Ok(()), // ?? function to run when encountered?, might require state
-          "DESCFCN" => Ok(()), // ?? only used once
-          "VTYPE" => Ok(()), // vehicle type??
+          "FLAGS" | "VTYPE" => mut_bools(&root.children[i], indent+1, &mut writer),
+          "STRENGTH" => mut_int(&root.children[i], indent+1, &mut writer),
+          "IN" => mut_string(&root.children[i], indent+1, &mut writer),
           _ => Err(()),
       }?;
   }
@@ -115,7 +114,54 @@ fn return_int(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Res
     Ok(())
 }
 
-fn dictionary(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+fn mut_string(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+
+    writer.write(format!("{}", spacer).as_bytes());
+    handle_w(&root.children[0], 0, &mut writer);
+    writer.write(b": ");
+
+    match root.children[1].kind() {
+        NodeType::Text => {
+            handle_t(&root.children[1], 0, &mut writer)?;
+            Ok(())
+        },
+        NodeType::Word => {
+            writer.write(b"\"");
+            handle_w(&root.children[1], 0, &mut writer)?;
+            writer.write(b"\"");
+            Ok(())
+        },
+        _ => Err(()),
+    }?;
+
+    writer.write(b",\n");
+
+    Ok(())
+}
+
+fn mut_int(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
+    let spacer = (0..indent).map(|_| "  ").collect::<String>();
+
+    writer.write(format!("{}", spacer).as_bytes());
+    handle_w(&root.children[0], 0, &mut writer)?;
+    writer.write(b": ");
+
+    match root.children[1].kind() {
+        NodeType::Word => {
+            // try to parse int? turbofish?
+            handle_w(&root.children[1], 0, &mut writer)?;
+            Ok(())
+        },
+        _ => Err(()),
+    }?;
+
+    writer.write(b",\n");
+
+    Ok(())
+}
+
+fn mut_bools(root: &Node, indent: u64, mut writer: &mut BufWriter<File>) -> Result<(), ()> {
     let spacer = (0..indent).map(|_| "  ").collect::<String>();
 
     writer.write(format!("{}", spacer).as_bytes());

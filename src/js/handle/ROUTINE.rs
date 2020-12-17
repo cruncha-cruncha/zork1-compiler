@@ -132,7 +132,7 @@ pub fn handle_ROUTINE(root: &Node, indent: u64, mut writer: &mut BufWriter<File>
       writer.write(b"\n");
   }
 
-  writer.write(format!("{}}}\n", spacer).as_bytes());
+  writer.write(format!("{}}}\n\n", spacer).as_bytes());
 
   Ok(())
 }
