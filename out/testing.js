@@ -817,7 +817,7 @@ let BUOY = {
 };
 
 function TREASURE_INSIDE() {
-  if (VERB_4(OPEN)) {
+  if (VERB_q(OPEN)) {
     SCORE_OBJ(_3EMERALD)
     RFALSE()
   }

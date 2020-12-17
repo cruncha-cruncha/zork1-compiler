@@ -23,7 +23,7 @@ pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), ()> {
     return Err(());
   }
 
-  let bare: String;
+  let mut bare: String;
   let prefix: KeywordWrapper; 
   let keyword = &root.children[0].tokens[0].value;
 
@@ -41,9 +41,13 @@ pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), ()> {
     prefix = KeywordWrapper::None;
   }
 
+  if bare.ends_with("?") {
+    bare = format!("{}{}", &bare[..(bare.len()-1)], "_q");
+  }
+
   if bare.contains(",") ||
      bare.contains(".") ||
-     bare[..(bare.len()-1)].contains("?") {
+     bare.contains("?") {
     return Err(());
   }
 

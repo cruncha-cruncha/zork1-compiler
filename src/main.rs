@@ -6,9 +6,7 @@ use std::io;
 
 mod zil;
 mod js;
-mod file_table;
-
-use crate::file_table::FileTable;
+mod inbetween;
 
 // need regression tests for ast parser
 
@@ -17,7 +15,7 @@ use crate::file_table::FileTable;
 // #2 print
 
 fn main() {
-    let mut files_lookup = FileTable::new();
+    let mut files_lookup = zil::file_table::FileTable::new();
 
     let file_path = Path::new(".").join("dummy-data").join("testing.zil");
     let file_key = files_lookup.insert(file_path.to_str().unwrap().to_string());
@@ -45,7 +43,7 @@ fn main() {
 
     //zil::ast::print_tree(&root, 0);
 
-    //zil::ast_stats::run_all(&root);
+    //inbetween::ast_stats::run_all(&root);
 
     let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_BufWriter(&output_file_path).unwrap();
@@ -80,35 +78,3 @@ pub fn get_BufWriter(file_path: &Path) -> Option<BufWriter<File>> {
     },
   }
 }
-
-/*
-<OBJECT ATTIC-TABLE
-	(IN ATTIC)
-	(SYNONYM TABLE)
-	(DESC "table")
-	(FLAGS NDESCBIT CONTBIT OPENBIT SURFACEBIT)
-    (CAPACITY 40)>
-
-// (IN ATTIC) and (SYNONTM TABLE) are handled elsewhere?
-
-class ATTIC-TABLE:
-  ndescbit = false
-  contbit = false
-  openbit = false
-  surfacebit = false
-  def describe():
-    return "table"
-  def capacity():
-    40
-
-<COND (<EQUAL? .NG .G> <RFALSE>)
-      (<EQUAL? .NG 2> <TELL "Your sword has begun to glow very brightly." CR>)
-      (<0? .NG> <TELL "Your sword is no longer glowing." CR>)>
-      
-if EQUAL?(.NG, .G):
-  RFALSE()
-elif EQUAL?(.NG, 2):
-  TELL("Your sword has begun to glow very brightly.", CR)
-elif 0?(.NG):
-  TELL("Your sword is no longer glowing.", CR)
-*/
