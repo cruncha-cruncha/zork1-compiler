@@ -7,6 +7,7 @@ use std::io;
 mod zil;
 mod js;
 mod inbetween;
+mod trace_error;
 
 // need regression tests for ast parser
 
@@ -22,28 +23,17 @@ fn main() {
 
     let reader = get_BufReader(&file_path).unwrap();
 
-    let mut generator = match zil::tokenize::TokenGenerator::new(file_key, reader) {
-        Some(v) => v,
-        None => return,
-    };
+    let mut generator = zil::tokenize::TokenGenerator::new(file_key, reader);
 
     let mut root = zil::ast::Node::new();
-    zil::ast::build_tree(&mut generator, &mut root);
-    zil::ast::retain_child_routines(&mut root);
-    zil::ast::remove_comments(&mut root);
-
-    match zil::ast::validate_tree(&root, 0) {
-        Ok(()) => println!("ok"),
-        Err(()) => {
-            println!("ERROR");
-            //zil::ast::print_tree(&root, 0);
-            return;
-        },
-    }
-
-    //zil::ast::print_tree(&root, 0);
-
-    //inbetween::ast_stats::run_all(&root);
+    
+    match zil::ast::build_tree(&mut generator, &mut root) {
+      Ok(()) => (),
+      Err(e) => {
+        println!("{}", e);
+        return;
+      }
+    };
 
     let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_BufWriter(&output_file_path).unwrap();

@@ -44,12 +44,12 @@ struct CharGenerator {
 }
 
 impl CharGenerator {
-    pub fn new(reader: BufReader<File>) -> Option<CharGenerator> {
-        Some(CharGenerator{
+    pub fn new(reader: BufReader<File>) -> CharGenerator {
+        CharGenerator {
             reader: reader,
             char_buf: Vec::new(),
             buf_index: 0,
-        })
+        }
     }
 }
 
@@ -88,24 +88,16 @@ pub struct TokenGenerator{
 }
 
 impl TokenGenerator {
-    pub fn new(file_key: u32, reader: BufReader<File>) -> Option<TokenGenerator> {
-        let char_gen = match CharGenerator::new(reader) {
-            Some(v) => v,
-            None => {
-                println!("Failed to create CharGenerator");
-                return None;
-            }
-        };
-
-        Some(TokenGenerator {
-            char_gen: char_gen,
+    pub fn new(file_key: u32, reader: BufReader<File>) -> TokenGenerator {
+        TokenGenerator {
+            char_gen: CharGenerator::new(reader),
             str_buf: String::new(),
             out_buf: VecDeque::new(),
             file_key: file_key,
             line_number: 1,
             in_string: false,
             escape: 0,
-        })
+        }
     }   
 }
 

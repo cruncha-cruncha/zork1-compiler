@@ -1,6 +1,8 @@
+use std::error::Error;
 use std::io;
 
 use crate::zil::tokenize::*;
+use crate::zil::validation_error::ValidationError;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum NodeType {
@@ -77,7 +79,25 @@ impl Node {
     }
 }
 
-pub fn build_tree(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Error> {
+pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut Node) -> Result<(), Box<dyn Error>> {
+    match build_tree_recursively(&mut tokens, &mut root) {
+        Some(e) => return Err(Box::new(e)),
+        None => (),
+    };
+
+    retain_child_routines(&mut root);
+
+    remove_comments(&mut root);
+
+    match validate_tree(&root, 0) {
+        Ok(()) => (),
+        Err(e) => return Err(Box::new(e)),
+    }
+
+    Ok(())
+}
+
+pub fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Error> {
     loop {
         let t = match tokens.next() {
             Some(Ok(v)) => v,
@@ -147,40 +167,40 @@ pub fn print_tree(root: &Node, depth: u64) {
     }
 }
 
-pub fn validate_tree(root: &Node, depth: u64) -> Result<(), ()> {
+pub fn validate_tree(root: &Node, depth: u64) -> Result<(), ValidationError> {
     match root.tokens.len() {
         0 => {
             if depth != 0 {
-                return Err(());
+                return Err(ValidationError::new());
             }
         },
         1 => {
             match root.tokens[0].kind {
                 TokenType::Text | TokenType::Word => {
                     if root.children.len() > 0 {
-                        return Err(());
+                        return Err(ValidationError::new());
                     }
                 },
-                _ => return Err(()),
+                _ => return Err(ValidationError::new()),
             }
         },
         2 => {
             match (root.tokens[0].kind, root.tokens[1].kind) {
                 (TokenType::LeftArrow, TokenType::RightArrow) => {
                     if root.children.len() != 0 && !root.children[0].is_word() {
-                        return Err(());
+                        return Err(ValidationError::new());
                     }
                 },
                 (TokenType::LeftParen, TokenType::RightParen) => (),
-                _ => return Err(()),
+                _ => return Err(ValidationError::new()),
             }
         },
-        _ => return Err(()),
+        _ => return Err(ValidationError::new()),
     }
 
     for n in root.children.iter() {
         match validate_tree(n, depth+1) {
-            Err(_) => return Err(()),
+            Err(_) => return Err(ValidationError::new()),
             _ => ()
         }
     }
