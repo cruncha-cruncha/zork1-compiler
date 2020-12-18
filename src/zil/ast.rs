@@ -2,7 +2,8 @@ use std::error::Error;
 use std::io;
 
 use crate::zil::tokenize::*;
-use crate::zil::validation_error::ValidationError;
+use crate::zil::validation_error::TVErr;
+use crate::trace_error::TraceError;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum NodeType {
@@ -167,42 +168,45 @@ pub fn print_tree(root: &Node, depth: u64) {
     }
 }
 
-pub fn validate_tree(root: &Node, depth: u64) -> Result<(), ValidationError> {
+pub fn validate_tree(root: &Node, depth: u64) -> Result<(), TVErr> {
     match root.tokens.len() {
         0 => {
             if depth != 0 {
-                return Err(ValidationError::new());
+                return Err(TVErr::new(String::from("Root node has no tokens")));
             }
         },
         1 => {
             match root.tokens[0].kind {
                 TokenType::Text | TokenType::Word => {
                     if root.children.len() > 0 {
-                        return Err(ValidationError::new());
+                        return Err(TVErr::new(String::from("Text or Word node has children")));
                     }
                 },
-                _ => return Err(ValidationError::new()),
+                _ => return Err(TVErr::new(String::from("Root node has only one token but it's not Text or Word"))),
             }
         },
         2 => {
             match (root.tokens[0].kind, root.tokens[1].kind) {
                 (TokenType::LeftArrow, TokenType::RightArrow) => {
                     if root.children.len() != 0 && !root.children[0].is_word() {
-                        return Err(ValidationError::new());
+                        return Err(TVErr::new(String::from("Routine is not empty but does not start with a Word")));
                     }
                 },
                 (TokenType::LeftParen, TokenType::RightParen) => (),
-                _ => return Err(ValidationError::new()),
+                _ => return Err(TVErr::new(String::from("Root node has two tokens but is not Routine or Grouping"))),
             }
         },
-        _ => return Err(ValidationError::new()),
+        n => return Err(TVErr::new(format!("Root node has {} tokens; that's too many", n))),
     }
 
     for n in root.children.iter() {
-        match validate_tree(n, depth+1) {
-            Err(_) => return Err(ValidationError::new()),
-            _ => ()
-        }
+        TVErr::trace(
+            validate_tree(n, depth+1),
+            TVErr::new(format!(
+                "file: {0: <10}, line: {1: <10}",
+                file!(), line!()
+            ))
+        )?;
     }
 
     Ok(())
