@@ -266,7 +266,7 @@ impl Iterator for TokenGenerator {
                 },
                 '\n' => {
                     if self.in_string {
-                        self.str_buf.push(' ');
+                        self.str_buf.push('\n');
                     } else {
                         if self.str_buf.trim() != "" {
                             self.out_buf.push_back(Token {
@@ -275,7 +275,12 @@ impl Iterator for TokenGenerator {
                                 file_key: self.file_key.clone(),
                                 line_number: self.line_number});
                         }
-                        self.str_buf.clear(); 
+                        self.str_buf.clear();
+                        self.out_buf.push_back(Token {
+                            kind: TokenType::Word,
+                            value: String::from("\n"),
+                            file_key: self.file_key.clone(),
+                            line_number: self.line_number});
                     }
                     self.line_number += 1;
                 },

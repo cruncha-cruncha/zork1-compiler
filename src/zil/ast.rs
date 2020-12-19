@@ -90,6 +90,22 @@ impl Node {
     }
 }
 
+pub fn print_tree(root: &Node, depth: u64) {
+    let spacer = String::from("  ");
+    let mut out = String::new();
+    for _ in 0..depth {
+        out.push_str(&spacer);
+    }
+    for t in root.tokens.iter() {
+        out.push_str(&t.value);
+        out.push_str(", ");
+    }   
+    println!("{}", out);
+    for n in root.children.iter() {
+        print_tree(n, depth+1);
+    }
+}
+
 pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut Node) -> Result<(), Box<dyn Error>> {
     match build_tree_recursively(&mut tokens, &mut root) {
         Some(e) => return Err(Box::new(e)),
@@ -104,6 +120,8 @@ pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut Node) -> Resul
     }
 
     retain_child_routines(&mut root);
+
+    remove_newlines(&mut root);
 
     Ok(())
 }
@@ -141,15 +159,7 @@ fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut Node) -> Optio
     }
 }
 
-// at the top level, we only care about things inside a <>
-pub fn retain_child_routines(root: &mut Node) {
-    root.children.retain(|n| n.is_routine());
-}
-
-// don't think this will work the way I want it to:
-// sometimes there is just a ";" hanging out, and then a couple
-// lines later there is a function. The function should not be removed
-pub fn remove_comments(root: &mut Node) {
+fn remove_comments(root: &mut Node) {
     let mut to_remove = Vec::new();
     for (i, n) in root.children.iter().enumerate() {
         if n.is_comment() {
@@ -165,23 +175,27 @@ pub fn remove_comments(root: &mut Node) {
     }
 }
 
-pub fn print_tree(root: &Node, depth: u64) {
-    let spacer = String::from("  ");
-    let mut out = String::new();
-    for _ in 0..depth {
-        out.push_str(&spacer);
+// at the top level, we only care about things inside a <>
+fn retain_child_routines(root: &mut Node) {
+    root.children.retain(|n| n.is_routine());
+}
+
+fn remove_newlines(root: &mut Node) {
+    let mut to_remove = Vec::new();
+    for (i, n) in root.children.iter().enumerate() {
+        if n.is_word() && n.tokens[0].value == String::from('\n') {
+            to_remove.push(i);
+        }
     }
-    for t in root.tokens.iter() {
-        out.push_str(&t.value);
-        out.push_str(", ");
-    }   
-    println!("{}", out);
-    for n in root.children.iter() {
-        print_tree(n, depth+1);
+    for i in to_remove.iter().rev() {
+        root.children.remove(*i);
+    }
+    for i in 0..root.children.len() {
+        remove_newlines(&mut root.children[i]);
     }
 }
 
-pub fn validate_tree(root: &Node, depth: u64) -> Result<(), TVErr> {
+fn validate_tree(root: &Node, depth: u64) -> Result<(), TVErr> {
     match root.tokens.len() {
         0 => {
             if depth != 0 {
