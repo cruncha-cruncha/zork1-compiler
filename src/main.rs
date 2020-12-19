@@ -7,7 +7,6 @@ use std::io;
 mod zil;
 mod js;
 mod inbetween;
-mod trace_error;
 
 // need regression tests for ast parser
 
@@ -28,13 +27,21 @@ fn main() {
     let mut root = zil::ast::Node::new();
     
     match zil::ast::build_tree(&mut generator, &mut root) {
-      Ok(()) => (),
+      Ok(()) => {
+        println!("build tree ok");
+        zil::ast::print_tree(&root, 0);
+        return;
+      },
       Err(e) => {
         println!("{}", e);
+        zil::ast::print_tree(&root, 0);
         return;
       }
     };
 
+    zil::ast::print_tree(&root, 0);
+
+    /*
     let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_BufWriter(&output_file_path).unwrap();
     match js::parse::parse(&root, writer) {
@@ -44,6 +51,7 @@ fn main() {
         return;
       }
     };
+    */
 }
 
 

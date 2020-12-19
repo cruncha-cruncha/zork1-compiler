@@ -1,9 +1,9 @@
 use std::error::Error;
 use std::io;
+use std::fmt;
 
 use crate::zil::tokenize::*;
 use crate::zil::validation_error::TVErr;
-use crate::trace_error::TraceError;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum NodeType {
@@ -17,6 +17,16 @@ pub enum NodeType {
 pub struct Node {
     pub tokens: Vec<Token>,
     pub children: Vec<Node>,
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut out = String::new();
+        for t in &self.tokens {
+            out.push_str(&format!("  Token: kind: {:>10}, value: {:>8}, file_key: {:>3}, line: {:>5}\n", &t.kind, &t.value, &t.line_number, &t.file_key));
+        }
+        write!(f, "Node\n{}", out)
+    }
 }
 
 impl Node {
@@ -86,8 +96,6 @@ pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut Node) -> Resul
         None => (),
     };
 
-    retain_child_routines(&mut root);
-
     remove_comments(&mut root);
 
     match validate_tree(&root, 0) {
@@ -95,10 +103,12 @@ pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut Node) -> Resul
         Err(e) => return Err(Box::new(e)),
     }
 
+    retain_child_routines(&mut root);
+
     Ok(())
 }
 
-pub fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Error> {
+fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut Node) -> Option<io::Error> {
     loop {
         let t = match tokens.next() {
             Some(Ok(v)) => v,
@@ -110,7 +120,7 @@ pub fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut Node) -> O
             TokenType::LeftArrow | TokenType::LeftParen => {
                 let mut child = Node::new();
                 child.push_token(t);
-                build_tree(tokens, &mut child);
+                build_tree_recursively(tokens, &mut child);
                 root.push_child(child);
             },
             TokenType::RightArrow | TokenType::RightParen => {
@@ -136,6 +146,9 @@ pub fn retain_child_routines(root: &mut Node) {
     root.children.retain(|n| n.is_routine());
 }
 
+// don't think this will work the way I want it to:
+// sometimes there is just a ";" hanging out, and then a couple
+// lines later there is a function. The function should not be removed
 pub fn remove_comments(root: &mut Node) {
     let mut to_remove = Vec::new();
     for (i, n) in root.children.iter().enumerate() {
@@ -172,41 +185,38 @@ pub fn validate_tree(root: &Node, depth: u64) -> Result<(), TVErr> {
     match root.tokens.len() {
         0 => {
             if depth != 0 {
-                return Err(TVErr::new(String::from("Root node has no tokens")));
+                return Err(TVErr::origin("Root node has no tokens.\n"));
             }
         },
         1 => {
             match root.tokens[0].kind {
                 TokenType::Text | TokenType::Word => {
                     if root.children.len() > 0 {
-                        return Err(TVErr::new(String::from("Text or Word node has children")));
+                        return Err(TVErr::origin(format!("Text or Word node has children.\nAt {}", root)));
                     }
                 },
-                _ => return Err(TVErr::new(String::from("Root node has only one token but it's not Text or Word"))),
+                _ => return Err(TVErr::origin(format!("Root node has only one token but it's not Text or Word.\nAt {}", root))),
             }
         },
         2 => {
             match (root.tokens[0].kind, root.tokens[1].kind) {
                 (TokenType::LeftArrow, TokenType::RightArrow) => {
                     if root.children.len() != 0 && !root.children[0].is_word() {
-                        return Err(TVErr::new(String::from("Routine is not empty but does not start with a Word")));
+                        return Err(TVErr::origin(format!("Routine is not empty but does not start with a Word.\nAt {}", root)));
                     }
                 },
                 (TokenType::LeftParen, TokenType::RightParen) => (),
-                _ => return Err(TVErr::new(String::from("Root node has two tokens but is not Routine or Grouping"))),
+                _ => return Err(TVErr::origin(format!("Root node has two tokens but is not Routine or Grouping.\nAt {}", root))),
             }
         },
-        n => return Err(TVErr::new(format!("Root node has {} tokens; that's too many", n))),
+        x => return Err(TVErr::origin(format!("Root node has {} tokens; that's too many.\nAt {}", x, root))),
     }
 
     for n in root.children.iter() {
-        TVErr::trace(
-            validate_tree(n, depth+1),
-            TVErr::new(format!(
-                "file: {0: <10}, line: {1: <10}",
-                file!(), line!()
-            ))
-        )?;
+        match validate_tree(n, depth+1) {
+            Ok(()) => (),
+            Err(e) => return Err(TVErr::wrap(e, format!("from {}", n)))
+        };
     }
 
     Ok(())

@@ -1,12 +1,18 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::trace_error::TraceError;
+use crate::zil::ast::Node;
 
 #[derive(Debug)]
 pub struct TVErr { // Tree Validation Error
   msg: String,
   from: Option<Box<TVErr>>
+}
+
+impl fmt::Display for TVErr {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.msg)
+  }
 }
 
 impl Error for TVErr {
@@ -18,25 +24,18 @@ impl Error for TVErr {
   }
 }
 
-impl fmt::Display for TVErr {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", self.msg)
-  }
-}
-
-impl TraceError for TVErr {
-  fn sheath(sword: TVErr, mut scabard: TVErr) -> TVErr {
-    scabard.from = Some(Box::from(sword));
-    scabard
-  }
-}
-
 impl TVErr {
-  pub fn new(msg: String) -> TVErr {
+  pub fn origin<S: Into<String>>(msg: S) -> TVErr {
     TVErr {
-      msg: msg,
+      msg: msg.into(),
       from: None
     }
   }
-}
 
+  pub fn wrap<S: Into<String>>(from: TVErr, msg: S) -> TVErr {
+    TVErr {
+      msg: msg.into(),
+      from: Some(Box::new(from))
+    }
+  }
+}

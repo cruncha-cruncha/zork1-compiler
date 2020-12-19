@@ -3,6 +3,7 @@ use std::path::Path;
 use std::io::BufReader;
 use std::io::BufRead;
 use std::io;
+use std::fmt;
 use std::collections::VecDeque;
 
 #[derive(Copy, Clone, PartialEq)]
@@ -14,6 +15,12 @@ pub enum TokenType {
     Comment,
     Text,
     Word
+}
+
+impl fmt::Display for TokenType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_str())
+    }
 }
 
 impl TokenType {
