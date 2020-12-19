@@ -29,17 +29,15 @@ fn main() {
     match zil::ast::build_tree(&mut generator, &mut root) {
       Ok(()) => {
         println!("build tree ok");
-        zil::ast::print_tree(&root, 0);
+        //zil::ast::print_tree(&root, 0);
         return;
       },
       Err(e) => {
-        println!("{}", e);
+        println!("\nERROR\n{}", e);
         zil::ast::print_tree(&root, 0);
         return;
       }
     };
-
-    zil::ast::print_tree(&root, 0);
 
     /*
     let output_file_path = Path::new(".").join("out").join("testing.js");

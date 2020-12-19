@@ -1,4 +1,1 @@
-; "all this is a comment
-even down here"
-
-<TEST>
+<A <B <C <>

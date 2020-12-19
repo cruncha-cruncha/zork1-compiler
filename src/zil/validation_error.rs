@@ -11,7 +11,14 @@ pub struct TVErr { // Tree Validation Error
 
 impl fmt::Display for TVErr {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", self.msg)
+    match &self.from {
+      Some(b) => {
+        write!(f, "{}", *b)?;
+      },
+      None => ()
+    }
+    write!(f, "{}", self.msg)?;
+    Ok(())
   }
 }
 

@@ -110,14 +110,14 @@ pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut Node) -> Resul
     match build_tree_recursively(&mut tokens, &mut root) {
         Some(e) => return Err(Box::new(e)),
         None => (),
-    };
-
-    remove_comments(&mut root);
+    };  
 
     match validate_tree(&root, 0) {
         Ok(()) => (),
         Err(e) => return Err(Box::new(e)),
     }
+
+    remove_comments(&mut root);
 
     retain_child_routines(&mut root);
 
@@ -159,6 +159,47 @@ fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut Node) -> Optio
     }
 }
 
+fn validate_tree(root: &Node, depth: u64) -> Result<(), TVErr> {
+    for n in root.children.iter() {
+        match validate_tree(n, depth+1) {
+            Ok(()) => (),
+            Err(e) => return Err(TVErr::wrap(e, format!("from {}", n)))
+        };
+    }
+
+    match root.tokens.len() {
+        0 => {
+            if depth != 0 {
+                return Err(TVErr::origin("Root node has no tokens.\n"));
+            }
+        },
+        1 => {
+            match root.tokens[0].kind {
+                TokenType::Text | TokenType::Word | TokenType::Comment => {
+                    if root.children.len() > 0 {
+                        return Err(TVErr::origin(format!("Text, Word, or Comment node has children.\nAt {}", root)));
+                    }
+                },
+                _ => return Err(TVErr::origin(format!("Root node has only one token but it's not Text, Word, or Comment.\nAt {}", root))),
+            }
+        },
+        2 => {
+            match (root.tokens[0].kind, root.tokens[1].kind) {
+                (TokenType::LeftArrow, TokenType::RightArrow) => {
+                    if root.children.len() != 0 && !root.children[0].is_word() {
+                        return Err(TVErr::origin(format!("Routine is not empty but does not start with a Word.\nAt {}", root)));
+                    }
+                },
+                (TokenType::LeftParen, TokenType::RightParen) => (),
+                _ => return Err(TVErr::origin(format!("Root node has two tokens but is not Routine or Grouping.\nAt {}", root))),
+            }
+        },
+        x => return Err(TVErr::origin(format!("Root node has {} tokens; that's too many.\nAt {}", x, root))),
+    }
+
+    Ok(())
+}
+
 fn remove_comments(root: &mut Node) {
     let mut to_remove = Vec::new();
     for (i, n) in root.children.iter().enumerate() {
@@ -193,45 +234,4 @@ fn remove_newlines(root: &mut Node) {
     for i in 0..root.children.len() {
         remove_newlines(&mut root.children[i]);
     }
-}
-
-fn validate_tree(root: &Node, depth: u64) -> Result<(), TVErr> {
-    match root.tokens.len() {
-        0 => {
-            if depth != 0 {
-                return Err(TVErr::origin("Root node has no tokens.\n"));
-            }
-        },
-        1 => {
-            match root.tokens[0].kind {
-                TokenType::Text | TokenType::Word => {
-                    if root.children.len() > 0 {
-                        return Err(TVErr::origin(format!("Text or Word node has children.\nAt {}", root)));
-                    }
-                },
-                _ => return Err(TVErr::origin(format!("Root node has only one token but it's not Text or Word.\nAt {}", root))),
-            }
-        },
-        2 => {
-            match (root.tokens[0].kind, root.tokens[1].kind) {
-                (TokenType::LeftArrow, TokenType::RightArrow) => {
-                    if root.children.len() != 0 && !root.children[0].is_word() {
-                        return Err(TVErr::origin(format!("Routine is not empty but does not start with a Word.\nAt {}", root)));
-                    }
-                },
-                (TokenType::LeftParen, TokenType::RightParen) => (),
-                _ => return Err(TVErr::origin(format!("Root node has two tokens but is not Routine or Grouping.\nAt {}", root))),
-            }
-        },
-        x => return Err(TVErr::origin(format!("Root node has {} tokens; that's too many.\nAt {}", x, root))),
-    }
-
-    for n in root.children.iter() {
-        match validate_tree(n, depth+1) {
-            Ok(()) => (),
-            Err(e) => return Err(TVErr::wrap(e, format!("from {}", n)))
-        };
-    }
-
-    Ok(())
 }
