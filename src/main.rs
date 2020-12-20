@@ -2,7 +2,6 @@ use std::path::Path;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::BufWriter;
-use std::io;
 
 mod zil;
 mod js;
@@ -52,7 +51,7 @@ fn main() {
     */
 }
 
-
+#[allow(non_snake_case)]
 pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
   match File::open(file_path) {
     Ok(f) => Some(BufReader::new(f)),
@@ -64,6 +63,7 @@ pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
   }
 }
 
+#[allow(non_snake_case)]
 pub fn get_BufWriter(file_path: &Path) -> Option<BufWriter<File>> {
   match File::create(file_path) {
     Ok(f) => Some(BufWriter::new(f)),

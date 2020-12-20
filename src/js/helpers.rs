@@ -1,16 +1,33 @@
-use crate::zil::ast::*;
+use crate::zil::ast::Node;
+use crate::js::contracts::*;
 
-pub fn format_string(root: &Node) -> Result<String, ()> {
+#[macro_export]
+macro_rules! wrap {
+  ($func:expr, $msg:expr) => {
+      match $func {
+          Err(e) => return Err(OutputErr::from(HandlerErr::wrap(e, format!("{}\nat {} in {}", $msg, line!(), file!())))),
+          Ok(v) => v,
+      };
+  };
+  ($func:expr) => {
+    match $func {
+        Err(e) => return Err(OutputErr::from(HandlerErr::wrap(e, format!("at {} in {}", line!(), file!())))),
+        Ok(v) => v,
+    };
+};
+}
+
+pub fn escape_text(root: &Node) -> Result<String, OutputErr> {
   if !root.is_text() && !root.is_word() {
-      return Err(());
+      return Err(OutputErr::from(HandlerErr::origin(format!("bad text to escape: {}", root))));
   }
 
   let escaped = root.tokens[0].value.replace("\"", "\\\"");
   Ok(String::from(format!("\"{}\"", escaped)))
 }
 
-pub fn format_keyword(root: &Node) -> Result<String, ()> {
-  let (mut keyword, prefix) = crack_keyword(&root)?;
+pub fn format_keyword(root: &Node) -> Result<String, OutputErr> {
+  let (mut keyword, prefix) = wrap!(crack_keyword(&root), root);
 
   keyword = match prefix {
     KeywordWrapper::Pfix => format!("pq_{}", &keyword),
@@ -22,9 +39,9 @@ pub fn format_keyword(root: &Node) -> Result<String, ()> {
   Ok(String::from(keyword))
 }
 
-pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), ()> {
+pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), OutputErr> {
   if !root.is_word() {
-    return Err(());
+    return Err(OutputErr::from(HandlerErr::origin(format!("bad keyword to crack: {}", root))));
   }
 
   let mut bare: String;
@@ -60,7 +77,7 @@ pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), ()> {
       '7' => "seven",
       '8' => "eight",
       '9' => "nine",
-      _ => return Err(())
+      _ => return Err(OutputErr::from(HandlerErr::origin(format!("Trying to crack keyword, but first char is not numeric?? {}", root))))
     };
     bare = format!("{}{}", alpha, &bare[1..]);
   }
@@ -72,7 +89,7 @@ pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), ()> {
   if bare.contains(",") ||
      bare.contains(".") ||
      bare.contains("?") {
-    return Err(());
+    return Err(OutputErr::from(HandlerErr::origin(format!("Trying to crack keyword, but bare still has symbols in it: {}", root))));
   }
 
   Ok((bare, prefix))

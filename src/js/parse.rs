@@ -1,16 +1,24 @@
 use std::fs::File;
-use std::io::BufWriter;
 
-use crate::zil::ast::*;
+use crate::zil::ast::Node;
 
-pub fn parse(root: &Node, mut writer: BufWriter<File>) -> Result<(), ()> {
+use crate::js::contracts::*;
+use crate::js::custom_buf_writer::*;
+
+
+pub fn parse(root: &Node, mut writer: CustomBufWriter<File>) -> Result<(), OutputErr> {
     for i in 0..root.children.len() {
         if !root.children[i].is_routine() {
-            return Err(());
+            return Err(OutputErr::from(HandlerErr::origin("top-level child is not a routine")));
         } else {
-            crate::js::handle::generic_tokens::handle_r(&root.children[i], 0, &mut writer)?;
+            crate::js::handlers::generic_tokens::R::print(&root.children[i], 0, &mut writer)?;
         }
     }
 
     Ok(())
 }
+
+
+
+
+

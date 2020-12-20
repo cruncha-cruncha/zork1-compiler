@@ -1,8 +1,6 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::zil::ast::Node;
-
 #[derive(Debug)]
 pub struct TVErr { // Tree Validation Error
   msg: String,
@@ -12,13 +10,10 @@ pub struct TVErr { // Tree Validation Error
 impl fmt::Display for TVErr {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match &self.from {
-      Some(b) => {
-        write!(f, "{}", *b)?;
-      },
+      Some(b) => { write!(f, "{}", *b)?; },
       None => ()
     }
-    write!(f, "{}", self.msg)?;
-    Ok(())
+    write!(f, "{}", self.msg)
   }
 }
 

@@ -3,7 +3,7 @@ use std::io;
 use std::fmt;
 
 use crate::zil::tokenize::*;
-use crate::zil::validation_error::TVErr;
+use crate::zil::contracts::*;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum NodeType {

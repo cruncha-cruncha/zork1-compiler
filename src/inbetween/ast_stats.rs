@@ -7,6 +7,7 @@ pub trait TreeStat {
     fn calc(&self, root: &Node, collector: &mut HashSet<String>);
 }
 
+#[allow(dead_code)]
 fn set_to_str(collector: &HashSet<String>) -> String {
     let mut out = String::new();
     for s in collector.iter() {
@@ -16,6 +17,7 @@ fn set_to_str(collector: &HashSet<String>) -> String {
     out
 }
 
+#[allow(dead_code)]
 pub fn run_all(root: &Node) {
     let mut stats: Vec<Box<dyn TreeStat>> = Vec::new();
     stats.push(Box::new(Stat01{}));
@@ -39,6 +41,7 @@ pub fn run_all(root: &Node) {
     }
 }
 
+#[allow(dead_code)]
 pub fn dot_comma(root: &Node) {
     let dot_stats = Stat09{};
     println!("\n{}", dot_stats.desc());
