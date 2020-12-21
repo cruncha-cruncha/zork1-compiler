@@ -36,7 +36,7 @@ let THIEF = {
   DESC: () => "thief",
   FLAGS: { ACTORBIT: true, INVISIBLE: true, CONTBIT: true, OPENBIT: true, TRYTAKEBIT: true },
   ACTION: () => "ROBBER_FUNCTION",
-  LDESC: () => "There is a suspicious-looking individual, holding a large bag, leaning against one wall. He is armed with a deadly stiletto.",
+  LDESC: () => "There is a suspicious-looking individual, holding a large bag, leaning\nagainst one wall. He is armed with a deadly stiletto.",
   STRENGTH: five,
 };
 

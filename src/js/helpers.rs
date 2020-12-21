@@ -22,7 +22,7 @@ pub fn escape_text(root: &Node) -> Result<String, OutputErr> {
       return Err(OutputErr::from(HandlerErr::origin(format!("bad text to escape: {}", root))));
   }
 
-  let escaped = root.tokens[0].value.replace("\"", "\\\"");
+  let escaped = root.tokens[0].value.replace("\"", "\\\"").replace("\n", "\\n");
   Ok(String::from(format!("\"{}\"", escaped)))
 }
 

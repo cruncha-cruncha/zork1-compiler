@@ -1,13 +1,12 @@
 use std::path::Path;
 use std::fs::File;
 use std::io::BufReader;
-use std::io::BufWriter;
 
 mod zil;
 mod js;
 mod inbetween;
-
-// need regression tests for ast parser
+#[cfg(test)]
+mod tests;
 
 // two passes through the tree?
 // #1 collect info
@@ -64,9 +63,9 @@ pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
 }
 
 #[allow(non_snake_case)]
-pub fn get_BufWriter(file_path: &Path) -> Option<BufWriter<File>> {
+pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_writer::CustomBufWriter<File>> {
   match File::create(file_path) {
-    Ok(f) => Some(BufWriter::new(f)),
+    Ok(f) => Some(crate::js::custom_buf_writer::CustomBufWriter::new(f)),
     Err(e) => {
       println!("Failed to create file {}", file_path.to_str().unwrap());
       println!("{:?}", e);
