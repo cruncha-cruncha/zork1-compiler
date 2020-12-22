@@ -20,6 +20,7 @@ impl FileTable {
         self.key
     }
 
+    #[allow(dead_code)]
     pub fn get(&mut self, k: u32) -> Option<String> {
         match self.table.get(&k) {
             Some(v) => Some(v.clone()),
