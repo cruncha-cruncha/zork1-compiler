@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 
 pub struct FileTable {
     key: u32,
@@ -26,6 +27,7 @@ impl FileTable {
         }
     }
 
+    #[allow(dead_code)]
     pub fn find_key(&mut self, v: String) -> Option<u32> {
         for (key, value) in self.table.iter() {
             if *value == v {
@@ -34,5 +36,15 @@ impl FileTable {
         }
 
         None
+    }
+}
+
+impl fmt::Display for FileTable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut out = String::new();
+        for (key, value) in self.table.iter() {
+            out.push_str(&format!("  {0:>4}: {1}\n", &key, &value));
+        }
+        write!(f, "FileTable\n{}", out)
     }
 }

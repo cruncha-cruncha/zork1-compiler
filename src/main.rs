@@ -17,6 +17,7 @@ fn main() {
 
     let file_path = Path::new(".").join("dummy-data").join("testing.zil");
     let file_key = files_lookup.insert(file_path.to_str().unwrap().to_string());
+    println!("{}", files_lookup);
 
     let reader = get_BufReader(&file_path).unwrap();
 
@@ -51,7 +52,7 @@ pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
     Ok(f) => Some(BufReader::new(f)),
     Err(e) => {
       println!("Failed to open file {}", file_path.to_str().unwrap());
-      println!("{:?}", e);
+      println!("{}", e);
       None
     },
   }
@@ -63,7 +64,7 @@ pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_wri
     Ok(f) => Some(crate::js::custom_buf_writer::CustomBufWriter::new(f)),
     Err(e) => {
       println!("Failed to create file {}", file_path.to_str().unwrap());
-      println!("{:?}", e);
+      println!("{}", e);
       None
     },
   }
