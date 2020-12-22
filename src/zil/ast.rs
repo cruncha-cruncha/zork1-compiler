@@ -109,15 +109,18 @@ pub fn print_tree(root: &Node, depth: u64) {
 pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut Node) -> Result<(), Box<dyn Error>> {
     match build_tree_recursively(&mut tokens, &mut root) {
         Some(e) => return Err(Box::new(e)),
-        None => (),
+        None => ()
     };  
 
     match validate_tree(&root, 0) {
         Ok(()) => (),
-        Err(e) => return Err(Box::new(e)),
+        Err(e) => return Err(Box::new(e))
     }
 
-    remove_comments(&mut root);
+    match remove_comments(&mut root) {
+        Some(e) => return Err(Box::new(e)),
+        None => ()
+    };
 
     retain_child_routines(&mut root);
 
@@ -200,7 +203,7 @@ fn validate_tree(root: &Node, depth: u64) -> Result<(), TVErr> {
     Ok(())
 }
 
-fn remove_comments(root: &mut Node) {
+fn remove_comments(root: &mut Node) -> Option<TVErr> {
     let mut to_remove = Vec::new();
     for (i, n) in root.children.iter().enumerate() {
         if n.is_comment() {
@@ -209,11 +212,18 @@ fn remove_comments(root: &mut Node) {
         }
     }
     for i in to_remove.iter().rev() {
+        if root.children.len() <= *i {
+            return Some(TVErr::origin("Unable to remove comments: unexpected tree structure"));
+        }
         root.children.remove(*i);
     }
     for i in 0..root.children.len() {
-        remove_comments(&mut root.children[i]);
+        match remove_comments(&mut root.children[i]) {
+            Some(e) => return Some(e),
+            None => ()
+        }
     }
+    None
 }
 
 // at the top level, we only care about things inside a <>

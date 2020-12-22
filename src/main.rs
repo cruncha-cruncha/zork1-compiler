@@ -25,11 +25,7 @@ fn main() {
     let mut root = zil::ast::Node::new();
     
     match zil::ast::build_tree(&mut generator, &mut root) {
-      Ok(()) => {
-        println!("build tree ok");
-        //zil::ast::print_tree(&root, 0);
-        return;
-      },
+      Ok(()) => println!("build tree ok"),
       Err(e) => {
         println!("\nERROR\n{}", e);
         zil::ast::print_tree(&root, 0);
@@ -37,17 +33,16 @@ fn main() {
       }
     };
 
-    /*
     let output_file_path = Path::new(".").join("out").join("testing.js");
-    let writer = get_BufWriter(&output_file_path).unwrap();
+    let writer = get_CustomBufWriter(&output_file_path).unwrap();
     match js::parse::parse(&root, writer) {
-      Ok(()) => println!("ok"),
-      Err(()) => {
-        println!("ERROR");
+      Ok(()) => println!("handle js ok"),
+      Err(e) => {
+        println!("\nERROR\n{}", e);
+        zil::ast::print_tree(&root, 0);
         return;
       }
     };
-    */
 }
 
 #[allow(non_snake_case)]

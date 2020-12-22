@@ -1,17 +1,28 @@
 use std::path::Path;
 use std::io::BufRead;
-use std::fs;
 
 #[test]
-pub fn go() {
-    let paths = fs::read_dir(&Path::new(".").join("src").join("tests")).unwrap();
+pub fn test_objects() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_objects");
+  test_folder(&path)
+}
 
-    for path in paths {
-        let path = path.unwrap().path();
-        if path.is_dir() {
-          test_folder(&path)
-        }
-    }
+#[test]
+pub fn test_repeat() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_repeat");
+  test_folder(&path)
+}
+
+#[test]
+pub fn test_routine() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_routine");
+  test_folder(&path)
+}
+
+#[test]
+pub fn test_comments() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_comments");
+  test_folder(&path)
 }
 
 pub fn test_folder(folder: &Path) {    
