@@ -2,6 +2,7 @@ use std::fs::File;
 
 use crate::zil::ast::{Node, NodeType};
 use crate::js::handlers::generic_tokens::*;
+use crate::js::helpers::is_int;
 use crate::js::contracts::*;
 use crate::js::custom_buf_writer::*;
 
@@ -111,8 +112,10 @@ impl OBJECT {
     
         match root.children[1].kind() {
             NodeType::Word => {
-                // try to parse int? turbofish?
-                wrap!(W::print(&root.children[1], 0, &mut writer));
+                match is_int(&root.children[1]) {
+                  true => wrap!(W::print(&root.children[1], 0, &mut writer)),
+                  false => return Err(OutputErr::from(HandlerErr::origin(format!("Trying to parse not-an-int in OBJECT sub group 'return_int': {}", root.children[1]))))
+                };
             },
             _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType in OBJECT sub group 'return_int'"))),
         };
@@ -153,8 +156,10 @@ impl OBJECT {
     
         match root.children[1].kind() {
             NodeType::Word => {
-                // try to parse int? turbofish?
-                wrap!(W::print(&root.children[1], 0, &mut writer));
+                match is_int(&root.children[1]) {
+                  true => wrap!(W::print(&root.children[1], 0, &mut writer)),
+                  false => return Err(OutputErr::from(HandlerErr::origin(format!("Trying to parse not-an-int in OBJECT sub group 'mut_int': {}", root.children[1]))))
+                };
             },
             _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType in OBJECT sub group 'mut_int'"))),
         };

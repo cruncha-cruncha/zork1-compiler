@@ -14,7 +14,7 @@ macro_rules! wrap {
         Err(e) => return Err(OutputErr::from(HandlerErr::wrap(e, format!("at {} in {}", line!(), file!())))),
         Ok(v) => v,
     };
-};
+  };
 }
 
 pub fn escape_text(root: &Node) -> Result<String, OutputErr> {
@@ -24,6 +24,17 @@ pub fn escape_text(root: &Node) -> Result<String, OutputErr> {
 
   let escaped = root.tokens[0].value.replace("\"", "\\\"").replace("\n", "\\n");
   Ok(String::from(format!("\"{}\"", escaped)))
+}
+
+pub fn is_int(root: &Node) -> bool {
+  if !root.is_word() {
+    return false;
+  }
+
+  match root.tokens[0].value.parse::<usize>() { // turbofish!
+    Ok(_) => true,
+    Err(_) => false
+  }
 }
 
 pub fn format_keyword(root: &Node) -> Result<String, OutputErr> {

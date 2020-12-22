@@ -5,8 +5,7 @@ use crate::js::contracts::*;
 use crate::js::helpers::*;
 use crate::js::custom_buf_writer::*;
 
-// <ROOM ... >
-// <INSERT-FILE ... > // literally just "import ..."
+// <GLOBAL ... >
 
 pub struct R {} // routine, aka any <>
 pub struct G {} // grouping, aka any ()
@@ -32,10 +31,12 @@ impl HandleJS for R {
         }
     
         match &root.children[0].tokens[0].value[..] {
+            "INSERT-FILE" => crate::js::handlers::import::Import::print(&root, indent, &mut writer),
             "COND" => crate::js::handlers::COND::COND::print(&root, indent, &mut writer),
             "ROUTINE" => crate::js::handlers::ROUTINE::ROUTINE::print(&root, indent, &mut writer),
             "REPEAT" => crate::js::handlers::REPEAT::REPEAT::print(&root, indent, &mut writer),
             "OBJECT" => crate::js::handlers::OBJECT::OBJECT::print(&root, indent, &mut writer),
+            "ROOM" => crate::js::handlers::ROOM::ROOM::print(&root, indent, &mut writer),
             "TELL" => crate::js::handlers::TELL::TELL::print(&root, indent, &mut writer),
             "SET" => crate::js::handlers::SET::SET::print(&root, indent, &mut writer),
             "EQUAL?" | "==?" | "=?" => crate::js::handlers::equals::Equals::print(&root, indent, &mut writer),
