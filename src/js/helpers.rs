@@ -23,7 +23,7 @@ pub fn escape_text(root: &Node) -> Result<String, OutputErr> {
   }
 
   let escaped = root.tokens[0].value.replace("\"", "\\\"").replace("\n", "\\n");
-  Ok(String::from(format!("\"{}\"", escaped)))
+  Ok(String::from(escaped))
 }
 
 pub fn is_int(root: &Node) -> bool {
@@ -51,7 +51,7 @@ pub fn format_keyword(root: &Node) -> Result<String, OutputErr> {
 }
 
 pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), OutputErr> {
-  if !root.is_word() {
+  if !root.is_word() && !root.is_text() {
     return Err(OutputErr::from(HandlerErr::origin(format!("bad keyword to crack: {}", root))));
   }
 
@@ -97,9 +97,7 @@ pub fn crack_keyword(root: &Node) -> Result<(String, KeywordWrapper), OutputErr>
     bare = format!("{}{}", &bare[..(bare.len()-1)], "_q");
   }
 
-  if bare.contains(",") ||
-     bare.contains(".") ||
-     bare.contains("?") {
+  if !bare.chars().all(|c| { c.is_alphanumeric() || c == '_' }) {
     return Err(OutputErr::from(HandlerErr::origin(format!("Trying to crack keyword, but bare still has symbols in it: {}", root))));
   }
 

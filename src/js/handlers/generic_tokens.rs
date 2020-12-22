@@ -118,7 +118,7 @@ impl HandleJS for T {
         
         let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
         let text = wrap!(escape_text(&root), root);
-        wrap!(writer.w(format!("{}{}", spacer, text)), root);
+        wrap!(writer.w(format!("{}\"{}\"", spacer, text)), root);
     
         Ok(())
     }
@@ -141,6 +141,37 @@ impl HandleJS for W {
             _ => {
                 let keyword = wrap!(format_keyword(&root), root);
                 wrap!(writer.w(format!("{}{}", spacer, keyword)), root)
+            }
+        };
+    
+        Ok(())
+    }
+}
+
+impl T {
+    // not recommended
+    pub fn print_as_word (root: &Node, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+        Self::validate(root)?;
+        
+        let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
+        let text = wrap!(format_keyword(&root), root);
+        wrap!(writer.w(format!("{}{}", spacer, text)), root);
+    
+        Ok(())
+    }
+}
+
+impl W {
+    // not recommended
+    pub fn print_with_quotes (root: &Node, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+        Self::validate(root)?;
+
+        let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
+        match &root.tokens[0].value[..] {
+            "T" => wrap!(writer.w(format!("{}\"true\"", spacer)), root),
+            _ => {
+                let keyword = wrap!(format_keyword(&root), root);
+                wrap!(writer.w(format!("{}\"{}\"", spacer, keyword)), root)
             }
         };
     

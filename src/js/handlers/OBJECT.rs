@@ -33,6 +33,8 @@ impl HandleJS for OBJECT {
                 "SYNONYM" | "ADJECTIVE" => wrap!(Self::return_string_array(&root.children[i], indent+1, &mut writer)),
                 "FLAGS" | "VTYPE" => wrap!(Self::mut_bools(&root.children[i], indent+1, &mut writer)), // not sure if should be mutable
                 "STRENGTH" => wrap!(Self::mut_int(&root.children[i], indent+1, &mut writer)), // not sure if should be mutable
+                // Look up <OBJECT ROOMS ... >
+                // the IN does not look like other INs
                 "IN" => wrap!(Self::mut_string(&root.children[i], indent+1, &mut writer)),
                 _ => return Err(OutputErr::from(HandlerErr::origin("Unknown sub grouping in OBJECT"))),
             };
@@ -63,11 +65,7 @@ impl OBJECT {
     
         match root.children[1].kind() {
             NodeType::Text => wrap!(T::print(&root.children[1], 0, &mut writer)),
-            NodeType::Word => {
-                wrap!(writer.w("\""));
-                wrap!(W::print(&root.children[1], 0, &mut writer));
-                wrap!(writer.w("\""));
-            },
+            NodeType::Word => wrap!(W::print_with_quotes(&root.children[1], 0, &mut writer)),
             _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType in OBJECT sub group 'return_string'"))),
         };
     
@@ -85,11 +83,8 @@ impl OBJECT {
     
         for i in 1..root.children.len() {
             match root.children[i].kind() {
-                NodeType::Word => {
-                    wrap!(writer.w("\""));
-                    wrap!(W::print(&root.children[i], 0, &mut writer));
-                    wrap!(writer.w("\""));
-                },
+                NodeType::Text => wrap!(T::print(&root.children[1], 0, &mut writer)),
+                NodeType::Word => wrap!(W::print_with_quotes(&root.children[i], 0, &mut writer)),
                 _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType in OBJECT sub group 'return_string_array'"))),
             };
     
@@ -134,11 +129,7 @@ impl OBJECT {
     
         match root.children[1].kind() {
             NodeType::Text => wrap!(T::print(&root.children[1], 0, &mut writer)),
-            NodeType::Word => {
-                wrap!(writer.w("\""));
-                wrap!(W::print(&root.children[1], 0, &mut writer));
-                wrap!(writer.w("\""));
-            },
+            NodeType::Word => wrap!(W::print_with_quotes(&root.children[1], 0, &mut writer)),
             _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType in OBJECT sub group 'mut_string'"))),
         };
     
