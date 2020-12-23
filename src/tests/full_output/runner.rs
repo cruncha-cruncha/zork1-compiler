@@ -8,6 +8,12 @@ pub fn test_objects() {
 }
 
 #[test]
+pub fn test_rooms() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_rooms");
+  test_folder(&path)
+}
+
+#[test]
 pub fn test_repeat() {
   let path = Path::new(".").join("src").join("tests").join("full_output").join("test_repeat");
   test_folder(&path)

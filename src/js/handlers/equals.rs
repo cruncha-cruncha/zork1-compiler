@@ -9,7 +9,9 @@ pub struct Equals {}
 
 impl HandleJS for Equals {
     fn validate (root: &Node) -> Result<(), HandlerErr> {
-        if root.children.len() < 3 {
+        if !root.is_routine() ||
+           root.children.len() < 3 ||
+           !root.children[0].is_word() {
             return Err(HandlerErr::origin(format!("Invalid Equals: {}", root)));
         }
         Ok(())

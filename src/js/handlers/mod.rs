@@ -22,6 +22,8 @@ mod ROOM;
 mod ROUTINE;
 #[allow(non_snake_case)]
 mod SET;
+#[allow(non_snake_case)]
+mod subgrouping_IN;
 mod subtract;
 #[allow(non_snake_case)]
 mod TELL;

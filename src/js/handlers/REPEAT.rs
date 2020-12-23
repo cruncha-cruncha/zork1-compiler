@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::zil::ast::{Node, NodeType};
+use crate::zil::ast::Node;
 use crate::js::handlers::generic_tokens::*;
 use crate::js::contracts::*;
 use crate::js::custom_buf_writer::*;
@@ -9,7 +9,12 @@ pub struct REPEAT {}
 
 impl HandleJS for REPEAT {
     fn validate (root: &Node) -> Result<(), HandlerErr> {
-        if root.children.len() < 3 {
+        if !root.is_routine() ||
+           root.children.len() < 3 ||
+           !root.children[0].is_word() ||
+           root.children[0].tokens[0].value != "REPEAT" ||
+           !root.children[1].is_grouping() ||
+           root.children[1].children.len() != 0 {
             return Err(HandlerErr::origin(format!("Invalid REPEAT: {}", root)));
         }
         Ok(())
@@ -23,10 +28,7 @@ impl HandleJS for REPEAT {
         wrap!(writer.w(format!("{}  while (true) {{\n", spacer)));
 
         for i in 2..root.children.len() {
-            match root.children[i].kind() {
-                NodeType::Routine => wrap!(R::print(&root.children[i], indent+2, &mut writer)),
-                _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown NodeType in REPEAT"))),
-            };
+            wrap!(R::print(&root.children[i], indent+2, &mut writer));
             wrap!(writer.w("\n"));
         }
 

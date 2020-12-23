@@ -10,8 +10,10 @@ pub struct ROUTINE {}
 impl HandleJS for ROUTINE {
     fn validate (root: &Node) -> Result<(), HandlerErr> {
         if root.children.len() < 4 ||
+           !root.children[0].is_word() ||
            !root.children[1].is_word() ||
-           !root.children[2].is_grouping() {
+           !root.children[2].is_grouping() ||
+           root.children[0].tokens[0].value != "ROUTINE" {
             return Err(HandlerErr::origin(format!("Invalid ROUTINE: {}", root)));
         }
         Ok(())
@@ -134,10 +136,7 @@ impl HandleJS for ROUTINE {
         }
       
         for i in 3..root.children.len() {
-            match root.children[i].kind() {
-                NodeType::Routine => wrap!(R::print(&root.children[i], indent+1, &mut writer)),
-                _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown NodeType in children in ROUTINE"))),
-            };
+            wrap!(R::print(&root.children[i], indent+1, &mut writer));
             wrap!(writer.w("\n"));
         }
       

@@ -9,7 +9,10 @@ pub struct Multiply {}
 
 impl HandleJS for Multiply {
     fn validate (root: &Node) -> Result<(), HandlerErr> {
-        if root.children.len() < 3 {
+        if !root.is_routine() ||
+           root.children.len() < 3 ||
+           !root.children[0].is_word() ||
+           root.children[0].tokens[0].value != "*" {
             return Err(HandlerErr::origin(format!("Invalid Multiply: {}", root)));
         }
         Ok(())
