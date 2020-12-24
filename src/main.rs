@@ -36,6 +36,7 @@ fn main() {
 
     //crate::inbetween::ast_stats::run_all(&root);
 
+    /*
     let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_CustomBufWriter(&output_file_path).unwrap();
     match js::parse::parse(&root, writer) {
@@ -46,6 +47,7 @@ fn main() {
         return;
       }
     };
+    */
 }
 
 #[allow(non_snake_case)]
@@ -60,6 +62,7 @@ pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
   }
 }
 
+/*
 #[allow(non_snake_case)]
 pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_writer::CustomBufWriter<File>> {
   match File::create(file_path) {
@@ -71,3 +74,4 @@ pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_wri
     },
   }
 }
+*/
