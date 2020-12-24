@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::zil::ast::{Node, NodeType};
+use crate::zil::contracts::*;
 use crate::js::handlers::generic_tokens::*;
 use crate::js::contracts::*;
 use crate::js::custom_buf_writer::*;
@@ -8,7 +8,7 @@ use crate::js::custom_buf_writer::*;
 pub struct SET {}
 
 impl HandleJS for SET {
-    fn validate (root: &Node) -> Result<(), HandlerErr> {
+    fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_routine() ||
            root.children.len() != 3 ||
            !root.children[0].is_word() ||
@@ -18,7 +18,7 @@ impl HandleJS for SET {
         Ok(())
     }
   
-    fn print(root: &Node, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    fn print(root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
       
         let spacer = (0..indent).map(|_| "  ").collect::<String>();
@@ -27,10 +27,10 @@ impl HandleJS for SET {
         wrap!(writer.w(" = "));
 
         match root.children[2].kind() {
-            NodeType::Routine => wrap!(R::print(&root.children[2], 0, &mut writer)),
-            NodeType::Text => wrap!(T::print(&root.children[2], 0, &mut writer)),
-            NodeType::Word => wrap!(W::print(&root.children[2], 0, &mut writer)),
-            _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown NodeType in value in SET"))),
+            ZilNodeType::Routine => wrap!(R::print(&root.children[2], 0, &mut writer)),
+            ZilNodeType::Text => wrap!(T::print(&root.children[2], 0, &mut writer)),
+            ZilNodeType::Word => wrap!(W::print(&root.children[2], 0, &mut writer)),
+            _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown ZilNodeType in value in SET"))),
         };
 
         wrap!(writer.w(")"));

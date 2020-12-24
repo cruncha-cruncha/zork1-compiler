@@ -1,2 +1,0 @@
-let KITCHEN = {
-  VALUE: () => 

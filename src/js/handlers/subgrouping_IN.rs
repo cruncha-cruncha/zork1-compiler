@@ -1,17 +1,17 @@
 use std::fs::File;
 
-use crate::zil::ast::{Node, NodeType};
+use crate::zil::contracts::*;
 use crate::js::handlers::generic_tokens::*;
 use crate::js::contracts::*;
 use crate::js::custom_buf_writer::*;
 
 pub struct SubgroupingIN {}
 
-// (EAST TO DAM-ROOM) -> EAST: () => to("DAM-ROOM")
+// (EAST TO DAM-ROOM) -> EAST: () => to(DAM-ROOM)
 // (EAST "Can't do it.") -> EAST: () => "Can't do it."
-// (IN LOCAL-GLOBALS) -> IN: "LOCAL-GLOBALS"
+// (IN LOCAL-GLOBALS) -> IN: LOCAL-GLOBALS
 impl HandleJS for SubgroupingIN {
-    fn validate (root: &Node) -> Result<(), HandlerErr> {
+    fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_grouping() ||
            root.children.len() < 2 ||
            root.children.len() > 3 ||
@@ -21,14 +21,14 @@ impl HandleJS for SubgroupingIN {
         Ok(())
     }
   
-    fn print(root: &Node, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    fn print(root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
 
         if root.children.len() == 2 {
             match root.children[1].kind() {
-                NodeType::Text => wrap!(crate::js::handlers::OBJECT::OBJECT::return_string(&root, indent, &mut writer)),
-                NodeType::Word => wrap!(crate::js::handlers::OBJECT::OBJECT::mut_string(&root, indent, &mut writer)),
-                _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType in SubgroupingIN of length 2")))
+                ZilNodeType::Text => wrap!(crate::js::handlers::OBJECT::OBJECT::return_string(&root, indent, &mut writer)),
+                ZilNodeType::Word => wrap!(crate::js::handlers::ROOM::ROOM::mut_fn(&root, indent, &mut writer)),
+                _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown ZilNodeType in SubgroupingIN of length 2")))
             };
         } else if root.children.len() == 3 {
             wrap!(Self::return_TO(&root, indent, &mut writer));
@@ -40,7 +40,7 @@ impl HandleJS for SubgroupingIN {
 
 impl SubgroupingIN {
     #[allow(non_snake_case)]
-    pub fn return_TO(root: &Node, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    pub fn return_TO(root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         if !root.children[1].is_word() ||
            root.children[1].tokens[0].value != "TO" ||
            !root.children[2].is_word() {
@@ -54,7 +54,7 @@ impl SubgroupingIN {
         wrap!(writer.w(format!(": () => ")));
         wrap!(W::print(&root.children[1], 0, &mut writer));
         wrap!(writer.w(format!("(")));
-        wrap!(W::print_with_quotes(&root.children[2], 0, &mut writer));
+        wrap!(W::print(&root.children[2], 0, &mut writer));
         wrap!(writer.w("),\n"));
     
         Ok(()) 

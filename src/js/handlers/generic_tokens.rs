@@ -1,11 +1,18 @@
 use std::fs::File;
 
-use crate::zil::ast::{Node, NodeType};
+use crate::zil::contracts::*;
 use crate::js::contracts::*;
 use crate::js::helpers::*;
 use crate::js::custom_buf_writer::*;
 
-// <GLOBAL ... >
+// <CONSTANT ... >
+
+// focus on
+// 1actions.zil
+// 1dungeon.zil
+// gglobals.zil
+// gsyntax.zil
+// gverbs.zil
 
 pub struct R {} // routine, aka any <>
 pub struct G {} // grouping, aka any ()
@@ -13,14 +20,14 @@ pub struct T {} // text
 pub struct W {} // word
 
 impl HandleJS for R {
-    fn validate (root: &Node) -> Result<(), HandlerErr> {
+    fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_routine() {
             return Err(HandlerErr::origin(format!("Invalid generic routine: {}", root)));
         }
         Ok(())
     }
   
-    fn print (root: &Node, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    fn print (root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
 
         let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
@@ -32,6 +39,8 @@ impl HandleJS for R {
     
         match &root.children[0].tokens[0].value[..] {
             "INSERT-FILE" => crate::js::handlers::import::Import::print(&root, indent, &mut writer),
+            "GLOBAL" => crate::js::handlers::GLOBAL::GLOBAL::print(&root, indent, &mut writer),
+            "TABLE" | "LTABLE" => crate::js::handlers::table::Table::print(&root, indent, &mut writer),
             "COND" => crate::js::handlers::COND::COND::print(&root, indent, &mut writer),
             "ROUTINE" => crate::js::handlers::ROUTINE::ROUTINE::print(&root, indent, &mut writer),
             "REPEAT" => crate::js::handlers::REPEAT::REPEAT::print(&root, indent, &mut writer),
@@ -53,10 +62,10 @@ impl HandleJS for R {
                 wrap!(writer.w("("));
                 for i in 1..root.children.len() {
                     match root.children[i].kind() {
-                        NodeType::Routine => wrap!(R::print(&root.children[i], 0, &mut writer)),
-                        NodeType::Grouping => wrap!(G::print(&root.children[i], 0, &mut writer)),
-                        NodeType::Text => wrap!(T::print(&root.children[i], 0, &mut writer)),
-                        NodeType::Word => wrap!(W::print(&root.children[i], 0, &mut writer)),
+                        ZilNodeType::Routine => wrap!(R::print(&root.children[i], 0, &mut writer)),
+                        ZilNodeType::Grouping => wrap!(G::print(&root.children[i], 0, &mut writer)),
+                        ZilNodeType::Text => wrap!(T::print(&root.children[i], 0, &mut writer)),
+                        ZilNodeType::Word => wrap!(W::print(&root.children[i], 0, &mut writer)),
                         _ => return Err(OutputErr::from(HandlerErr::origin("could not handle generic routine"))),
                     };
                     if i+1 < root.children.len() {
@@ -73,14 +82,14 @@ impl HandleJS for R {
 }
 
 impl HandleJS for G {
-    fn validate (root: &Node) -> Result<(), HandlerErr> {
+    fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_grouping() {
             return Err(HandlerErr::origin(format!("Invalid generic grouping: {}", root)));
         }
         Ok(())
     }
   
-    fn print (root: &Node, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    fn print (root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
 
         let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
@@ -88,11 +97,11 @@ impl HandleJS for G {
     
         for i in 0..root.children.len() {
             match root.children[i].kind() {
-                NodeType::Routine => wrap!(R::print(&root.children[i], 0, &mut writer)),
-                NodeType::Grouping => wrap!(G::print(&root.children[i], 0, &mut writer)),
-                NodeType::Text => wrap!(T::print(&root.children[i], 0, &mut writer)),
-                NodeType::Word => wrap!(W::print(&root.children[i], 0, &mut writer)),
-                _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown NodeType in generic grouping"))),
+                ZilNodeType::Routine => wrap!(R::print(&root.children[i], 0, &mut writer)),
+                ZilNodeType::Grouping => wrap!(G::print(&root.children[i], 0, &mut writer)),
+                ZilNodeType::Text => wrap!(T::print(&root.children[i], 0, &mut writer)),
+                ZilNodeType::Word => wrap!(W::print(&root.children[i], 0, &mut writer)),
+                _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown ZilNodeType in generic grouping"))),
             };
             if i+1 < root.children.len() {
                 wrap!(writer.w(" "));
@@ -106,14 +115,14 @@ impl HandleJS for G {
 }
 
 impl HandleJS for T {
-    fn validate (root: &Node) -> Result<(), HandlerErr> {
+    fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_text() {
             return Err(HandlerErr::origin(format!("Invalid generic text: {}", root)));
         }
         Ok(())
     }
   
-    fn print (root: &Node, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    fn print (root: &ZilNode, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
         
         let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
@@ -125,24 +134,19 @@ impl HandleJS for T {
 }
 
 impl HandleJS for W {
-    fn validate (root: &Node) -> Result<(), HandlerErr> {
+    fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_word() {
             return Err(HandlerErr::origin(format!("Invalid generic word: {}", root)));
         }
         Ok(())
     }
   
-    fn print (root: &Node, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    fn print (root: &ZilNode, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
 
         let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
-        match &root.tokens[0].value[..] {
-            "T" => wrap!(writer.w(format!("{}true", spacer)), root),
-            _ => {
-                let keyword = wrap!(format_keyword(&root), root);
-                wrap!(writer.w(format!("{}{}", spacer, keyword)), root)
-            }
-        };
+        let keyword = wrap!(format_keyword(&root), root);
+        wrap!(writer.w(format!("{}{}", spacer, keyword)), root);
     
         Ok(())
     }
@@ -150,7 +154,7 @@ impl HandleJS for W {
 
 impl T {
     // not recommended
-    pub fn print_as_word (root: &Node, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    pub fn print_as_word (root: &ZilNode, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
         
         let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
@@ -163,17 +167,12 @@ impl T {
 
 impl W {
     // not recommended
-    pub fn print_with_quotes (root: &Node, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    pub fn print_with_quotes (root: &ZilNode, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
 
         let spacer = (0..indent).map(|_| "  ").collect::<String>(); 
-        match &root.tokens[0].value[..] {
-            "T" => wrap!(writer.w(format!("{}\"true\"", spacer)), root),
-            _ => {
-                let keyword = wrap!(format_keyword(&root), root);
-                wrap!(writer.w(format!("{}\"{}\"", spacer, keyword)), root)
-            }
-        };
+        let keyword = wrap!(format_keyword(&root), root);
+        wrap!(writer.w(format!("{}\"{}\"", spacer, keyword)), root);
     
         Ok(())
     }

@@ -3,12 +3,12 @@ use std::io;
 use std::fmt;
 use std::error::Error;
 
-use crate::zil::ast::Node;
+use crate::zil::contracts::ZilNode;
 use crate::js::custom_buf_writer::*;
 
 pub trait HandleJS {
-  fn validate (root: &Node) -> Result<(), HandlerErr>;
-  fn print (root: &Node, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr>;
+  fn validate (root: &ZilNode) -> Result<(), HandlerErr>;
+  fn print (root: &ZilNode, indent: u64, writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr>;
 }
 
 #[derive(Debug)]

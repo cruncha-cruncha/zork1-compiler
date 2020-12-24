@@ -2,14 +2,20 @@ use std::path::Path;
 use std::io::BufRead;
 
 #[test]
-pub fn test_objects() {
-  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_objects");
+pub fn test_comments() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_comments");
   test_folder(&path)
 }
 
 #[test]
-pub fn test_rooms() {
-  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_rooms");
+pub fn test_global() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_global");
+  test_folder(&path)
+}
+
+#[test]
+pub fn test_objects() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_objects");
   test_folder(&path)
 }
 
@@ -20,14 +26,14 @@ pub fn test_repeat() {
 }
 
 #[test]
-pub fn test_routine() {
-  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_routine");
+pub fn test_rooms() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_rooms");
   test_folder(&path)
 }
 
 #[test]
-pub fn test_comments() {
-  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_comments");
+pub fn test_routine() {
+  let path = Path::new(".").join("src").join("tests").join("full_output").join("test_routine");
   test_folder(&path)
 }
 
@@ -35,7 +41,7 @@ pub fn test_folder(folder: &Path) {
     let input_file_path = folder.join("input.zil");
     let reader = crate::get_BufReader(&input_file_path).unwrap();
     let mut generator = crate::zil::tokenize::TokenGenerator::new(0, reader);
-    let mut root = crate::zil::ast::Node::new();
+    let mut root = crate::zil::contracts::ZilNode::new();
     crate::zil::ast::build_tree(&mut generator, &mut root).unwrap();
 
     let output_file_path = folder.join("actual.js");
