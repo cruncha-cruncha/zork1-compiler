@@ -34,6 +34,8 @@ fn main() {
       }
     };
 
+    //crate::inbetween::ast_stats::run_all(&root);
+
     let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_CustomBufWriter(&output_file_path).unwrap();
     match js::parse::parse(&root, writer) {

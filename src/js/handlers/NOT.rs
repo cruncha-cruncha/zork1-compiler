@@ -9,7 +9,10 @@ pub struct NOT {}
 
 impl HandleJS for NOT {
     fn validate (root: &Node) -> Result<(), HandlerErr> {
-        if root.children.len() != 2 {
+        if !root.is_routine() ||
+           root.children.len() != 2 ||
+           !root.children[0].is_word() ||
+           root.children[0].tokens[0].value != "NOT" {
             return Err(HandlerErr::origin(format!("Invalid NOT: {}", root)));
         }
         Ok(())

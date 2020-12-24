@@ -31,6 +31,7 @@ pub fn run_all(root: &Node) {
     stats.push(Box::new(Stat08{}));
     stats.push(Box::new(Stat09{}));
     stats.push(Box::new(Stat11{}));
+    stats.push(Box::new(Stat13{}));
 
     let mut collector: HashSet<String>;
     for b in stats.iter() {
@@ -273,6 +274,30 @@ impl TreeStat for Stat12 {
            root.children[0].tokens[0].value == String::from("CONSTANT") && 
            root.children.len() >= 2 {
             collector.insert(String::from(&root.children[1].tokens[0].value));
+        }
+        for n in root.children.iter() {
+            self.calc(n, collector);
+        }
+    }
+}
+
+pub struct Stat13;
+impl TreeStat for Stat13 {
+    fn desc(&self) -> String {
+        String::from("<ROOM ... (X ... ) ... >")
+    }
+
+    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+        if root.is_routine() &&
+           root.has_children() &&
+           root.children[0].is_word() &&
+           root.children[0].tokens[0].value == String::from("ROOM") {
+            for n in root.children.iter() {
+                if n.is_grouping() &&
+                n.has_children() {
+                    collector.insert(String::from(&n.children[0].tokens[0].value));
+                }
+            }
         }
         for n in root.children.iter() {
             self.calc(n, collector);

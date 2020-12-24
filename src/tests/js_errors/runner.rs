@@ -28,6 +28,20 @@ pub fn test_SET_1() {
   test_folder(&input_file_path)
 }
 
+#[test]
+#[allow(non_snake_case)]
+pub fn test_ROOM_1() {
+  let input_file_path = Path::new(".").join("src").join("tests").join("js_errors").join("bad_ROOM_1.zil");
+  test_folder(&input_file_path)
+}
+
+#[test]
+#[allow(non_snake_case)]
+pub fn test_ROOM_2() {
+  let input_file_path = Path::new(".").join("src").join("tests").join("js_errors").join("bad_ROOM_2.zil");
+  test_folder(&input_file_path)
+}
+
 pub fn test_folder(input_file_path: &Path) {    
     let reader = crate::get_BufReader(&input_file_path).unwrap();
     let mut generator = crate::zil::tokenize::TokenGenerator::new(0, reader);

@@ -9,7 +9,10 @@ pub struct TELL {}
 
 impl HandleJS for TELL {
     fn validate (root: &Node) -> Result<(), HandlerErr> {
-        if root.children.len() < 2 {
+        if !root.is_routine() ||
+           root.children.len() < 2 ||
+           !root.children[0].is_word() ||
+           root.children[0].tokens[0].value != "TELL" {
             return Err(HandlerErr::origin(format!("Invalid TELL: {}", root)));
         }
         Ok(())

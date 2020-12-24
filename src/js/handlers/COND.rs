@@ -9,10 +9,13 @@ pub struct COND {}
 
 impl HandleJS for COND {
     fn validate (root: &Node) -> Result<(), HandlerErr> {
-        if root.children.len() < 2 ||
-            !root.children[1].is_grouping() || 
-            root.children[1].children.len() < 2 {
-                return Err(HandlerErr::origin(format!("Invalid COND: {}", root)));
+        if !root.is_routine() ||
+           root.children.len() < 2 ||
+           !root.children[0].is_word() ||
+           root.children[0].tokens[0].value != "COND" ||
+           !root.children[1].is_grouping() || 
+           root.children[1].children.len() < 2 {
+            return Err(HandlerErr::origin(format!("Invalid COND: {}", root)));
         }
         Ok(())
     }
