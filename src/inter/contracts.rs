@@ -85,6 +85,7 @@ impl InterNode {
                 token = Some(zn.tokens[0].clone());
             },
             (ZilNodeType::Unknown, _) => {
+              start = 0;
               kind = InterNodeType::Unknown;
               token = None;
             }

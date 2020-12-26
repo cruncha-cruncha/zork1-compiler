@@ -116,6 +116,9 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         // first child must be a word
         // second cannot be a grouping
 
+        println!("{}", n.children[0].value());
+        println!("{}", n.children[1].value());
+
         if n.children.len() != 2 ||
            n.children[0].kind != InterNodeType::Word ||
            n.children[1].kind == InterNodeType::Grouping {
@@ -211,6 +214,13 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         }
       },
       _ => ()
+    };
+  }
+
+  for i in 0..n.children.len() {
+    match validate(&n.children[i]) {
+      Ok(()) => (),
+      Err(e) => return Err(InterErr::wrap(e, "something"))
     };
   }
 
