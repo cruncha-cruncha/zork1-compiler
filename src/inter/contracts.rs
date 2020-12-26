@@ -1,16 +1,18 @@
 use std::fmt;
 use std::error::Error;
 
-use crate::zil::contracts::{ZilNode, ZilNodeType};
+use crate::zil::contracts::*;
+use crate::zil::tokenize::*;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum InterNodeType {
+    Unknown,
     Routine,
     EmptyRoutine,
     Grouping,
-    EmptyGrouping,
     Text,
-    Word
+    Word,
+    Int
 }
 
 impl fmt::Display for InterNodeType {
@@ -22,69 +24,76 @@ impl fmt::Display for InterNodeType {
 impl InterNodeType {
     pub fn to_str(&self) -> String {
         match *self {
+            InterNodeType::Unknown => "InterNodeType::Unknown".to_string(),
             InterNodeType::Routine => "InterNodeType::Routine".to_string(),
             InterNodeType::EmptyRoutine => "InterNodeType::EmptyRoutine".to_string(),
             InterNodeType::Grouping => "InterNodeType::Grouping".to_string(),
-            InterNodeType::EmptyGrouping => "InterNodeType::EmptyGrouping".to_string(),
             InterNodeType::Text => "InterNodeType::Text".to_string(),
             InterNodeType::Word => "InterNodeType::Word".to_string(),
+            InterNodeType::Int => "InterNodeType::Int".to_string(),
         }
     }
 }
 
 pub struct InterNode {
     pub kind: InterNodeType,
-    pub value: String,
+    pub token: Option<Token>,
     pub children: Vec<InterNode>
 }
 
 impl fmt::Display for InterNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", &self.value, &self.kind)
+      match &self.token {
+        None => write!(f, "{}", &self.kind),
+        Some(t) => write!(f, "{}: {}", &t.value, &self.kind)
+      }
     }
 }
 
 impl InterNode {
-    fn clone_zilnode(zn: &ZilNode) -> Result<Self, InterErr> {
+    pub fn clone_zilnode(zn: &ZilNode) -> Result<InterNode, InterErr> {
+        let mut start = 1;
+
         let kind: InterNodeType;
-        let value: String;
+        let token: Option<Token>;
         match (zn.kind(), zn.children.len()) {
             (ZilNodeType::Routine, 0) => {
                 kind = InterNodeType::EmptyRoutine;
-                value = String::from("");
-            }
+                token = None;
+            },
             (ZilNodeType::Routine, _) => {
                 kind = InterNodeType::Routine;
                 if !zn.children[0].is_word() {
                     return Err(InterErr::origin(format!("First child in routine is not a word. Near line {} in file {}", zn.tokens[0].file_key, zn.tokens[0].line_number)));
                 }
-                value = String::from(&zn.children[0].tokens[0].value);
-            }
-            (ZilNodeType::Grouping, 0) => {
-                kind = InterNodeType::EmptyGrouping;
-                value = String::from("");
-            }
+                token = Some(zn.children[0].tokens[0].clone());
+            },
             (ZilNodeType::Grouping, _) => {
+                start = 0;
                 kind = InterNodeType::Grouping;
-                if !zn.children[0].is_word() {
-                    return Err(InterErr::origin(format!("First child in grouping is not a word. Near line {} in file {}", zn.tokens[0].file_key, zn.tokens[0].line_number)));
-                }
-                value = String::from(&zn.children[0].tokens[0].value);
-            }
+                token = None;
+            },
             (ZilNodeType::Text, 0) => {
                 kind = InterNodeType::Text;
-                value = String::from(&zn.tokens[0].value);
-            }
+                token = Some(zn.tokens[0].clone());
+            },
             (ZilNodeType::Word, 0) => {
-                kind = InterNodeType::Word;
-                value = String::from(&zn.tokens[0].value);
+                match zn.tokens[0].value.parse::<usize>() {
+                  Ok(_) => { kind = InterNodeType::Int; },
+                  Err(_) => { kind = InterNodeType::Word; }
+                };
+                token = Some(zn.tokens[0].clone());
+            },
+            (ZilNodeType::Unknown, _) => {
+              kind = InterNodeType::Unknown;
+              token = None;
             }
-            _ => return Err(InterErr::origin("Unkown (ZilNodeType, children.len()) in InterNode::clone_zilnode"))
+            _ => return Err(InterErr::origin("Unknown (ZilNodeType, children.len()) in InterNode::clone_zilnode"))
         };
 
         let mut children = Vec::new();
-        for c in zn.children.iter() {
-            children.push(match Self::clone_zilnode(&c) {
+        for i in start..zn.children.len() {
+            children.push(match Self::clone_zilnode(&zn.children[i]) {
                 Ok(v) => v,
                 Err(e) => return Err(InterErr::wrap(e, format!("{}", zn)))
             });
@@ -92,9 +101,16 @@ impl InterNode {
 
         Ok(InterNode {
             kind: kind,
-            value: value,
+            token: token,
             children: children
         })
+    }
+
+    pub fn value(&self) -> &str {
+      match &self.token {
+        Some(t) => &t.value,
+        None => ""
+      }
     }
 }
 

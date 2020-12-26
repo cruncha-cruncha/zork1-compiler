@@ -5,6 +5,7 @@ use crate::zil::tokenize::*;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum ZilNodeType {
+    Unknown,
     Routine,
     Grouping,
     Comment,
@@ -48,7 +49,7 @@ impl ZilNode {
         } else if self.is_word() {
             ZilNodeType::Word
         } else {
-            panic!("Don't know what ZilNodeType");
+            ZilNodeType::Unknown
         }
     }
 

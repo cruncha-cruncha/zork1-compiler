@@ -4,7 +4,7 @@ use std::io::BufReader;
 
 mod zil;
 mod js;
-mod inbetween;
+mod inter;
 #[cfg(test)]
 mod tests;
 
@@ -26,7 +26,7 @@ fn main() {
     let mut root = zil::contracts::ZilNode::new();
     
     match zil::ast::build_tree(&mut generator, &mut root) {
-      Ok(()) => println!("build tree ok"),
+      Ok(()) => println!("built zil tree"),
       Err(e) => {
         println!("\nERROR\n{}", e);
         zil::ast::print_tree(&root, 0);
@@ -34,7 +34,18 @@ fn main() {
       }
     };
 
-    //crate::inbetween::ast_stats::run_all(&root);
+    //crate::inter::ast_stats::run_all(&root);
+
+    let _root = match inter::ast::clone_zil_tree(&root) {
+      Ok(v) => {
+        println!("built inter tree");
+        v
+      },
+      Err(e) => {
+        println!("\nERROR\n{}", e);
+        return;
+      }
+    };
 
     /*
     let output_file_path = Path::new(".").join("out").join("testing.js");

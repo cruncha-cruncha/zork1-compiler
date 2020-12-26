@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::io;
-use std::fmt;
 
 use crate::zil::tokenize::*;
 use crate::zil::contracts::*;
