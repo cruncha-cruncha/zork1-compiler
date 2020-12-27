@@ -34,9 +34,9 @@ fn main() {
       }
     };
 
-    //crate::inter::ast_stats::run_all(&root);
+    //inter::ast_stats::run_all(&root);
 
-    let _root = match inter::ast::clone_zil_tree(&root) {
+    let root = match inter::ast::clone_zil_tree(&root) {
       Ok(v) => {
         println!("built inter tree");
         v
@@ -46,6 +46,8 @@ fn main() {
         return;
       }
     };
+
+    inter::ast::print_tree(&root, 0);
 
     /*
     let output_file_path = Path::new(".").join("out").join("testing.js");

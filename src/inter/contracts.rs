@@ -35,6 +35,7 @@ impl InterNodeType {
     }
 }
 
+#[derive(Clone, PartialEq)]
 pub struct InterNode {
     pub kind: InterNodeType,
     pub token: Option<Token>,
@@ -45,7 +46,7 @@ impl fmt::Display for InterNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
       match &self.token {
         None => write!(f, "{}", &self.kind),
-        Some(t) => write!(f, "{}: {}", &t.value, &self.kind)
+        Some(t) => write!(f, "kind: {}, value: {}, line_number: {}, file_key: {}", &self.kind, &t.value, &t.line_number, &t.file_key)
       }
     }
 }
@@ -64,7 +65,7 @@ impl InterNode {
             (ZilNodeType::Routine, _) => {
                 kind = InterNodeType::Routine;
                 if !zn.children[0].is_word() {
-                    return Err(InterErr::origin(format!("First child in routine is not a word. Near line {} in file {}", zn.tokens[0].file_key, zn.tokens[0].line_number)));
+                    return Err(InterErr::origin(format!("First child in routine is not a word.\nNear line {} in file {}", zn.tokens[0].file_key, zn.tokens[0].line_number)));
                 }
                 token = Some(zn.children[0].tokens[0].clone());
             },
@@ -96,7 +97,7 @@ impl InterNode {
         for i in start..zn.children.len() {
             children.push(match Self::clone_zilnode(&zn.children[i]) {
                 Ok(v) => v,
-                Err(e) => return Err(InterErr::wrap(e, format!("{}", zn)))
+                Err(e) => return Err(InterErr::wrap(e, format!("From {}", zn)))
             });
         }
 
@@ -127,7 +128,7 @@ impl fmt::Display for InterErr {
       Some(b) => { write!(f, "{}", *b)?; },
       None => ()
     }
-    write!(f, "{}", self.msg)
+    write!(f, "  At:\n{}\n", self.msg)
   }
 }
 

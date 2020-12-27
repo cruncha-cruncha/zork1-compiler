@@ -1,54 +1,3 @@
-// print tree
-// validate? just enough so that the next stage won't panic, don't worry about semantics
-// re-organize tree (like "AUX" in ROUTINE params, IN vs IN TO in OBJECTs and ROOMs)
-// override/substitute words
-
-// can compare enum references, is this more performant?
-
-// new hypothesis
-// dot prefix can be ignored
-// comma prefix cannot. It means "dereference this pointer". Can simulate pointer by with an array of length 1
-// will have to make extensive use of (() => { ... })() aka Immediately Invoked Function Expressions (IIFE) as everything returns something
-
-/*
-;"0 -> no next, 1 -> success, 2 -> failed move"
-<ROUTINE GO-NEXT (TBL "AUX" VAL)
-	 <COND
- 		(<SET VAL <LKP ,HERE .TBL>> <COND 
-			(<NOT <GOTO .VAL>> 2)
-		      	(T 1)
-		>)
-	>
->
-*/
-
-// becomes
-
-/*
-let GO_NEXT = (TBL) => {
-  let VAL;
-  // ROUTINE always returns the last expressions
-  // COND is always wrapped in an IIFE
-  return (() => {
-    if (VAL = LKP(HERE[0], TBL)) {
-      // COND groupings always return the last expr
-      // COND is always wrapped in an IIFE
-      return (() => {
-        if (!GOTO(VAL)) {
-          return 2;
-        } else {
-          return 1;
-        }
-        // COND always returns 0 by default
-        return 0;
-      })();
-    }
-    // COND always returns 0 by default
-    return 0;
-  })();
-}
-*/
-
 use crate::inter::contracts::*;
 
 pub fn validate(n: &InterNode) -> Result<(), InterErr> {
@@ -63,17 +12,17 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         if n.children.len() < 3 ||
            n.children[0].kind != InterNodeType::Word || 
            n.children[1].kind != InterNodeType::Grouping {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid ROUTINE ({}); could be a couple things", n)));
         }
 
         match validate_param_grouping(&n.children[1]) {
           Ok(_) => (),
-          Err(e) => return Err(e)
+          Err(e) => return Err(InterErr::wrap(e, format!("From ROUTINE\n{}", n)))
         };
 
         for i in 2..n.children.len() {
           if n.children[i].kind != InterNodeType::Routine {
-            return Err(InterErr::origin("msg"));
+            return Err(InterErr::origin(format!("Invalid ROUTINE ({}); not all children are Routines", n)));
           }
         }
       },
@@ -84,13 +33,13 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
 
         if n.children.len() < 1 ||
            n.children[0].kind != InterNodeType::Word {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid OBJECT ({}); could be a couple things", n)));
         }
 
         for i in 1..n.children.len() {
           match validate_object_grouping(&n.children[i]) {
             Ok(_) => (),
-            Err(e) => return Err(e)
+            Err(e) => return Err(InterErr::wrap(e, format!("From OBJECT\n{}", n)))
           };
         }
       },
@@ -101,13 +50,13 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
 
         if n.children.len() < 1 ||
            n.children[0].kind != InterNodeType::Word {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid ROOM ({}); could be a couple things", n)));
         }
 
         for i in 1..n.children.len() {
           match validate_room_grouping(&n.children[i]) {
             Ok(_) => (),
-            Err(e) => return Err(e)
+            Err(e) => return Err(InterErr::wrap(e, format!("From ROOM\n{}", n)))
           };
         }
       },
@@ -116,13 +65,10 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         // first child must be a word
         // second cannot be a grouping
 
-        println!("{}", n.children[0].value());
-        println!("{}", n.children[1].value());
-
         if n.children.len() != 2 ||
            n.children[0].kind != InterNodeType::Word ||
            n.children[1].kind == InterNodeType::Grouping {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid ({}); could be a couple things", n)));
         }
       },
       "TELL" => {
@@ -130,14 +76,14 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         // all must be routine, text, or word
 
         if n.children.len() < 1 {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid TELL ({}); could be a couple things", n)));
         }
 
         for i in 0..n.children.len() {
           if n.children[i].kind != InterNodeType::Routine &&
              n.children[i].kind != InterNodeType::Text &&
              n.children[i].kind != InterNodeType::Word {
-            return Err(InterErr::origin("msg"));
+            return Err(InterErr::origin(format!("Invalid TELL ({}); something with the children, could be a couple things", n)));
           }
         }
       },
@@ -149,12 +95,12 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         if n.children.len() < 2 ||
            n.children[0].kind != InterNodeType::Grouping ||
            n.children[0].children.len() > 0 {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid ROUTINE ({}); could be a couple things", n)));
         }
 
         for i in 1..n.children.len() {
           if n.children[i].kind != InterNodeType::Routine {
-            return Err(InterErr::origin("msg"));
+            return Err(InterErr::origin(format!("Invalid ROUTINE ({}) children", n)));
           }
         }
       }
@@ -163,13 +109,13 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         // all must be groupings -> validate
 
         if n.children.len() < 1 {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid COND ({}); doesn't have enough children", n)));
         }
 
         for i in 1..n.children.len() {
           match validate_cond_grouping(&n.children[i]) {
             Ok(_) => (),
-            Err(e) => return Err(e)
+            Err(e) => return Err(InterErr::wrap(e, format!("From COND\n{}", n)))
           };
         }
       },
@@ -180,7 +126,7 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         if n.children.len() != 1 ||
            (n.children[0].kind != InterNodeType::Routine &&
             n.children[0].kind != InterNodeType::Word) {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid NOT ({})", n)));
         }
       },
       "AND" | "OR" | "+" | "*" => {
@@ -188,13 +134,13 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         // all either a word or routine
 
         if n.children.len() < 1 {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid AND/OR/+/* ({})", n)));
         }
 
         for i in 0..n.children.len() {
           if n.children[i].kind != InterNodeType::Routine &&
              n.children[i].kind != InterNodeType::Word {
-            return Err(InterErr::origin("msg"));
+            return Err(InterErr::origin(format!("Invalid AND/OR/+/* ({}) child", n)));
           }
         }
       },
@@ -203,13 +149,13 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
         // all either a word or routine
 
         if n.children.len() != 2 {
-          return Err(InterErr::origin("msg"));
+          return Err(InterErr::origin(format!("Invalid -// ({}); bad child len()", n)));
         }
 
         for i in 0..n.children.len() {
           if n.children[i].kind != InterNodeType::Routine &&
              n.children[i].kind != InterNodeType::Word {
-            return Err(InterErr::origin("msg"));
+            return Err(InterErr::origin(format!("Invalid -// ({}); bad children", n)));
           }
         }
       },
@@ -220,7 +166,7 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
   for i in 0..n.children.len() {
     match validate(&n.children[i]) {
       Ok(()) => (),
-      Err(e) => return Err(InterErr::wrap(e, "something"))
+      Err(e) => return Err(InterErr::wrap(e, format!("Invalid children, at {}", n)))
     };
   }
 
@@ -234,18 +180,18 @@ fn validate_param_grouping(n: &InterNode) -> Result<(), InterErr> {
         if c.children.len() != 2 ||
            c.children[0].kind != InterNodeType::Word ||
            c.children[1].kind == InterNodeType::Grouping {
-          return Err(InterErr::origin("Invalid param grouping grouping"));
+          return Err(InterErr::origin(format!("Invalid param grouping grouping ({})", c)));
         }
       },
       InterNodeType::Text => {
         match c.value() {
           "OPTIONAL" => (),
           "AUX" => (),
-          s => return Err(InterErr::origin(format!("Unknown text in param grouping: {}", s)))
+          _ => return Err(InterErr::origin(format!("Unknown text in param grouping: {}", c)))
         };
       },
       InterNodeType::Word => (),
-      _ => return Err(InterErr::origin("Unknown InterNodeType in param grouping"))
+      _ => return Err(InterErr::origin(format!("Unknown InterNodeType in param grouping ({})", c)))
     };
   }
 
@@ -255,7 +201,7 @@ fn validate_param_grouping(n: &InterNode) -> Result<(), InterErr> {
 fn validate_object_grouping(n: &InterNode) -> Result<(), InterErr> {
   if n.children.len() < 2 ||
      n.children[0].kind != InterNodeType::Word {
-    return Err(InterErr::origin("Invalid object grouping"));
+    return Err(InterErr::origin(format!("Invalid object grouping ({})", n)));
   }
 
   match n.children[0].value() {
@@ -267,7 +213,7 @@ fn validate_object_grouping(n: &InterNode) -> Result<(), InterErr> {
       // second must be word
       if n.children.len() != 2 ||
          n.children[1].kind != InterNodeType::Word {
-        return Err(InterErr::origin(format!("Bad {} in object grouping", n.children[0].value())));
+        return Err(InterErr::origin(format!("Bad ({}) in object grouping", n.children[0])));
       }
     },
     "TEXT" | "DESC" | "LDESC" | "FDESC" => {
@@ -275,18 +221,18 @@ fn validate_object_grouping(n: &InterNode) -> Result<(), InterErr> {
       // second must be text
       if n.children.len() != 2 ||
          n.children[1].kind != InterNodeType::Text {
-        return Err(InterErr::origin(format!("Bad {} in object grouping", n.children[0].value())));
+        return Err(InterErr::origin(format!("Bad ({}) in object grouping", n.children[0])));
       }
     },
     "VTYPE" | "FLAGS" | "SYNONYM" | "ADJECTIVE" => {
       // at least two children
       // all must be words
       if n.children.len() < 2 {
-        return Err(InterErr::origin(format!("{} doesn't have enough siblings, in object grouping", n.children[0].value())));
+        return Err(InterErr::origin(format!("({}) doesn't have enough siblings, in object grouping", n.children[0])));
       }
       for i in 1..n.children.len() {
         if n.children[i].kind != InterNodeType::Word {
-          return Err(InterErr::origin(format!("{} has a non-word sibling, in object grouping", n.children[0].value())));
+          return Err(InterErr::origin(format!("({}) has a non-word sibling, in object grouping", n.children[0])));
         }
       }
     },
@@ -295,10 +241,10 @@ fn validate_object_grouping(n: &InterNode) -> Result<(), InterErr> {
       // second must be Int
       if n.children.len() != 2 ||
          n.children[1].kind != InterNodeType::Int {
-        return Err(InterErr::origin(format!("Bad {} in object grouping", n.children[0].value())));
+        return Err(InterErr::origin(format!("Bad ({}) in object grouping", n.children[0])));
       }
     },
-    s => return Err(InterErr::origin(format!("Unknown object grouping: {}", s)))
+    _ => return Err(InterErr::origin(format!("Unknown object grouping: ({})", n.children[0])))
   };
 
   Ok(())
@@ -308,7 +254,7 @@ fn validate_object_grouping(n: &InterNode) -> Result<(), InterErr> {
 fn validate_object_IN_grouping(n: &InterNode) -> Result<(), InterErr> {
   if n.children.len() != 2 ||
      n.children[1].kind != InterNodeType::Word {
-    return Err(InterErr::origin("Invalid object IN grouping"));
+    return Err(InterErr::origin(format!("Invalid object IN grouping ({})", n)));
   }
 
   Ok(())
@@ -317,7 +263,7 @@ fn validate_object_IN_grouping(n: &InterNode) -> Result<(), InterErr> {
 fn validate_room_grouping(n: &InterNode) -> Result<(), InterErr> {
   if n.children.len() < 2 ||
      n.children[0].kind != InterNodeType::Word {
-    return Err(InterErr::origin("Invalid room grouping"));
+    return Err(InterErr::origin(format!("Invalid room grouping ({})", n)));
   }
 
   match validate_object_grouping(&n) {
@@ -332,15 +278,15 @@ fn validate_room_grouping(n: &InterNode) -> Result<(), InterErr> {
       // like (PSEUDO "DOOR" DOOR-PSEUDO "PAINT" PAINT-PSEUDO)
       if n.children.len() < 3 ||
          n.children.len()%2 != 1 {
-        return Err(InterErr::origin(format!("{} doesn't have enough siblings, in room grouping", n.children[0].value())));
+        return Err(InterErr::origin(format!("({}) doesn't have enough siblings, in room grouping", n.children[0])));
       }
 
       for i in 0..(n.children.len()-1)/2 {
         if n.children[i*2+1].kind != InterNodeType::Text {
-          return Err(InterErr::origin(format!("Odd child is not Text, in {}, in room grouping", n.children[0].value())));
+          return Err(InterErr::origin(format!("Odd child is not Text, in ({}), in room grouping", n.children[0])));
         }
         if n.children[i*2+2].kind != InterNodeType::Word {
-          return Err(InterErr::origin(format!("Even child is not Word, in {}, in room grouping", n.children[0].value())));
+          return Err(InterErr::origin(format!("Even child is not Word, in ({}), in room grouping", n.children[0])));
         }
       }
     },
@@ -348,18 +294,18 @@ fn validate_room_grouping(n: &InterNode) -> Result<(), InterErr> {
       // at least 2 children
       // all must be words
       if n.children.len() < 2 {
-        return Err(InterErr::origin(format!("{} doesn't have enough siblings, in room grouping", n.children[0].value())));
+        return Err(InterErr::origin(format!("({}) doesn't have enough siblings, in room grouping", n.children[0])));
       }
       for i in 1..n.children.len() {
         if n.children[i].kind != InterNodeType::Word {
-          return Err(InterErr::origin(format!("{} has a non-word sibling, in room grouping", n.children[0].value())));
+          return Err(InterErr::origin(format!("({}) has a non-word sibling, in room grouping", n.children[0])));
         }
       }
     },
     "NORTH" | "NE" | "EAST" | "SE" | "SOUTH" | "SW" | "WEST" | "NW" | "LAND" | "UP" | "DOWN" | "OUT" => {
       return validate_room_IN_grouping(&n);
     },
-    s => return Err(InterErr::origin(format!("Bad room grouping: {}", s)))
+    _ => return Err(InterErr::origin(format!("Bad room grouping: {}", n.children[0])))
   };
 
   Ok(())

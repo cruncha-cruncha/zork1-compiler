@@ -44,6 +44,21 @@ pub struct Token {
     pub line_number: u64
 }
 
+impl Token {
+    pub fn is_fake(&self) -> bool {
+        self.file_key == 0 || self.line_number == 0
+    }
+
+    pub fn fake<S: Into<String>>(kind: TokenType, value: S) -> Token {
+        Token {
+            kind: kind,
+            value: value.into(),
+            file_key: 0,
+            line_number: 0
+        }
+    }
+}
+
 struct CharGenerator {
     reader: BufReader<File>,
     char_buf: Vec<char>,
