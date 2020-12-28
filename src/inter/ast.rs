@@ -55,7 +55,6 @@ let GO_NEXT = (TBL) => {
 >
 */
 
-use crate::zil::tokenize::*;
 use crate::zil::contracts::*;
 use crate::inter::contracts::*;
 use crate::inter;
@@ -104,10 +103,9 @@ pub fn refactor_room_nav(root: &mut InterNode) {
             }
 
             #[allow(non_snake_case)]
-            let mut tmp_InterNode = root.children[i].children.remove(0);
-            tmp_InterNode.value = String::from(format!("{}_TO", &tmp_InterNode.value));
-            tmp_InterNode.token = None;
-            root.children[i].children.insert(0, tmp_InterNode);
+            let tmp_InterNode = root.children[i].children.remove(0);
+            root.children[i].children.insert(0, InterNode::no_token(
+              InterNodeType::Word, format!("{}_TO", &tmp_InterNode.value), vec![]));
 
             match root.children[i].children.len() {
               2 | 3 => (),
@@ -125,7 +123,7 @@ pub fn refactor_room_nav(root: &mut InterNode) {
                 root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
               },
               6 => {
-                if root.children[5].value() == "IS" {
+                if root.children[i].children[4].value() == "IS" {
                   // (IN_TO KITCHEN IF KITCHEN-WINDOW IS OPEN) -> (IN_TO <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> KITCHEN)>)
                   let tmp_cond = InterNode::no_token(
                     InterNodeType::Routine, "COND",
