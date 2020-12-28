@@ -3,10 +3,11 @@
 
 // can compare enum references, is this more performant?
 
-// new hypothesis
-// dot prefix can be ignored
-// comma prefix cannot. It means "dereference this pointer". Can simulate pointer by with an array of length 1
-// will have to make extensive use of (() => { ... })() aka Immediately Invoked Function Expressions (IIFE) as everything returns something
+// Hypotheses:
+// - dot prefix can be ignored
+// - comma prefix cannot. It means "dereference this pointer". Can simulate pointer by with an array of length 1
+// - will have to make extensive use of (() => { ... })() aka Immediately Invoked Function Expressions (IIFE) as everything returns something
+// - ,P?xxxx refers to property xxxx. Sometimes of the current ROOM, sometimes of a provided ROOM or OBJECT
 
 /*
 ;"0 -> no next, 1 -> success, 2 -> failed move"
@@ -62,7 +63,8 @@ use crate::inter;
 pub fn clone_zil_tree(root: &ZilNode) -> Result<InterNode, InterErr> {
   let mut root = inter::contracts::InterNode::clone_zilnode(&root)?;
   inter::validation::validate(&root)?;
-  refactor_params(&mut root);
+  refactor_routine_params(&mut root);
+  refactor_room_nav(&mut root);
   Ok(root)
 }
 
@@ -79,10 +81,141 @@ pub fn print_tree(root: &InterNode, depth: u64) {
     }
 }
 
-// for every ROUTINE, take the second child (which should be a grouping)
-// for everything after "AUX", move into a <SET> in the children of the ROUTINE
+/*
+(IN ROOMS) -> (IN ROOMS)
+(IN "The dam blocks your way.") -> (IN_TO "The dam blocks your way.")
+(IN TO SQUEEKY-ROOM) -> (IN_TO SQUEEKY-ROOM)
+(IN PER GRATING-EXIT) -> (IN_TO PER GRATING-EXIT) // execute GRATING-EXIT
+(IN TO STONE-BARROW IF WON-FLAG) -> (IN_TO <COND (,WON-FLAG STONE-BARROW)>)
+(IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN) -> (IN_TO <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> KITCHEN)>)
+(IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T "You would drown")>)
+(IN TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T "Text")>)
+*/
+pub fn refactor_room_nav(root: &mut InterNode) {
+  if root.kind == InterNodeType::Routine && root.value() == "ROOM" {
+    for i in 1..root.children.len() {
+      if root.children[i].children[0].value() == "IN" && root.children[i].children[1].value() == "ROOMS" {
+        // do nothing
+      } else {
+        match root.children[i].children[0].value() {
+          "IN" | "NORTH" | "NE" | "EAST" | "SE" | "SOUTH" | "SW" | "WEST" | "NW" | "LAND" | "UP" | "DOWN" | "OUT" => {
+            if root.children[i].children[1].value() == "TO" {
+              root.children[i].children.remove(1);
+            }
+            #[allow(non_snake_case)]
+            let mut tmp_InterNode = root.children[i].children.remove(0);
+            #[allow(non_snake_case)]
+            let mut tmp_Token = tmp_InterNode.token.unwrap();
+            tmp_Token.value = String::from(format!("{}_TO", &tmp_Token.value));
+            tmp_InterNode.token = Some(tmp_Token);
+            root.children[i].children.insert(0, tmp_InterNode);
 
-pub fn refactor_params(root: &mut InterNode) {
+            match root.children.len() {
+              5 => {
+                // (IN_TO STONE-BARROW IF WON-FLAG) -> (IN_TO <COND (,WON-FLAG STONE-BARROW)>)
+                let tmp_cond = InterNode {
+                  kind: InterNodeType::Routine,
+                  token: Some(Token::fake(TokenType::Word, "COND")),
+                  children: vec![InterNode{
+                    kind: InterNodeType::Grouping,
+                    token: None,
+                    children: vec![InterNode {
+                      kind: InterNodeType::Word,
+                      token: Some(Token::fake(TokenType::Word, format!(",{}", root.children[i].children[1].value()))),
+                      children: Vec::new()
+                    }, InterNode {
+                      kind: InterNodeType::Word,
+                      token: Some(Token::fake(TokenType::Word, root.children[i].children[4].value())),
+                      children: Vec::new()
+                    }]
+                  }]
+                };
+                root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
+              },
+              7 => {
+                if root.children[5].value() == "IS" {
+                  // (IN_TO KITCHEN IF KITCHEN-WINDOW IS OPEN) -> (IN_TO <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> KITCHEN)>)
+                  let tmp_cond = InterNode {
+                    kind: InterNodeType::Routine,
+                    token: Some(Token::fake(TokenType::Word, "COND")),
+                    children: vec![InterNode {
+                      kind: InterNodeType::Grouping,
+                      token: None,
+                      children: vec![InterNode {
+                        kind: InterNodeType::Routine,
+                        token: Some(Token::fake(TokenType::Word, "FSET?")),
+                        children: vec![InterNode {
+                          kind: InterNodeType::Word,
+                          token: Some(Token::fake(TokenType::Word, format!(",{}", root.children[i].children[3].value()))),
+                          children: Vec::new()
+                        }, InterNode {
+                          kind: InterNodeType::Word,
+                          token: Some(Token::fake(TokenType::Word, format!(",{}BIT", root.children[i].children[5].value()))),
+                          children: Vec::new()
+                        }]
+                      }, InterNode {
+                        kind: InterNodeType::Word,
+                        token: Some(Token::fake(TokenType::Word, root.children[i].children[1].value())),
+                        children: Vec::new()
+                      }]
+                    }]
+                  };
+                  root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
+                } else {
+                  // (IN_TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T "You would drown")>)
+                  let tmp_cond = InterNode {
+                    kind: InterNodeType::Routine,
+                    token: Some(Token::fake(TokenType::Word, "COND")),
+                    children: vec![InterNode {
+                      kind: InterNodeType::Grouping,
+                      token: None,
+                      children: vec![InterNode {
+                          kind: InterNodeType::Word,
+                          token: Some(Token::fake(TokenType::Word, format!(",{}", root.children[i].children[3].value()))),
+                          children: Vec::new()
+                        }, InterNode {
+                          kind: InterNodeType::Word,
+                          token: Some(Token::fake(TokenType::Word, format!(",{}BIT", root.children[i].children[1].value()))),
+                          children: Vec::new()
+                        }]
+                    }, InterNode {
+                      kind: InterNodeType::Grouping,
+                      token: None,
+                      children: vec![InterNode {
+                          kind: InterNodeType::Word,
+                          token: Some(Token::fake(TokenType::Word, "T")),
+                          children: Vec::new()
+                        }, InterNode {
+                          kind: InterNodeType::Text,
+                          token: Some(Token::fake(TokenType::Text, root.children[i].children[5].value())),
+                          children: Vec::new()
+                        }]
+                    }]
+                  };
+                  root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
+                }
+              },
+              9 => {
+                // (IN_TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T "Text")>)
+              },
+              _ => panic!()
+            };
+          },
+          _ => panic!()
+        };
+      }
+    }
+  }
+  for i in 0..root.children.len() {
+    refactor_room_nav(&mut root.children[i]);
+  }
+}
+
+// for <ROUTINE X ( ... ) ... >, take the params grouping (children[1])
+// if there is an "AUX" child in the params grouping:
+// convert every child after to a <SET> routine in the main ROUTINE body
+// remove those params from the grouping
+pub fn refactor_routine_params(root: &mut InterNode) {
   if root.kind == InterNodeType::Routine && root.value() == "ROUTINE" {
     let mut aux_index: Option<usize> = None;
     for i in 0..root.children[1].children.len() {
@@ -136,6 +269,6 @@ pub fn refactor_params(root: &mut InterNode) {
   }
     
   for i in 0..root.children.len() {
-    refactor_params(&mut root.children[i]);
+    refactor_routine_params(&mut root.children[i]);
   }
 }

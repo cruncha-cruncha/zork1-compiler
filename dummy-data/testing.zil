@@ -1,3 +1,9 @@
-<ROUTINE PATIO ("AUX" R (B 1))
-  <TELL "me something I don't know">
->
+<ROOM LIVING-ROOM
+  (IN ROOMS)
+  (IN "The dam blocks your way.")
+  (IN TO SQUEEKY-ROOM)
+  (IN PER GRATING-EXIT)
+  (IN TO STONE-BARROW IF WON-FLAG)
+  (IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN)
+  (IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.")
+  (IN TO X IF Y IS Z ELSE "Text")>
