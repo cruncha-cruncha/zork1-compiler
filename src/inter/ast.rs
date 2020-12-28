@@ -102,103 +102,87 @@ pub fn refactor_room_nav(root: &mut InterNode) {
             if root.children[i].children[1].value() == "TO" {
               root.children[i].children.remove(1);
             }
+
             #[allow(non_snake_case)]
             let mut tmp_InterNode = root.children[i].children.remove(0);
-            #[allow(non_snake_case)]
-            let mut tmp_Token = tmp_InterNode.token.unwrap();
-            tmp_Token.value = String::from(format!("{}_TO", &tmp_Token.value));
-            tmp_InterNode.token = Some(tmp_Token);
+            tmp_InterNode.value = String::from(format!("{}_TO", &tmp_InterNode.value));
+            tmp_InterNode.token = None;
             root.children[i].children.insert(0, tmp_InterNode);
 
-            match root.children.len() {
-              5 => {
+            match root.children[i].children.len() {
+              2 | 3 => (),
+              4 => {
                 // (IN_TO STONE-BARROW IF WON-FLAG) -> (IN_TO <COND (,WON-FLAG STONE-BARROW)>)
-                let tmp_cond = InterNode {
-                  kind: InterNodeType::Routine,
-                  token: Some(Token::fake(TokenType::Word, "COND")),
-                  children: vec![InterNode{
-                    kind: InterNodeType::Grouping,
-                    token: None,
-                    children: vec![InterNode {
-                      kind: InterNodeType::Word,
-                      token: Some(Token::fake(TokenType::Word, format!(",{}", root.children[i].children[1].value()))),
-                      children: Vec::new()
-                    }, InterNode {
-                      kind: InterNodeType::Word,
-                      token: Some(Token::fake(TokenType::Word, root.children[i].children[4].value())),
-                      children: Vec::new()
-                    }]
-                  }]
-                };
+                let tmp_cond = InterNode::no_token(
+                  InterNodeType::Routine, "COND",
+                  vec![InterNode::no_token(
+                    InterNodeType::Grouping, "",
+                    vec![
+                      InterNode::no_token(InterNodeType::Word, root.children[i].children[1].value(), vec![]),
+                      InterNode::no_token(InterNodeType::Word, root.children[i].children[3].value(), vec![])]
+                  )]
+                );
                 root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
               },
-              7 => {
+              6 => {
                 if root.children[5].value() == "IS" {
                   // (IN_TO KITCHEN IF KITCHEN-WINDOW IS OPEN) -> (IN_TO <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> KITCHEN)>)
-                  let tmp_cond = InterNode {
-                    kind: InterNodeType::Routine,
-                    token: Some(Token::fake(TokenType::Word, "COND")),
-                    children: vec![InterNode {
-                      kind: InterNodeType::Grouping,
-                      token: None,
-                      children: vec![InterNode {
-                        kind: InterNodeType::Routine,
-                        token: Some(Token::fake(TokenType::Word, "FSET?")),
-                        children: vec![InterNode {
-                          kind: InterNodeType::Word,
-                          token: Some(Token::fake(TokenType::Word, format!(",{}", root.children[i].children[3].value()))),
-                          children: Vec::new()
-                        }, InterNode {
-                          kind: InterNodeType::Word,
-                          token: Some(Token::fake(TokenType::Word, format!(",{}BIT", root.children[i].children[5].value()))),
-                          children: Vec::new()
-                        }]
-                      }, InterNode {
-                        kind: InterNodeType::Word,
-                        token: Some(Token::fake(TokenType::Word, root.children[i].children[1].value())),
-                        children: Vec::new()
-                      }]
-                    }]
-                  };
+                  let tmp_cond = InterNode::no_token(
+                    InterNodeType::Routine, "COND",
+                    vec![InterNode::no_token(
+                      InterNodeType::Grouping, "",
+                      vec![InterNode::no_token(
+                        InterNodeType::Routine, "FSET?",
+                        vec![
+                          InterNode::no_token(InterNodeType::Word, format!(",{}", root.children[i].children[3].value()), vec![]),
+                          InterNode::no_token(InterNodeType::Word, format!(",{}BIT", root.children[i].children[5].value()), vec![])]
+                      ), 
+                      InterNode::no_token(InterNodeType::Word, root.children[i].children[1].value(), vec![])]
+                    )]
+                  );
                   root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
                 } else {
                   // (IN_TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T "You would drown")>)
-                  let tmp_cond = InterNode {
-                    kind: InterNodeType::Routine,
-                    token: Some(Token::fake(TokenType::Word, "COND")),
-                    children: vec![InterNode {
-                      kind: InterNodeType::Grouping,
-                      token: None,
-                      children: vec![InterNode {
-                          kind: InterNodeType::Word,
-                          token: Some(Token::fake(TokenType::Word, format!(",{}", root.children[i].children[3].value()))),
-                          children: Vec::new()
-                        }, InterNode {
-                          kind: InterNodeType::Word,
-                          token: Some(Token::fake(TokenType::Word, format!(",{}BIT", root.children[i].children[1].value()))),
-                          children: Vec::new()
-                        }]
-                    }, InterNode {
-                      kind: InterNodeType::Grouping,
-                      token: None,
-                      children: vec![InterNode {
-                          kind: InterNodeType::Word,
-                          token: Some(Token::fake(TokenType::Word, "T")),
-                          children: Vec::new()
-                        }, InterNode {
-                          kind: InterNodeType::Text,
-                          token: Some(Token::fake(TokenType::Text, root.children[i].children[5].value())),
-                          children: Vec::new()
-                        }]
-                    }]
-                  };
+                  let tmp_cond = InterNode::no_token(
+                    InterNodeType::Routine, "COND",
+                    vec![InterNode::no_token(
+                      InterNodeType::Grouping, "",
+                      vec![
+                        InterNode::no_token(InterNodeType::Word, format!(",{}", root.children[i].children[3].value()), vec![]),
+                        InterNode::no_token(InterNodeType::Word, format!(",{}BIT", root.children[i].children[1].value()), vec![])]
+                    ), InterNode::no_token(
+                      InterNodeType::Grouping, "",
+                      vec![
+                        InterNode::no_token(InterNodeType::Word, "T", vec![]),
+                        InterNode::no_token(InterNodeType::Text, root.children[i].children[5].value(), vec![])]
+                    )]
+                  );
                   root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
                 }
               },
-              9 => {
+              8 => {
                 // (IN_TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T "Text")>)
+                let tmp_cond = InterNode::no_token(
+                  InterNodeType::Routine, "COND",
+                  vec![InterNode::no_token(
+                    InterNodeType::Grouping, "",
+                    vec![
+                      InterNode::no_token(
+                        InterNodeType::Routine, "FSET?",
+                        vec![
+                          InterNode::no_token(InterNodeType::Word, format!(",{}", root.children[i].children[3].value()), vec![]),
+                          InterNode::no_token(InterNodeType::Word, format!(",{}BIT", root.children[i].children[5].value()), vec![])]), 
+                      InterNode::no_token(InterNodeType::Word, root.children[i].children[1].value(), vec![])] 
+                  ), InterNode::no_token(
+                    InterNodeType::Grouping, "",
+                    vec![
+                      InterNode::no_token(InterNodeType::Word, "T", vec![]),
+                      InterNode::no_token(InterNodeType::Text, root.children[i].children[7].value(), vec![])]
+                  )]
+                );
+                root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
               },
-              _ => panic!()
+              x => { println!("{}", x); panic!() }
             };
           },
           _ => panic!()
@@ -228,38 +212,27 @@ pub fn refactor_routine_params(root: &mut InterNode) {
       for i in ((aux_index.unwrap()+1)..root.children[1].children.len()).rev() {
         match root.children[1].children[i].kind {
           InterNodeType::Grouping => {
-            root.children.insert(2, InterNode {
-              kind: InterNodeType::Routine,
-              token: Some(Token::fake(TokenType::Word, "SET")),
-              children: vec![InterNode {
-                kind: InterNodeType::Word,
-                token: Some(Token::fake(TokenType::Word, root.children[1].children[i].children[0].value())),
-                children: Vec::new()
-              }, InterNode {
-                kind: root.children[1].children[i].children[1].kind,
-                token: match root.children[1].children[i].children[1].kind {
-                  InterNodeType::EmptyRoutine => None,
-                  InterNodeType::Word | InterNodeType::Int => Some(Token::fake(TokenType::Word, root.children[1].children[i].children[1].value())),
-                  _ => panic!()
-                },
-                children: Vec::new()
-              }]
-            });
+            root.children.insert(2, InterNode::no_token(
+              InterNodeType::Routine, "SET",
+              vec![
+                InterNode::no_token(InterNodeType::Word, root.children[1].children[i].children[0].value(), vec![]),
+                InterNode::no_token(
+                  root.children[1].children[i].children[1].kind,
+                  match root.children[1].children[i].children[1].kind {
+                    InterNodeType::EmptyRoutine => String::from(""),
+                    InterNodeType::Word | InterNodeType::Int => String::from(root.children[1].children[i].children[1].value()),
+                    _ => panic!()
+                  },
+                  vec![])]
+            ));
           },
           InterNodeType::Word => {
-            root.children.insert(2, InterNode{
-              kind: InterNodeType::Routine,
-              token: Some(Token::fake(TokenType::Word, "SET")),
-              children: vec![InterNode {
-                kind: InterNodeType::Word,
-                token: Some(Token::fake(TokenType::Word, root.children[1].children[i].value())),
-                children: Vec::new()
-              }, InterNode {
-                kind: InterNodeType::EmptyRoutine,
-                token: None,
-                children: Vec::new()
-              }]
-            });
+            root.children.insert(2, InterNode::no_token(
+              InterNodeType::Routine, "SET",
+              vec![
+                InterNode::no_token(InterNodeType::Word, root.children[1].children[i].value(), vec![]),
+                InterNode::no_token(InterNodeType::EmptyRoutine, "", vec![])]
+            ));
           },
           _ => panic!()
         };
