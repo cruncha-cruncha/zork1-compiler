@@ -1,5 +1,5 @@
 pub mod ast_stats;
-pub mod contracts;
-mod validation;
 pub mod ast;
-pub mod meta;
+pub mod node;
+pub mod stats;
+mod validation;

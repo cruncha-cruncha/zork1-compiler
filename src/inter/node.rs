@@ -1,7 +1,7 @@
 use std::fmt;
 use std::error::Error;
 
-use crate::zil::contracts::*;
+use crate::zil::node::*;
 use crate::zil::tokenize::*;
 
 #[derive(Copy, Clone, PartialEq)]

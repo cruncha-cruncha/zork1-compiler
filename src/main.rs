@@ -23,7 +23,7 @@ fn main() {
 
     let mut generator = zil::tokenize::TokenGenerator::new(file_key, reader);
 
-    let mut root = zil::contracts::ZilNode::new();
+    let mut root = zil::node::ZilNode::new();
     
     match zil::ast::build_tree(&mut generator, &mut root) {
       Ok(()) => println!("built zil tree"),

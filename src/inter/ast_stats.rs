@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::zil::contracts::*;
+use crate::zil::node::*;
 
 // convert to use InterNode tree
 

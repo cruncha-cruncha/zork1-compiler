@@ -1,4 +1,4 @@
-use crate::inter::contracts::*;
+use crate::inter::node::*;
 
 pub fn validate(n: &InterNode) -> Result<(), InterErr> {
   if n.kind == InterNodeType::Routine {

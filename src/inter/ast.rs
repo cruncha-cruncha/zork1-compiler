@@ -47,12 +47,12 @@ let GO_NEXT = (TBL) => {
 }
 */
 
-use crate::zil::contracts::*;
-use crate::inter::contracts::*;
+use crate::zil::node::*;
+use crate::inter::node::*;
 use crate::inter;
 
 pub fn clone_zil_tree(root: &ZilNode) -> Result<InterNode, InterErr> {
-  let mut root = inter::contracts::InterNode::clone_zilnode(&root)?;
+  let mut root = InterNode::clone_zilnode(&root)?;
   inter::validation::validate(&root)?;
   refactor_routine_params(&mut root);
   refactor_room_nav(&mut root);

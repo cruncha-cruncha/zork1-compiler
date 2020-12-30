@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io;
 
 use crate::zil::tokenize::*;
-use crate::zil::contracts::*;
+use crate::zil::node::*;
 
 pub fn print_tree(root: &ZilNode, depth: u64) {
     let spacer = String::from("  ");
