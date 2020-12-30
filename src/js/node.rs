@@ -10,6 +10,7 @@ pub trait HandleJS {
   fn print (root: &JSNode, meta: &mut Meta, stats: &Stats, writer: &mut CustomBufWriter<File>, ) -> Result<(), io::Error>;
 }
 
+#[derive(Copy, Clone, PartialEq)]
 pub enum JSNodeType {
   Unknown,
   Routine,
@@ -35,9 +36,9 @@ impl From<InterNodeType> for JSNodeType {
 }
 
 pub struct JSNode {
-  kind: JSNodeType,
-  value: String,
-  children: Vec<JSNode>
+  pub kind: JSNodeType,
+  pub value: String,
+  pub children: Vec<JSNode>
 }
 
 impl JSNode {

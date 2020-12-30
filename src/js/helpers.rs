@@ -1,43 +1,11 @@
-use crate::zil::contracts::ZilNode;
-use crate::js::contracts::*;
+use crate::js::node::*;
 
-#[macro_export]
-macro_rules! wrap {
-  ($func:expr, $msg:expr) => {
-      match $func {
-          Err(e) => return Err(OutputErr::from(HandlerErr::wrap(e, format!("{}\nat {} in {}", $msg, line!(), file!())))),
-          Ok(v) => v,
-      };
-  };
-  ($func:expr) => {
-    match $func {
-        Err(e) => return Err(OutputErr::from(HandlerErr::wrap(e, format!("at {} in {}", line!(), file!())))),
-        Ok(v) => v,
-    };
-  };
+pub fn escape_text(root: &JSNode) -> String {
+  String::from(root.value.replace("\"", "\\\"").replace("\n", "\\n"))
 }
 
-pub fn escape_text(root: &ZilNode) -> Result<String, OutputErr> {
-  if !root.is_text() {
-      return Err(OutputErr::from(HandlerErr::origin(format!("bad text to escape: {}", root))));
-  }
-
-  let escaped = root.tokens[0].value.replace("\"", "\\\"").replace("\n", "\\n");
-  Ok(String::from(escaped))
-}
-
-pub fn is_int(root: &ZilNode) -> bool {
-  if !root.is_word() {
-    return false;
-  }
-
-  match root.tokens[0].value.parse::<usize>() { // turbofish!
-    Ok(_) => true,
-    Err(_) => false
-  }
-}
-
-pub fn format_keyword(root: &ZilNode) -> Result<String, OutputErr> {
+/*
+pub fn format_keyword(root: &ZilNode) -> Result<String, ()> {
   if !root.is_word() && !root.is_text() {
     return Err(OutputErr::from(HandlerErr::origin(format!("invalid keyword to format: {}", root))));
   }
@@ -73,17 +41,12 @@ pub fn format_keyword(root: &ZilNode) -> Result<String, OutputErr> {
 
   Ok(String::from(keyword))
 }
+*/
 
-pub fn crack_keyword(root: &ZilNode) -> Result<(KeywordPrefix, String, KeywordSuffix), OutputErr> {
-  if !root.is_word() && !root.is_text() {
-    return Err(OutputErr::from(HandlerErr::origin(format!("invalid keyword to crack: {}", root))));
-  }
-
+pub fn crack_keyword(root: &JSNode) -> Result<(KeywordPrefix, String, KeywordSuffix), ()> {
   let prefix: KeywordPrefix;
+  let mut bare = root.value.clone();
   let suffix: KeywordSuffix;
-  let mut bare = String::from(&root.tokens[0].value);
-
-  bare = bare.replace("-", "_");
 
   if bare.ends_with("?") {
     bare = format!("{}", &bare[..(bare.len()-1)]);
@@ -115,10 +78,10 @@ pub fn crack_keyword(root: &ZilNode) -> Result<(KeywordPrefix, String, KeywordSu
   }
 
   if !bare.chars().all(|c| { c.is_alphanumeric() || c == '_' }) {
-    return Err(OutputErr::from(HandlerErr::origin(format!("Trying to crack keyword, but bare still has symbols in it: {}", root))));
+    return Err(());
   }
 
-  Ok((prefix, bare,  suffix))
+  Ok((prefix, bare, suffix))
 }
 
 #[derive(Clone, PartialEq)]
