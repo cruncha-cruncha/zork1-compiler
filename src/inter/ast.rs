@@ -1,4 +1,3 @@
-// re-organize tree (like "AUX" in ROUTINE params, IN vs IN TO in OBJECTs and ROOMs)
 // override/substitute words
 
 // can compare enum references, is this more performant?
@@ -48,13 +47,6 @@ let GO_NEXT = (TBL) => {
 }
 */
 
-/*
-<ROUTINE PATIO (V "AUX" E)
-  <SET E <>>
-  <SET E V>
->
-*/
-
 use crate::zil::contracts::*;
 use crate::inter::contracts::*;
 use crate::inter;
@@ -64,6 +56,7 @@ pub fn clone_zil_tree(root: &ZilNode) -> Result<InterNode, InterErr> {
   inter::validation::validate(&root)?;
   refactor_routine_params(&mut root);
   refactor_room_nav(&mut root);
+  replace_dashes(&mut root);
   Ok(root)
 }
 
@@ -80,6 +73,19 @@ pub fn print_tree(root: &InterNode, depth: u64) {
     }
 }
 
+fn replace_dashes(root: &mut InterNode) {
+  match root.kind {
+    InterNodeType::EmptyRoutine | InterNodeType::Text | InterNodeType::Int => return,
+    InterNodeType::Unknown | InterNodeType::Grouping => (),
+    _ => {
+      root.value = root.value().replace("-", "_");
+    }
+  };
+  for i in 0..root.children.len() {
+    replace_dashes(&mut root.children[i]);
+  }
+}
+
 /*
 (IN ROOMS) -> (IN ROOMS)
 (IN "The dam blocks your way.") -> (IN_TO "The dam blocks your way.")
@@ -90,7 +96,7 @@ pub fn print_tree(root: &InterNode, depth: u64) {
 (IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T "You would drown")>)
 (IN TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T "Text")>)
 */
-pub fn refactor_room_nav(root: &mut InterNode) {
+fn refactor_room_nav(root: &mut InterNode) {
   if root.kind == InterNodeType::Routine && root.value() == "ROOM" {
     for i in 1..root.children.len() {
       if root.children[i].children[0].value() == "IN" && root.children[i].children[1].value() == "ROOMS" {
@@ -193,11 +199,8 @@ pub fn refactor_room_nav(root: &mut InterNode) {
   }
 }
 
-// for <ROUTINE X ( ... ) ... >, take the params grouping (children[1])
-// if there is an "AUX" child in the params grouping:
-// convert every child after to a <SET> routine in the main ROUTINE body
-// remove those params from the grouping
-pub fn refactor_routine_params(root: &mut InterNode) {
+// <ROUTINE R (X Y "AUX" Z) ... > becomes <ROUTINE R (X Y) <SET Z> ... >
+fn refactor_routine_params(root: &mut InterNode) {
   if root.kind == InterNodeType::Routine && root.value() == "ROUTINE" {
     let mut aux_index: Option<usize> = None;
     for i in 0..root.children[1].children.len() {
