@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::zil::ast::{Node, NodeType};
+use crate::zil::contracts::*;
 use crate::js::handlers::generic_tokens::*;
 use crate::js::contracts::*;
 use crate::js::custom_buf_writer::*;
@@ -8,7 +8,7 @@ use crate::js::custom_buf_writer::*;
 pub struct ROOM {}
 
 impl HandleJS for ROOM {
-    fn validate (root: &Node) -> Result<(), HandlerErr> {
+    fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_routine() ||
            root.children.len() < 2 ||
            !root.children[0].is_word() ||
@@ -18,7 +18,7 @@ impl HandleJS for ROOM {
         Ok(())
     }
   
-    fn print(root: &Node, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    fn print(root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
         Self::validate(root)?;
       
         let spacer = (0..indent).map(|_| "  ").collect::<String>();
@@ -46,7 +46,7 @@ impl HandleJS for ROOM {
 }
 
 impl ROOM {
-    pub fn validate_sub_grouping(root: &Node) -> Result<(), HandlerErr> {
+    pub fn validate_sub_grouping(root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_grouping() ||
            root.children.len() < 2 ||
            !root.children[0].is_word() {
@@ -55,7 +55,7 @@ impl ROOM {
         Ok(())
     }
 
-    pub fn return_obj(root: &Node, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+    pub fn return_obj(root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
       if root.children.len()%2 != 1 {
         return Err(OutputErr::from(HandlerErr::origin("Bad number of children in ROOM sub group 'return_obj'")));
       }
@@ -68,17 +68,17 @@ impl ROOM {
 
       for i in 0..(root.children.len() - 1)/2 {
         match root.children[(i*2)+1].kind() {
-          NodeType::Text => wrap!(T::print_as_word(&root.children[(i*2)+1], 0, &mut writer)),
-          NodeType::Word => wrap!(W::print(&root.children[(i*2)+1], 0, &mut writer)),
-          _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType for key in ROOM sub group 'return_obj'"))),
+          ZilNodeType::Text => wrap!(T::print_as_word(&root.children[(i*2)+1], 0, &mut writer)),
+          ZilNodeType::Word => wrap!(W::print(&root.children[(i*2)+1], 0, &mut writer)),
+          _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown ZilNodeType for key in ROOM sub group 'return_obj'"))),
         };
 
         wrap!(writer.w(": "));
 
         match root.children[(i*2)+2].kind() {
-          NodeType::Text => wrap!(T::print(&root.children[(i*2)+2], 0, &mut writer)),
-          NodeType::Word => wrap!(W::print_with_quotes(&root.children[(i*2)+2], 0, &mut writer)),
-          _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown NodeType for value in ROOM sub group 'return_obj'"))),
+          ZilNodeType::Text => wrap!(T::print(&root.children[(i*2)+2], 0, &mut writer)),
+          ZilNodeType::Word => wrap!(W::print(&root.children[(i*2)+2], 0, &mut writer)),
+          _ => return Err(OutputErr::from(HandlerErr::origin("Cannot handle unknown ZilNodeType for value in ROOM sub group 'return_obj'"))),
         };
 
         if ((i+1)*2)+1 < root.children.len() {
@@ -91,5 +91,17 @@ impl ROOM {
   
       Ok(())
     }
+
+    pub fn mut_fn(root: &ZilNode, indent: u64, mut writer: &mut CustomBufWriter<File>) -> Result<(), OutputErr> {
+      let spacer = (0..indent).map(|_| "  ").collect::<String>();
+  
+      wrap!(writer.w(format!("{}", spacer)));
+      wrap!(W::print(&root.children[0], 0, &mut writer));
+      wrap!(writer.w(": "));
+      wrap!(W::print(&root.children[1], 0, &mut writer));
+      wrap!(writer.w(",\n"));
+  
+      Ok(())
+  }
 }
 

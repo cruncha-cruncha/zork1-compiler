@@ -1,1 +1,1 @@
-print("Cleopatra Jones")(X = five)
+print("Cleopatra Jones")(X = 5)

@@ -4,7 +4,7 @@ use std::io::BufReader;
 
 mod zil;
 mod js;
-mod inbetween;
+mod inter;
 #[cfg(test)]
 mod tests;
 
@@ -23,10 +23,10 @@ fn main() {
 
     let mut generator = zil::tokenize::TokenGenerator::new(file_key, reader);
 
-    let mut root = zil::ast::Node::new();
+    let mut root = zil::node::ZilNode::new();
     
     match zil::ast::build_tree(&mut generator, &mut root) {
-      Ok(()) => println!("build tree ok"),
+      Ok(()) => println!("built zil tree"),
       Err(e) => {
         println!("\nERROR\n{}", e);
         zil::ast::print_tree(&root, 0);
@@ -34,15 +34,30 @@ fn main() {
       }
     };
 
-    //crate::inbetween::ast_stats::run_all(&root);
+    //inter::ast_stats::run_all(&root);
+
+    let root = match inter::ast::clone_zil_tree(&root) {
+      Ok(v) => {
+        println!("built inter tree");
+        v
+      },
+      Err(e) => {
+        println!("\nERROR\n{}", e);
+        zil::ast::print_tree(&root, 0);
+        return;
+      }
+    };
+
+    //inter::ast::print_tree(&root, 0);
+
+    let root = js::node::JSNode::clone_internode(&root);
 
     let output_file_path = Path::new(".").join("out").join("testing.js");
     let writer = get_CustomBufWriter(&output_file_path).unwrap();
     match js::parse::parse(&root, writer) {
-      Ok(()) => println!("handle js ok"),
-      Err(e) => {
-        println!("\nERROR\n{}", e);
-        zil::ast::print_tree(&root, 0);
+      Ok(_) => println!("output ok"),
+      Err(_) => {
+        println!("\nBAD OUTPUT\n");
         return;
       }
     };

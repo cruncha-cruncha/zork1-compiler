@@ -1,11 +1,17 @@
+#[allow(non_snake_case)]
+mod COND;
+pub mod generic_tokens;
+#[allow(non_snake_case)]
+mod ROUTINE;
+/*
 mod add;
 #[allow(non_snake_case)]
 mod AND;
-#[allow(non_snake_case)]
-mod COND;
 mod divide;
 mod equals;
 pub mod generic_tokens;
+#[allow(non_snake_case)]
+mod GLOBAL;
 mod import;
 mod multiply;
 #[allow(non_snake_case)]
@@ -25,5 +31,7 @@ mod SET;
 #[allow(non_snake_case)]
 mod subgrouping_IN;
 mod subtract;
+mod table;
 #[allow(non_snake_case)]
 mod TELL;
+*/

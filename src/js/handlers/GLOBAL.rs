@@ -5,15 +5,15 @@ use crate::js::handlers::generic_tokens::*;
 use crate::js::contracts::*;
 use crate::js::custom_buf_writer::*;
 
-pub struct Divide {}
+pub struct GLOBAL {}
 
-impl HandleJS for Divide {
+impl HandleJS for GLOBAL {
     fn validate (root: &ZilNode) -> Result<(), HandlerErr> {
         if !root.is_routine() ||
            root.children.len() != 3 ||
            !root.children[0].is_word() ||
-           root.children[0].tokens[0].value != "/" {
-            return Err(HandlerErr::origin(format!("Invalid Divide: {}", root)));
+           root.children[0].tokens[0].value != "GLOBAL" {
+            return Err(HandlerErr::origin(format!("Invalid GLOBAL: {}", root)));
         }
         Ok(())
     }
@@ -22,24 +22,19 @@ impl HandleJS for Divide {
         Self::validate(root)?;
       
         let spacer = (0..indent).map(|_| "  ").collect::<String>();
-        wrap!(writer.w(format!("{}(", spacer)));
-
-        match root.children[1].kind() {
-            ZilNodeType::Routine => wrap!(R::print(&root.children[1], 0, &mut writer)),
-            ZilNodeType::Word => wrap!(W::print(&root.children[1], 0, &mut writer)),
-            _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown ZilNodeType in numerator of Divide"))),
-        };
-
-        wrap!(writer.w(" / "));
-
+        wrap!(writer.w(format!("{}let ", spacer)));
+        wrap!(W::print(&root.children[1], 0, &mut writer));
+        wrap!(writer.w(" = "));
+      
         match root.children[2].kind() {
             ZilNodeType::Routine => wrap!(R::print(&root.children[2], 0, &mut writer)),
+            ZilNodeType::Text => wrap!(T::print(&root.children[2], 0, &mut writer)),
             ZilNodeType::Word => wrap!(W::print(&root.children[2], 0, &mut writer)),
-            _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown ZilNodeType in denominator of Divide"))),
+            _ => return Err(OutputErr::from(HandlerErr::origin("Cannot print unknown ZilNodeType in GLOBAL"))),
         };
-
-        wrap!(writer.w(")"));
-
+      
+        wrap!(writer.w(";\n"));
+      
         Ok(())
     }
 }

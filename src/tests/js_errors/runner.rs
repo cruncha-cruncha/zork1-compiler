@@ -45,7 +45,7 @@ pub fn test_ROOM_2() {
 pub fn test_folder(input_file_path: &Path) {    
     let reader = crate::get_BufReader(&input_file_path).unwrap();
     let mut generator = crate::zil::tokenize::TokenGenerator::new(0, reader);
-    let mut root = crate::zil::ast::Node::new();
+    let mut root = crate::zil::contracts::ZilNode::new();
     crate::zil::ast::build_tree(&mut generator, &mut root).unwrap();
 
     let output_file_path = Path::new(".").join("out").join("testing.js");

@@ -1,10 +1,12 @@
 use std::collections::HashSet;
 
-use crate::zil::ast::*;
+use crate::zil::node::*;
+
+// convert to use InterNode tree
 
 pub trait TreeStat {
     fn desc(&self) -> String;
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>);
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>);
 }
 
 #[allow(dead_code)]
@@ -18,7 +20,7 @@ fn set_to_str(collector: &HashSet<String>) -> String {
 }
 
 #[allow(dead_code)]
-pub fn run_all(root: &Node) {
+pub fn run_all(root: &ZilNode) {
     let mut stats: Vec<Box<dyn TreeStat>> = Vec::new();
     stats.push(Box::new(Stat01{}));
     stats.push(Box::new(Stat02{}));
@@ -43,7 +45,7 @@ pub fn run_all(root: &Node) {
 }
 
 #[allow(dead_code)]
-pub fn dot_comma(root: &Node) {
+pub fn dot_comma(root: &ZilNode) {
     let dot_stats = Stat09{};
     println!("\n{}", dot_stats.desc());
     let mut dot_collector: HashSet<String> = HashSet::new();
@@ -66,7 +68,7 @@ impl TreeStat for Stat01 {
         String::from("<X ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() {
             collector.insert(String::from(&root.children[0].tokens[0].value));
@@ -83,7 +85,7 @@ impl TreeStat for Stat02 {
         String::from("<ROUTINE X ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() &&
            root.children[0].is_word() &&
@@ -103,7 +105,7 @@ impl TreeStat for Stat03 {
         String::from("<GLOBAL X ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() &&
            root.children[0].is_word() &&
@@ -123,7 +125,7 @@ impl TreeStat for Stat04 {
         String::from("<OBJECT X ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() &&
            root.children[0].is_word() &&
@@ -143,7 +145,7 @@ impl TreeStat for Stat05 {
         String::from("(X ... )")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_grouping() &&
            root.has_children() {
             collector.insert(String::from(&root.children[0].tokens[0].value));
@@ -160,7 +162,7 @@ impl TreeStat for Stat06 {
         String::from("<COND ... (X ... ) ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() &&
            root.children[0].is_word() &&
@@ -184,7 +186,7 @@ impl TreeStat for Stat07 {
         String::from("(X ... ) but not <COND ... (X ... ) ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.has_children() {
             if !root.children[0].is_word() ||
                root.children[0].tokens[0].value != String::from("COND") {
@@ -209,7 +211,7 @@ impl TreeStat for Stat08 {
         String::from("<OBJECT ... (X ... ) ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() &&
            root.children[0].is_word() &&
@@ -233,7 +235,7 @@ impl TreeStat for Stat09 {
         String::from("WORDs that start with \".\"")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_word() &&
            root.tokens[0].value.starts_with(".") {
             collector.insert(String::from(&root.tokens[0].value[1..]));
@@ -250,7 +252,7 @@ impl TreeStat for Stat11 {
         String::from("WORDs that start with \",\"")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_word() &&
            root.tokens[0].value.starts_with(",") {
             collector.insert(String::from(&root.tokens[0].value[1..]));
@@ -267,7 +269,7 @@ impl TreeStat for Stat12 {
         String::from("<CONSTANT X ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() &&
            root.children[0].is_word() &&
@@ -287,7 +289,7 @@ impl TreeStat for Stat13 {
         String::from("<ROOM ... (X ... ) ... >")
     }
 
-    fn calc(&self, root: &Node, collector: &mut HashSet<String>) {
+    fn calc(&self, root: &ZilNode, collector: &mut HashSet<String>) {
         if root.is_routine() &&
            root.has_children() &&
            root.children[0].is_word() &&

@@ -36,6 +36,7 @@ impl TokenType {
     }
 }
 
+#[derive(Clone, PartialEq)]
 pub struct Token {
     pub kind: TokenType,
     pub value: String,

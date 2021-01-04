@@ -1,47 +1,19 @@
-use crate::zil::ast::Node;
-use crate::js::contracts::*;
-
-#[macro_export]
-macro_rules! wrap {
-  ($func:expr, $msg:expr) => {
-      match $func {
-          Err(e) => return Err(OutputErr::from(HandlerErr::wrap(e, format!("{}\nat {} in {}", $msg, line!(), file!())))),
-          Ok(v) => v,
-      };
-  };
-  ($func:expr) => {
-    match $func {
-        Err(e) => return Err(OutputErr::from(HandlerErr::wrap(e, format!("at {} in {}", line!(), file!())))),
-        Ok(v) => v,
-    };
-  };
+pub fn escape_text(value: &str) -> String {
+  String::from(value.replace("\"", "\\\"").replace("\n", "\\n"))
 }
 
-pub fn escape_text(root: &Node) -> Result<String, OutputErr> {
-  if !root.is_text() {
-      return Err(OutputErr::from(HandlerErr::origin(format!("bad text to escape: {}", root))));
-  }
-
-  let escaped = root.tokens[0].value.replace("\"", "\\\"").replace("\n", "\\n");
-  Ok(String::from(escaped))
-}
-
-pub fn is_int(root: &Node) -> bool {
-  if !root.is_word() {
-    return false;
-  }
-
-  match root.tokens[0].value.parse::<usize>() { // turbofish!
-    Ok(_) => true,
-    Err(_) => false
-  }
-}
-
-pub fn format_keyword(root: &Node) -> Result<String, OutputErr> {
-  let (prefix, mut keyword, suffix) = wrap!(crack_keyword(&root), root);
+pub fn format_keyword(value: &str) -> Result<String, ()> {
+  let (prefix, mut keyword, suffix) = crack_keyword(&value)?;
 
   keyword = match prefix {
-    KeywordPrefix::Qfix => format!("pq_{}", &keyword),
+    KeywordPrefix::Qfix((b, s)) => {
+      match *b {
+        KeywordPrefix::Comma => format!("comma_{}q_{}", s, &keyword),
+        KeywordPrefix::Dot => format!("dot_{}q_{}", s, &keyword),
+        KeywordPrefix::None =>format!("{}q_{}", s, &keyword),
+        _ => return Err(())
+      }
+    },
     KeywordPrefix::Comma => format!("comma_{}", &keyword),
     KeywordPrefix::Dot => format!("dot_{}", &keyword),
     KeywordPrefix::None => keyword
@@ -55,67 +27,49 @@ pub fn format_keyword(root: &Node) -> Result<String, OutputErr> {
   Ok(String::from(keyword))
 }
 
-pub fn crack_keyword(root: &Node) -> Result<(KeywordPrefix, String, KeywordSuffix), OutputErr> {
-  if !root.is_word() && !root.is_text() {
-    return Err(OutputErr::from(HandlerErr::origin(format!("bad keyword to crack: {}", root))));
-  }
-
+pub fn crack_keyword(value: &str) -> Result<(KeywordPrefix, String, KeywordSuffix), ()> {
   let prefix: KeywordPrefix;
+  let mut bare = value.clone();
   let suffix: KeywordSuffix;
-  let keyword = &root.tokens[0].value;
-  let mut bare: String;
-
-  if keyword.starts_with(",P?") {
-    bare = keyword[3..].to_string();
-    prefix = KeywordPrefix::Qfix;
-  } else if keyword.starts_with(",") {
-    bare = keyword[1..].to_string();
-    prefix = KeywordPrefix::Comma;
-  } else if keyword.starts_with(".") {
-    bare = keyword[1..].to_string();
-    prefix = KeywordPrefix::Dot;
-  } else {
-    bare = keyword.to_string();
-    prefix = KeywordPrefix::None;
-  }
-
-  bare = bare.replace("-", "_");
-
-  let first_char = bare.chars().next().unwrap();
-  if first_char.is_numeric() {
-    let alpha = match first_char {
-      '0' => "zero",
-      '1' => "one",
-      '2' => "two",
-      '3' => "three",
-      '4' => "four",
-      '5' => "five",
-      '6' => "six",
-      '7' => "seven",
-      '8' => "eight",
-      '9' => "nine",
-      _ => return Err(OutputErr::from(HandlerErr::origin(format!("Trying to crack keyword, but first char is not numeric?? {}", root))))
-    };
-    bare = format!("{}{}", alpha, &bare[1..]);
-  }
 
   if bare.ends_with("?") {
-    bare = format!("{}", &bare[..(bare.len()-1)]);
+    bare = &bare[..(bare.len()-1)];
     suffix = KeywordSuffix::Question;
   } else {
     suffix = KeywordSuffix::None;
   }
 
-  if !bare.chars().all(|c| { c.is_alphanumeric() || c == '_' }) {
-    return Err(OutputErr::from(HandlerErr::origin(format!("Trying to crack keyword, but bare still has symbols in it: {}", root))));
+  if bare.contains("?") {
+    let i = bare.find("?").unwrap();
+    let pre = &bare[..i];
+    if pre.starts_with(",") {
+      prefix = KeywordPrefix::Qfix((Box::new(KeywordPrefix::Comma), String::from(&pre[1..])));
+    } else if pre.starts_with(".") {
+      prefix = KeywordPrefix::Qfix((Box::new(KeywordPrefix::Dot), String::from(&pre[1..])));
+    } else {
+      prefix = KeywordPrefix::Qfix((Box::new(KeywordPrefix::None), String::from(pre)));
+    }
+    bare = &bare[(i+1)..];
+  } else if bare.starts_with(",") {
+    prefix = KeywordPrefix::Comma;
+    bare = &bare[1..];
+  } else if bare.starts_with(".") {
+    prefix = KeywordPrefix::Dot;
+    bare = &bare[1..];
+  } else {
+    prefix = KeywordPrefix::None;
   }
 
-  Ok((prefix, bare,  suffix))
+  if !bare.chars().all(|c| { c.is_alphanumeric() || c == '_' }) {
+    return Err(());
+  }
+
+  Ok((prefix, String::from(bare), suffix))
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum KeywordPrefix {
-  Qfix,
+  Qfix((Box<KeywordPrefix>, String)),
   Comma,
   Dot,
   None,
