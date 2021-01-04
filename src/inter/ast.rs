@@ -60,6 +60,7 @@ pub fn clone_zil_tree(root: &ZilNode) -> Result<InterNode, InterErr> {
   Ok(root)
 }
 
+#[allow(dead_code)]
 pub fn print_tree(root: &InterNode, depth: u64) {
     let spacer = String::from("  ");
     let mut out = String::new();
@@ -199,7 +200,7 @@ fn refactor_room_nav(root: &mut InterNode) {
   }
 }
 
-// <ROUTINE R (X Y "AUX" Z) ... > becomes <ROUTINE R (X Y) <SET Z> ... >
+// <ROUTINE R (X Y "AUX" Z) ... > becomes <ROUTINE R (X Y) <LET Z> ... >
 fn refactor_routine_params(root: &mut InterNode) {
   if root.kind == InterNodeType::Routine && root.value() == "ROUTINE" {
     let mut aux_index: Option<usize> = None;
@@ -214,7 +215,7 @@ fn refactor_routine_params(root: &mut InterNode) {
         match root.children[1].children[i].kind {
           InterNodeType::Grouping => {
             root.children.insert(2, InterNode::no_token(
-              InterNodeType::Routine, "SET",
+              InterNodeType::Routine, "LET",
               vec![
                 InterNode::no_token(InterNodeType::Word, root.children[1].children[i].children[0].value(), vec![]),
                 InterNode::no_token(
@@ -229,7 +230,7 @@ fn refactor_routine_params(root: &mut InterNode) {
           },
           InterNodeType::Word => {
             root.children.insert(2, InterNode::no_token(
-              InterNodeType::Routine, "SET",
+              InterNodeType::Routine, "LET",
               vec![
                 InterNode::no_token(InterNodeType::Word, root.children[1].children[i].value(), vec![]),
                 InterNode::no_token(InterNodeType::EmptyRoutine, "", vec![])]
