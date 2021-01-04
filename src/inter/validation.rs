@@ -174,7 +174,8 @@ pub fn validate(n: &InterNode) -> Result<(), InterErr> {
 }
 
 fn validate_param_grouping(n: &InterNode) -> Result<(), InterErr> {
-  for c in n.children.iter() {
+  let mut optional = false;
+  for (i, c) in n.children.iter().enumerate() {
     match c.kind {
       InterNodeType::Grouping => {
         if c.children.len() != 2 ||
@@ -185,12 +186,26 @@ fn validate_param_grouping(n: &InterNode) -> Result<(), InterErr> {
       },
       InterNodeType::Text => {
         match c.value() {
-          "OPTIONAL" => (),
-          "AUX" => (),
+          "OPTIONAL" => {
+            optional = true;
+            if (i+1) >= n.children.len() {
+              return Err(InterErr::origin(format!("Last param in param grouping cannot be text: {}", c)))
+            }
+          },
+          "AUX" => {
+            optional = false;
+            if (i+1) >= n.children.len() {
+              return Err(InterErr::origin(format!("Last param in param grouping cannot be text: {}", c)))
+            }
+          },
           _ => return Err(InterErr::origin(format!("Unknown text in param grouping: {}", c)))
         };
       },
-      InterNodeType::Word => (),
+      InterNodeType::Word => {
+        if optional {
+          return Err(InterErr::origin(format!("Optional param in param grouping does not have a default value: {}", c)))
+        }
+      },
       _ => return Err(InterErr::origin(format!("Unknown InterNodeType in param grouping ({})", c)))
     };
   }

@@ -1,9 +1,8 @@
-<ROOM LIVING-ROOM
-  (IN ROOMS)
-  (IN "The dam blocks your way.")
-  (IN TO SQUEEKY-ROOM)
-  (IN PER GRATING-EXIT)
-  (IN TO STONE-BARROW IF WON-FLAG)
-  (IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN)
-  (IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.")
-  (IN TO X IF Y IS Z ELSE "Text")>
+<ROUTINE GO-NEXT (TBL "AUX" VAL)
+	 <COND
+ 		(<SET VAL <LKP ,HERE .TBL>> <COND 
+			(<NOT <GOTO .VAL>> 2)
+		      	(T 1)
+		>)
+	>
+>

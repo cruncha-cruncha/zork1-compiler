@@ -10,4 +10,10 @@ impl Meta<'_> {
       parent: Some(&parent)
     }
   }
+  pub fn zero_indent<'a>(parent: &'a Meta) -> Meta<'a> {
+    Meta {
+      indent: 0,
+      parent: Some(&parent)
+    }
+  }
 }

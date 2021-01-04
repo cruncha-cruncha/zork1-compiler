@@ -43,24 +43,24 @@ fn main() {
       },
       Err(e) => {
         println!("\nERROR\n{}", e);
-        return;
-      }
-    };
-
-    inter::ast::print_tree(&root, 0);
-
-    /*
-    let output_file_path = Path::new(".").join("out").join("testing.js");
-    let writer = get_CustomBufWriter(&output_file_path).unwrap();
-    match js::parse::parse(&root, writer) {
-      Ok(()) => println!("handle js ok"),
-      Err(e) => {
-        println!("\nERROR\n{}", e);
         zil::ast::print_tree(&root, 0);
         return;
       }
     };
-    */
+
+    //inter::ast::print_tree(&root, 0);
+
+    let root = js::node::JSNode::clone_internode(&root);
+
+    let output_file_path = Path::new(".").join("out").join("testing.js");
+    let writer = get_CustomBufWriter(&output_file_path).unwrap();
+    match js::parse::parse(&root, writer) {
+      Ok(_) => println!("output ok"),
+      Err(_) => {
+        println!("\nBAD OUTPUT\n");
+        return;
+      }
+    };
 }
 
 #[allow(non_snake_case)]
@@ -75,7 +75,6 @@ pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
   }
 }
 
-/*
 #[allow(non_snake_case)]
 pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_writer::CustomBufWriter<File>> {
   match File::create(file_path) {
@@ -87,4 +86,3 @@ pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_wri
     },
   }
 }
-*/

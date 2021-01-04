@@ -1,13 +1,11 @@
 use std::fs::File;
 use std::io;
 
-use crate::inter::stats::*;
 use crate::inter::node::*;
-use crate::js::meta::*;
 use crate::js::custom_buf_writer::*;
 
 pub trait HandleJS {
-  fn print (root: &JSNode, meta: &mut Meta, stats: &Stats, writer: &mut CustomBufWriter<File>, ) -> Result<(), io::Error>;
+  fn print (root: &JSNode, writer: &mut CustomBufWriter<File>) -> Result<(), io::Error>;
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -42,7 +40,7 @@ pub struct JSNode {
 }
 
 impl JSNode {
-  fn clone_internode(root: &InterNode) -> JSNode {
+  pub fn clone_internode(root: &InterNode) -> JSNode {
     let mut children = Vec::new();
     for i in 0..root.children.len() {
         children.push(Self::clone_internode(&root.children[i]))

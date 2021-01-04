@@ -1,24 +1,9 @@
-use crate::js::node::*;
-
-pub fn escape_text(root: &JSNode) -> String {
-  String::from(root.value.replace("\"", "\\\"").replace("\n", "\\n"))
+pub fn escape_text(value: &str) -> String {
+  String::from(value.replace("\"", "\\\"").replace("\n", "\\n"))
 }
 
-/*
-pub fn format_keyword(root: &ZilNode) -> Result<String, ()> {
-  if !root.is_word() && !root.is_text() {
-    return Err(OutputErr::from(HandlerErr::origin(format!("invalid keyword to format: {}", root))));
-  }
-
-  // overrides
-  match &root.tokens[0].value[..] {
-    "T" => return Ok(String::from("true")),
-    "0?" => return Ok(String::from("isZero")),
-    "1?" => return Ok(String::from("isOne")),
-    _ => (),
-  }
-
-  let (prefix, mut keyword, suffix) = wrap!(crack_keyword(&root), root);
+pub fn format_keyword(value: &str) -> Result<String, ()> {
+  let (prefix, mut keyword, suffix) = crack_keyword(&value)?;
 
   keyword = match prefix {
     KeywordPrefix::Qfix((b, s)) => {
@@ -26,7 +11,7 @@ pub fn format_keyword(root: &ZilNode) -> Result<String, ()> {
         KeywordPrefix::Comma => format!("comma_{}q_{}", s, &keyword),
         KeywordPrefix::Dot => format!("dot_{}q_{}", s, &keyword),
         KeywordPrefix::None =>format!("{}q_{}", s, &keyword),
-        _ => return Err(OutputErr::from(HandlerErr::origin(format!("Cannot format unknown KeywordPrefix in Qfix of format_keyword {}", root))))
+        _ => return Err(())
       }
     },
     KeywordPrefix::Comma => format!("comma_{}", &keyword),
@@ -41,15 +26,14 @@ pub fn format_keyword(root: &ZilNode) -> Result<String, ()> {
 
   Ok(String::from(keyword))
 }
-*/
 
-pub fn crack_keyword(root: &JSNode) -> Result<(KeywordPrefix, String, KeywordSuffix), ()> {
+pub fn crack_keyword(value: &str) -> Result<(KeywordPrefix, String, KeywordSuffix), ()> {
   let prefix: KeywordPrefix;
-  let mut bare = root.value.clone();
+  let mut bare = value.clone();
   let suffix: KeywordSuffix;
 
   if bare.ends_with("?") {
-    bare = format!("{}", &bare[..(bare.len()-1)]);
+    bare = &bare[..(bare.len()-1)];
     suffix = KeywordSuffix::Question;
   } else {
     suffix = KeywordSuffix::None;
@@ -65,23 +49,22 @@ pub fn crack_keyword(root: &JSNode) -> Result<(KeywordPrefix, String, KeywordSuf
     } else {
       prefix = KeywordPrefix::Qfix((Box::new(KeywordPrefix::None), String::from(pre)));
     }
-    bare = bare[(i+1)..].to_string();
+    bare = &bare[(i+1)..];
   } else if bare.starts_with(",") {
     prefix = KeywordPrefix::Comma;
-    bare = bare[1..].to_string();
+    bare = &bare[1..];
   } else if bare.starts_with(".") {
     prefix = KeywordPrefix::Dot;
-    bare = bare[1..].to_string();
+    bare = &bare[1..];
   } else {
     prefix = KeywordPrefix::None;
-    bare = bare.to_string();
   }
 
   if !bare.chars().all(|c| { c.is_alphanumeric() || c == '_' }) {
     return Err(());
   }
 
-  Ok((prefix, bare, suffix))
+  Ok((prefix, String::from(bare), suffix))
 }
 
 #[derive(Clone, PartialEq)]
