@@ -40,8 +40,6 @@ impl HandleJS for COND {
 
         writer.w(" else {\nreturn 0;\n}})()")?;
 
-        //writer.w("})()")?;
-
         Ok(())
     }
 }

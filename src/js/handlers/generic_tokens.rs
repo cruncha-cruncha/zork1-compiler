@@ -28,6 +28,7 @@ impl HandleJS for R {
     
         match &root.value[..] {
             "ROUTINE" => crate::js::handlers::ROUTINE::ROUTINE::print(&root, &mut writer),
+            "REPEAT" => crate::js::handlers::REPEAT::REPEAT::print(&root, &mut writer),
             "COND" => crate::js::handlers::COND::COND::print(&root, &mut writer),
             _ => {
                 writer.w(format!("{}", format_keyword(&root.value).unwrap()))?;
