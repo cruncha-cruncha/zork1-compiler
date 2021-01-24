@@ -2,6 +2,8 @@
 mod COND;
 pub mod generic_tokens;
 #[allow(non_snake_case)]
+mod OBJECT;
+#[allow(non_snake_case)]
 mod REPEAT;
 #[allow(non_snake_case)]
 mod ROUTINE;

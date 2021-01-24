@@ -42,7 +42,7 @@ impl HandleJS for ROUTINE {
             writer.w(";\n")?;
         }
 
-        writer.w("}")?;
+        writer.w("}\n")?;
 
         Ok(())
     }

@@ -10,7 +10,7 @@ pub fn format_keyword(value: &str) -> Result<String, ()> {
       match *b {
         KeywordPrefix::Comma => format!("comma_{}q_{}", s, &keyword),
         KeywordPrefix::Dot => format!("dot_{}q_{}", s, &keyword),
-        KeywordPrefix::None =>format!("{}q_{}", s, &keyword),
+        KeywordPrefix::None => format!("{}q_{}", s, &keyword),
         _ => return Err(())
       }
     },

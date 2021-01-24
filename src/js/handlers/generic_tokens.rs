@@ -30,6 +30,7 @@ impl HandleJS for R {
             "ROUTINE" => crate::js::handlers::ROUTINE::ROUTINE::print(&root, &mut writer),
             "REPEAT" => crate::js::handlers::REPEAT::REPEAT::print(&root, &mut writer),
             "COND" => crate::js::handlers::COND::COND::print(&root, &mut writer),
+            "OBJECT" => crate::js::handlers::OBJECT::OBJECT::print(&root, &mut writer),
             _ => {
                 writer.w(format!("{}", format_keyword(&root.value).unwrap()))?;
                 writer.w("(")?;
@@ -38,14 +39,14 @@ impl HandleJS for R {
                         JSNodeType::Routine | JSNodeType::EmptyRoutine => R::print(&root.children[i], &mut writer),
                         JSNodeType::Grouping => G::print(&root.children[i], &mut writer),
                         JSNodeType::Text => T::print(&root.children[i], &mut writer),
-                        JSNodeType::Word => W::print(&root.children[i], &mut writer),
+                        JSNodeType::Word | JSNodeType::Int => W::print(&root.children[i], &mut writer),
                         _ => panic!(),
                     }?;
                     if i+1 < root.children.len() {
                         writer.w(", ")?;
                     }
                 }
-                writer.w(")")?;
+                writer.w(")\n")?;
                 Ok(())
             }
         }?;
@@ -60,10 +61,10 @@ impl HandleJS for G {
     
         for i in 0..root.children.len() {
             match root.children[i].kind {
-                JSNodeType::Routine => R::print(&root.children[i], &mut writer)?,
+                JSNodeType::Routine | JSNodeType::EmptyRoutine => R::print(&root.children[i], &mut writer)?,
                 JSNodeType::Grouping => G::print(&root.children[i], &mut writer)?,
                 JSNodeType::Text => T::print(&root.children[i], &mut writer)?,
-                JSNodeType::Word => W::print(&root.children[i], &mut writer)?,
+                JSNodeType::Word | JSNodeType::Int => W::print(&root.children[i], &mut writer)?,
                 _ => panic!(),
             };
             if i+1 < root.children.len() {
@@ -95,7 +96,8 @@ impl HandleJS for W {
 
 impl T {
     // not recommended
-    fn print_as_word (root: &JSNode, writer: &mut CustomBufWriter<File>) -> Result<(), io::Error> {
+    #[allow(dead_code)]
+    pub fn print_as_word (root: &JSNode, writer: &mut CustomBufWriter<File>) -> Result<(), io::Error> {
         let keyword = format_keyword(&root.value).unwrap();
         writer.w(format!("{}", keyword))?;
         Ok(())
@@ -104,7 +106,16 @@ impl T {
 
 impl W {
     // not recommended
-    fn print_as_text (root: &JSNode, writer: &mut CustomBufWriter<File>) -> Result<(), io::Error> {
+    #[allow(dead_code)]
+    pub fn print_as_text (root: &JSNode, writer: &mut CustomBufWriter<File>) -> Result<(), io::Error> {
+        let text = escape_text(&root.value);
+        writer.w(format!("\"{}\"", text))?;
+        Ok(())
+    }
+
+    // not recommended
+    #[allow(dead_code)]
+    pub fn print_with_quotes (root: &JSNode, writer: &mut CustomBufWriter<File>) -> Result<(), io::Error> {
         let keyword = format_keyword(&root.value).unwrap();
         writer.w(format!("\"{}\"", keyword))?;
         Ok(())

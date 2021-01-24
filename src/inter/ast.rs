@@ -89,13 +89,13 @@ fn replace_dashes(root: &mut InterNode) {
 
 /*
 (IN ROOMS) -> (IN ROOMS)
-(IN "The dam blocks your way.") -> (IN_TO "The dam blocks your way.")
+(IN "The dam blocks your way.") -> (IN_TO <TELL "The dam blocks your way.">)
 (IN TO SQUEEKY-ROOM) -> (IN_TO SQUEEKY-ROOM)
 (IN PER GRATING-EXIT) -> (IN_TO PER GRATING-EXIT) // execute GRATING-EXIT
 (IN TO STONE-BARROW IF WON-FLAG) -> (IN_TO <COND (,WON-FLAG STONE-BARROW)>)
 (IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN) -> (IN_TO <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> KITCHEN)>)
-(IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T "You would drown")>)
-(IN TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T "Text")>)
+(IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T <TELL "You would drown">)>)
+(IN TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T <TELL "Text">)>)
 */
 fn refactor_room_nav(root: &mut InterNode) {
   if root.kind == InterNodeType::Routine && root.value() == "ROOM" {
@@ -115,7 +115,21 @@ fn refactor_room_nav(root: &mut InterNode) {
               InterNodeType::Word, format!("{}_TO", &tmp_InterNode.value), vec![]));
 
             match root.children[i].children.len() {
-              2 | 3 => (),
+              2 => {
+                // (IN "The dam blocks your way.") -> (IN_TO <TELL "The dam blocks your way.">)
+                match root.children[i].children[1].kind {
+                  InterNodeType::Text => {
+                    let tmp_tell = InterNode::no_token(
+                      InterNodeType::Routine, "TELL",
+                      vec![InterNode::no_token(
+                        InterNodeType::Text, root.children[i].children[1].value(), vec![])]
+                    );
+                    root.children[i].children = vec![root.children[i].children.remove(0), tmp_tell];
+                  },
+                  _ => ()
+                };
+              },
+              3 => (),
               4 => {
                 // (IN_TO STONE-BARROW IF WON-FLAG) -> (IN_TO <COND (,WON-FLAG STONE-BARROW)>)
                 let tmp_cond = InterNode::no_token(
@@ -147,26 +161,29 @@ fn refactor_room_nav(root: &mut InterNode) {
                   );
                   root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
                 } else {
-                  // (IN_TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T "You would drown")>)
+                  // (IN_TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE ,RESERVOIR) (T <TELL "You would drown">)>)
                   let tmp_cond = InterNode::no_token(
                     InterNodeType::Routine, "COND",
                     vec![InterNode::no_token(
                       InterNodeType::Grouping, "",
                       vec![
                         InterNode::no_token(InterNodeType::Word, format!(",{}", root.children[i].children[3].value()), vec![]),
-                        InterNode::no_token(InterNodeType::Word, format!(",{}BIT", root.children[i].children[1].value()), vec![])]
+                        InterNode::no_token(InterNodeType::Word, root.children[i].children[1].value(), vec![])]
                     ), InterNode::no_token(
                       InterNodeType::Grouping, "",
                       vec![
                         InterNode::no_token(InterNodeType::Word, "T", vec![]),
-                        InterNode::no_token(InterNodeType::Text, root.children[i].children[5].value(), vec![])]
+                        InterNode::no_token(
+                          InterNodeType::Routine, "TELL",
+                          vec![
+                            InterNode::no_token(InterNodeType::Text, root.children[i].children[5].value(), vec![])])]
                     )]
                   );
                   root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
                 }
               },
               8 => {
-                // (IN_TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T "Text")>)
+                // (IN_TO X IF Y IS Z ELSE "Text") -> (IN_TO <COND (<FSET? ,Y ,Z> X) (T <TELL "Text">)>)
                 let tmp_cond = InterNode::no_token(
                   InterNodeType::Routine, "COND",
                   vec![InterNode::no_token(
@@ -176,13 +193,16 @@ fn refactor_room_nav(root: &mut InterNode) {
                         InterNodeType::Routine, "FSET?",
                         vec![
                           InterNode::no_token(InterNodeType::Word, format!(",{}", root.children[i].children[3].value()), vec![]),
-                          InterNode::no_token(InterNodeType::Word, format!(",{}BIT", root.children[i].children[5].value()), vec![])]), 
+                          InterNode::no_token(InterNodeType::Word, format!("{}", root.children[i].children[5].value()), vec![])]), 
                       InterNode::no_token(InterNodeType::Word, root.children[i].children[1].value(), vec![])] 
                   ), InterNode::no_token(
                     InterNodeType::Grouping, "",
                     vec![
                       InterNode::no_token(InterNodeType::Word, "T", vec![]),
-                      InterNode::no_token(InterNodeType::Text, root.children[i].children[7].value(), vec![])]
+                        InterNode::no_token(
+                          InterNodeType::Routine, "TELL",
+                          vec![
+                            InterNode::no_token(InterNodeType::Text, format!("{}", &root.children[i].children[7].value()), vec![])])]
                   )]
                 );
                 root.children[i].children = vec![root.children[i].children.remove(0), tmp_cond];
@@ -190,7 +210,7 @@ fn refactor_room_nav(root: &mut InterNode) {
               x => { println!("{}", x); panic!() }
             };
           },
-          _ => panic!()
+          _ => (),
         };
       }
     }
