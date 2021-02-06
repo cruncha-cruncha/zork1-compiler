@@ -31,6 +31,7 @@ impl HandleJS for R {
             "REPEAT" => crate::js::handlers::REPEAT::REPEAT::print(&root, &mut writer),
             "COND" => crate::js::handlers::COND::COND::print(&root, &mut writer),
             "OBJECT" => crate::js::handlers::OBJECT::OBJECT::print(&root, &mut writer),
+            "ROOM" => crate::js::handlers::ROOM::ROOM::print(&root, &mut writer),
             _ => {
                 writer.w(format!("{}", format_keyword(&root.value).unwrap()))?;
                 writer.w("(")?;

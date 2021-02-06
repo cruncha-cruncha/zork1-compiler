@@ -91,7 +91,7 @@ fn replace_dashes(root: &mut InterNode) {
 (IN ROOMS) -> (IN ROOMS)
 (IN "The dam blocks your way.") -> (IN_TO <TELL "The dam blocks your way.">)
 (IN TO SQUEEKY-ROOM) -> (IN_TO SQUEEKY-ROOM)
-(IN PER GRATING-EXIT) -> (IN_TO PER GRATING-EXIT) // execute GRATING-EXIT
+(IN PER GRATING-EXIT) -> (IN_TO <GRATING-EXIT>) // execute GRATING-EXIT
 (IN TO STONE-BARROW IF WON-FLAG) -> (IN_TO <COND (,WON-FLAG STONE-BARROW)>)
 (IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN) -> (IN_TO <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> KITCHEN)>)
 (IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.") -> (IN_TO <COND (,LOW-TIDE RESERVOIR) (T <TELL "You would drown">)>)
@@ -129,7 +129,13 @@ fn refactor_room_nav(root: &mut InterNode) {
                   _ => ()
                 };
               },
-              3 => (),
+              3 => {
+                // (IN PER GRATING-EXIT) -> (IN_TO <GRATING-EXIT>)
+                let tmp_func = InterNode::no_token(
+                  InterNodeType::Routine, root.children[i].children[2].value(), vec![]
+                );
+                root.children[i].children = vec![root.children[i].children.remove(0), tmp_func];
+              },
               4 => {
                 // (IN_TO STONE-BARROW IF WON-FLAG) -> (IN_TO <COND (,WON-FLAG STONE-BARROW)>)
                 let tmp_cond = InterNode::no_token(

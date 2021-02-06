@@ -336,7 +336,7 @@ fn validate_room_IN_grouping(n: &InterNode) -> Result<(), InterErr> {
   // (IN TO STONE-BARROW IF WON-FLAG)
   // (IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN)
   // (IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.")
-  // assume (IN TO X IF Y IS Z ELSE "Text") is possible
+  // (IN TO X IF Y IS Z ELSE "Text")
 
   if n.children.len() < 2 {
     return Err(InterErr::origin("IN grouping does not have enough children"));
