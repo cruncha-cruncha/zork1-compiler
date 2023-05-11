@@ -1,88 +1,90 @@
-use std::path::Path;
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader};
+use std::path::Path;
 
+mod stats;
 mod zil;
-mod js;
-mod inter;
-#[cfg(test)]
-mod tests;
-
-// two passes through the tree?
-// #1 collect info
-// #2 print
+// mod js;
+// mod inter;
+// #[cfg(test)]
+// mod tests;
 
 fn main() {
     let mut files_lookup = zil::file_table::FileTable::new();
 
-    let file_path = Path::new(".").join("dummy-data").join("testing.zil");
-    let file_key = files_lookup.insert(file_path.to_str().unwrap().to_string());
+    let mut file_path = Path::new("..").join("dummy-data").join("test1.zil");
+    files_lookup.add(file_path);
+    file_path = Path::new("..").join("dummy-data").join("test2.zil");
+    files_lookup.add(file_path);
     println!("{}", files_lookup);
 
-    let reader = get_BufReader(&file_path).unwrap();
+    let char_gen = zil::char_gen::new(&mut files_lookup);
+    let mut token_gen = zil::token_gen::new(char_gen);
 
-    let mut generator = zil::tokenize::TokenGenerator::new(file_key, reader);
-
-    let mut root = zil::node::ZilNode::new();
-    
-    match zil::ast::build_tree(&mut generator, &mut root) {
-      Ok(()) => println!("built zil tree"),
-      Err(e) => {
-        println!("\nERROR\n{}", e);
-        zil::ast::print_tree(&root, 0);
-        return;
-      }
+    let tree = match zil::ast::build_tree(&mut token_gen) {
+        Ok(t) => t,
+        Err(e) => panic!("\nERROR\n{}", e),
     };
 
-    //inter::ast_stats::run_all(&root);
+    tree.print();
 
-    let root = match inter::ast::clone_zil_tree(&root) {
-      Ok(v) => {
-        println!("built inter tree");
-        v
-      },
-      Err(e) => {
-        println!("\nERROR\n{}", e);
-        zil::ast::print_tree(&root, 0);
-        return;
-      }
-    };
+    // let mut lookup = stats::top_level::CrossRef::new(&tree);
+    // lookup.populate();
 
-    //inter::ast::print_tree(&root, 0);
+    // for k in lookup.rooms.keys() {
+    //     println!("{}", k);
+    // }
 
-    let root = js::node::JSNode::clone_internode(&root);
+    // let mut rooms = stats::rooms::RoomCodex::new(&lookup.rooms);
+    // rooms.populate();
 
-    let output_file_path = Path::new(".").join("out").join("testing.js");
-    let writer = get_CustomBufWriter(&output_file_path).unwrap();
-    match js::parse::parse(&root, writer) {
-      Ok(_) => println!("output ok"),
-      Err(_) => {
-        println!("\nBAD OUTPUT\n");
-        return;
-      }
-    };
+    // for v in rooms.subgroups.iter() {
+    //     println!("{}", v);
+    // }
+
+
+
+
+
+    // //inter::ast_stats::run_all(&root);
+
+    // let root = match inter::ast::clone_zil_tree(&root) {
+    //   Ok(v) => {
+    //     println!("built inter tree");
+    //     v
+    //   },
+    //   Err(e) => {
+    //     println!("\nERROR\n{}", e);
+    //     zil::ast::print_tree(&root, 0);
+    //     return;
+    //   }
+    // };
+
+    // //inter::ast::print_tree(&root, 0);
+
+    // let root = js::node::JSNode::clone_internode(&root);
+
+    // let output_file_path = Path::new(".").join("out").join("testing.js");
+    // let writer = get_CustomBufWriter(&output_file_path).unwrap();
+    // match js::parse::parse(&root, writer) {
+    //   Ok(_) => println!("output ok"),
+    //   Err(_) => {
+    //     println!("\nBAD OUTPUT\n");
+    //     return;
+    //   }
+    // };
 }
 
-#[allow(non_snake_case)]
-pub fn get_BufReader(file_path: &Path) -> Option<BufReader<File>> {
-  match File::open(file_path) {
-    Ok(f) => Some(BufReader::new(f)),
-    Err(e) => {
-      println!("Failed to open file {}", file_path.to_str().unwrap());
-      println!("{}", e);
-      None
-    },
-  }
-}
 
-#[allow(non_snake_case)]
-pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_writer::CustomBufWriter<File>> {
-  match File::create(file_path) {
-    Ok(f) => Some(crate::js::custom_buf_writer::CustomBufWriter::new(f)),
-    Err(e) => {
-      println!("Failed to create file {}", file_path.to_str().unwrap());
-      println!("{}", e);
-      None
-    },
-  }
-}
+
+// #[allow(non_snake_case)]
+// pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_writer::CustomBufWriter<File>> {
+//   match File::create(file_path) {
+//     Ok(f) => Some(crate::js::custom_buf_writer::CustomBufWriter::new(f)),
+//     Err(e) => {
+//       println!("Failed to create file {}", file_path.to_str().unwrap());
+//       println!("{}", e);
+//       None
+//     },
+//   }
+// }

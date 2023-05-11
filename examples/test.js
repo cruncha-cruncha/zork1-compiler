@@ -22,6 +22,7 @@ const westHouse = newLocalScope((rarg) => {
     crlf();
   }
 });
+addRoutine(westHouse);
 
 /*
 <GLOBAL BAT-DROPS
@@ -62,17 +63,18 @@ const batDrops = [
 const flyMe = () => {
   fweep(4);
   tell("The bat grabs you by the scruff of your neck and lifts you away...." + "\n" + "\n");
-  gotoRoom(pickOne(global(batDrops)));
+  gotoRoom(pickOne(global(batDrops)), false);
   if (not(equal_q(global(here), global(entranceToHades)))) {
     vFirstLook();
   }
 }
+addRoutine(flyMe);
 
 /*
 <GLOBAL MIRROR-MUNG <>>
 */
 
-const mirrorMung = {};
+const mirrorMung = false;
 
 /*
 <GLOBAL LUCKY T>
@@ -95,12 +97,13 @@ shaken at your clumsy attempt, resume their hideous jeering." CR>
 */
 
 const iXb = () => {
-	global("xc") ||
-	(equal_q(global("here"), global("entranceToHades")) && 
+	or(global("xc"), and(
+		equal_q(global("here"), global("entranceToHades")),
 		tell("The tension of this ceremony is broken, and the wraiths, amused but\nshaken at your clumsy attempt, resume their hideous jeering." + "\n")
-	)
-	setg("xb", {})
+	))
+	setg("xb", false)
 }
+addRoutine(iXb);
 
 /*
 <ROUTINE I-XC ()
@@ -108,11 +111,12 @@ const iXb = () => {
 	 <I-XB>>
 */
 
-// does <> mean false??
+// does <> mean false?? yes!
 const iXc = () => {
-	setg("xc", {})
+	setg("xc", false)
 	iXb()
 }
+addRoutine(iXc);
 
 /*
 <ROUTINE I-XBH ()
@@ -129,6 +133,7 @@ const iXbh = () => {
 		tell("The bell appears to have cooled down." + "\n")
 	}
 }
+addRoutine(iXbh);
 
 /*
 <ROUTINE MOVE-ALL (FROM TO "AUX" X N)
@@ -150,7 +155,7 @@ const moveAll = newLocalScope((from, to) => {
   // get the first OBJECT IN the from OBJECT
   if (set("x", first_q(local("from")))) {
     while (true) {
-			// will this conditional work? or pass to a NOT func?
+			// pass to a NOT func
       if (not(local("x"))) {
 				// is this right? Or should we just break?
         return;
@@ -165,6 +170,7 @@ const moveAll = newLocalScope((from, to) => {
     }
   }
 });
+addRoutine(moveAll);
 
 /*
 <ROUTINE KILL-INTERRUPTS ()
@@ -236,10 +242,44 @@ const otvalFrob = newLocalScope((o=global("trophyCase")) => {
 		set("f", next_q(local("f")))
 	}
 });
+addRoutine(otvalFrob);
 
-// ,P?XXX refers to property XXX of an OBJECT (or ROOM?)
+// ,P?XXX refers to property XXX of an OBJECT (or ROOM?). Either way, is always global
 
 // ---------------- DUNGEON ----------------
+
+// ??
+// every object has: in, synonym, adjective, desc, flags
+// can also have: size, action, fdesc, capacity, strength, ldesc, tvalue
+// OBJECT actions cannot have any required params, but may have optional params?
+// ROOM actions always take one param?
+
+// in room direction conditionals, ELSE is always followed by a string
+// OBJECTs can be in ROOMs or OBJECTs, what does GLOBAL-OBJECTS and LOCAL-GLOBALS mean?
+// ROOMs are always in "room"
+// action must always be a routine
+
+// ROOM directionals: bit tricky to explain, can look like
+// (IN "The dam blocks your way.")
+// (IN TO SQUEEKY-ROOM)
+// (IN PER GRATING-EXIT)
+// (IN TO STONE-BARROW IF WON-FLAG)
+// (IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN)
+// (IN TO RESERVOIR IF LOW-TIDE ELSE "You would drown.")
+// (IN TO X IF Y IS Z ELSE "Text")
+
+// "IN" | "NORTH" | "NE" | "EAST" | "SE" | "SOUTH" | "SW" | "WEST" | "NW" | "LAND" | "UP" | "DOWN" | "OUT"
+
+// "GLOBAL" => {
+// at least 2 children
+// all must be words
+// objects that are in this room?
+
+// "PSEUDO" => {
+// at least 3 children
+// alternating word, text, word, text, etc.
+// like (PSEUDO "DOOR" DOOR-PSEUDO "PAINT" PAINT-PSEUDO)
+// fake objects (actually routines) that are in this room that you can interact with? In other ways than move?
 
 /*
 <OBJECT SWORD
@@ -255,6 +295,20 @@ const otvalFrob = newLocalScope((o=global("trophyCase")) => {
 	(TVALUE 0)>
 */
 
+const sword = {
+	baseType: BaseTypes.OBJECT,
+	in: livingRoom, // a room
+	synonym: ["sword", "orcrist", 'glamdring', 'blade'],
+	adjective: ['elvish', 'old', 'antique'],
+	desc: "sword",
+	flags: ["takebit", "weaponbit", "trytakebit"],
+	action: swordFcn, // a routine
+	fdesc: "Above the trophy case hangs an elvish sword of great antiquity.",
+	size: 30,
+	tvalue: 0
+}
+addObject(sword);
+
 /*
 <OBJECT THIEF
 	(IN ROUND-ROOM)
@@ -269,6 +323,19 @@ against one wall. He is armed with a deadly stiletto.")
 	(STRENGTH 5)>
 */
 
+const thief = {
+	baseType: BaseTypes.OBJECT,
+	in: roundRoom, // a room
+	synonym: ["thief", "robber", "man", "person"],
+	adjective: ["shady", "suspicious", "seedy"],
+	desc: "thief",
+	flags: ["actorbit", "invisible", "contbit", "openbit", "trytakebit"],
+	action: robberFunction, // a routine
+	ldesc: "There is a suspicious-looking individual, holding a large bag, leaning\nagainst one wall. He is armed with a deadly stiletto.",
+	strength: 5
+}
+addObject(thief);
+
 /*
 <OBJECT STILETTO
 	(IN THIEF)
@@ -279,6 +346,19 @@ against one wall. He is armed with a deadly stiletto.")
 	(FLAGS WEAPONBIT TRYTAKEBIT TAKEBIT NDESCBIT)
 	(SIZE 10)>
 */
+
+// does NDESCBIT mean this object has no LDESC? No! Maybe?
+const stiletto = {
+	baseType: BaseTypes.OBJECT,
+	in: thief, // an object
+	synonym: ["stiletto"],
+	adjective: ["vicious"],
+	desc: "stiletto",
+	action: stilletoFunction, // a routine
+	flags: ["weaponbit", "trytakebit", "takebit", "ndescbit"],
+	size: 10
+}
+addObject(stilleto);
 
 /*
 <OBJECT PUTTY
@@ -291,6 +371,18 @@ against one wall. He is armed with a deadly stiletto.")
 	(ACTION PUTTY-FCN)>
 */
 
+const putty = {
+	baseType: BaseTypes.OBJECT,
+	in: tube, // an object
+	synonym: ["material", "gunk"],
+	adjective: ["viscous"],
+	desc: "viscous material",
+	flags: ["takebit", "toolbit"],
+	size: 6,
+	action: puttyFcn // a routine
+}
+addObject(putty);
+
 /*
 <OBJECT NEST
 	(IN UP-A-TREE)
@@ -301,6 +393,18 @@ against one wall. He is armed with a deadly stiletto.")
 	(FDESC "Beside you on the branch is a small bird's nest.")
 	(CAPACITY 20)>
 */
+
+const nest = {
+	baseType: BaseTypes.OBJECT,
+	in: upATree, // a room
+	synonym: "nest",
+	adjective: "birds",
+	desc: "bird's nest",
+	flags: ["takebit", "burnbit", "contbit", "openbit", "searchbit"],
+	fdesc: "Beside you on the branch is a small bird's nest.",
+	capacity: 20
+}
+addObject(nest);
 
 /*
 <ROOM WEST-OF-HOUSE
@@ -319,6 +423,17 @@ against one wall. He is armed with a deadly stiletto.")
       (GLOBAL WHITE-HOUSE BOARD FOREST)>
 */
 
+const westOfHouse = {
+	baseType: BaseTypes.ROOM,
+	in: rooms, // ???
+	desc: "West of House",
+	// ...
+	action: westHouse, // a routine
+	flags: ["rlandbit", "onbit", "sacredbit"],
+	global: ["whiteHouse", "board", "forest"] // ???
+}
+addRoom(westOfHouse);
+
 /*
 <ROOM ATTIC
       (IN ROOMS)
@@ -327,6 +442,91 @@ against one wall. He is armed with a deadly stiletto.")
       (DOWN TO KITCHEN)
       (FLAGS RLANDBIT SACREDBIT)
       (GLOBAL STAIRS)>
+*/
+
+const attic = {
+	baseType: BaseTypes.ROOM,
+	in: rooms, // ???
+	ldesc: "This is the attic. The only exit is a stairway leading down.",
+	desc: "Attic",
+	// ...
+	flags: ["rlandbit", "sacredbit"],
+	global: ["stairs"] // ???
+}
+
+/*
+<ROOM CELLAR
+      (IN ROOMS)
+      (DESC "Cellar")
+      (NORTH TO TROLL-ROOM)
+      (SOUTH TO EAST-OF-CHASM)
+      (UP TO LIVING-ROOM IF TRAP-DOOR IS OPEN)
+      (WEST
+"You try to ascend the ramp, but it is impossible, and you slide back down.")
+      (ACTION CELLAR-FCN)
+      (FLAGS RLANDBIT)
+      (VALUE 25)
+      (GLOBAL TRAP-DOOR SLIDE STAIRS)>
+*/
+
+/*
+<ROOM LOWER-SHAFT	;"was BSHAF"
+      (IN ROOMS)
+      (LDESC
+"This is a small drafty room in which is the bottom of a long
+shaft. To the south is a passageway and to the east a very narrow
+passage. In the shaft can be seen a heavy iron chain.")
+      (DESC "Drafty Room")
+      (SOUTH TO MACHINE-ROOM)
+      (OUT TO TIMBER-ROOM
+       IF EMPTY-HANDED
+       ELSE "You cannot fit through this passage with that load.")
+      (EAST TO TIMBER-ROOM
+       IF EMPTY-HANDED
+       ELSE "You cannot fit through this passage with that load.")
+      (ACTION NO-OBJS)
+      (FLAGS RLANDBIT SACREDBIT)
+      (PSEUDO "CHAIN" CHAIN-PSEUDO)>
+*/
+
+/*
+<ROOM GRATING-ROOM
+      (IN ROOMS)
+      (DESC "Grating Room")
+      (SW TO MAZE-11)
+      (UP TO GRATING-CLEARING
+       IF GRATE IS OPEN ELSE "The grating is closed.")
+      (ACTION MAZE-11-FCN)
+      (GLOBAL GRATE)
+      (FLAGS RLANDBIT)>
+*/
+
+/*
+<ROOM ENTRANCE-TO-HADES
+      (IN ROOMS)
+      (DESC "Entrance to Hades")
+      (UP TO TINY-CAVE)
+      (IN TO LAND-OF-LIVING-DEAD IF LLD-FLAG
+       ELSE "Some invisible force prevents you from passing through the gate.")
+      (SOUTH TO LAND-OF-LIVING-DEAD IF LLD-FLAG
+       ELSE "Some invisible force prevents you from passing through the gate.")
+      (ACTION LLD-ROOM)
+      (FLAGS RLANDBIT ONBIT)
+      (GLOBAL BODIES)
+      (PSEUDO "GATE" GATE-PSEUDO "GATES" GATE-PSEUDO)>
+*/
+
+/*
+<ROOM LIVING-ROOM
+      (IN ROOMS)
+      (DESC "Living Room")
+      (EAST TO KITCHEN)
+      (WEST TO STRANGE-PASSAGE IF MAGIC-FLAG ELSE "The door is nailed shut.")
+      (DOWN PER TRAP-DOOR-EXIT)
+      (ACTION LIVING-ROOM-FCN)
+      (FLAGS RLANDBIT ONBIT SACREDBIT)
+      (GLOBAL STAIRS)
+      (PSEUDO "NAILS" NAILS-PSEUDO "NAIL" NAILS-PSEUDO)>
 */
 
 // ---------------- SYNTAX ----------------

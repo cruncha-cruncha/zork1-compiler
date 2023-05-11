@@ -1,161 +1,256 @@
-use std::error::Error;
-use std::io;
+use super::{
+    error::ZilErr,
+    node::{ZilNode, ZilNodeType},
+    token::{Token, TokenType},
+    token_gen::TokenGen,
+};
 
-use crate::zil::tokenize::*;
-use crate::zil::node::*;
+pub struct Tree {
+    root: ZilNode,
+}
 
-pub fn print_tree(root: &ZilNode, depth: u64) {
+impl Tree {
+    #[allow(dead_code)]
+    pub fn print(&self) {
+        print_tree_recursive(&self.root, 0);
+    }
+
+    pub fn get_root(&self) -> &ZilNode {
+        &self.root
+    }
+}
+
+fn print_tree_recursive(root: &ZilNode, depth: u64) {
     let spacer = String::from("  ");
     let mut out = String::new();
     for _ in 0..depth {
         out.push_str(&spacer);
     }
-    for t in root.tokens.iter() {
-        out.push_str(&t.value);
-        out.push_str(", ");
-    }   
-    println!("{}", out);
+
+    out.push_str(&format!("{}: ", root.node_type));
+
+    let mut dirty = true;
     for n in root.children.iter() {
-        print_tree(n, depth+1);
+        if n.node_type == ZilNodeType::Token {
+            if !dirty && n.token.as_ref().unwrap().kind == TokenType::Space {
+                continue;
+            }
+
+            let val = &n.token_val();
+            if n.token.as_ref().unwrap().kind == TokenType::Text {
+                out.push_str(&format!("\"{}\"", val));
+            } else {
+                out.push_str(val);
+            }
+
+            dirty = true;
+        } else {
+            if dirty {
+                println!("{}", out);
+                dirty = false;
+            }
+
+            print_tree_recursive(n, depth + 1);
+
+            out = String::new();
+            out.push_str(&spacer);
+            for _ in 0..depth {
+                out.push_str(&spacer);
+            }
+        }
+    }
+
+    if dirty {
+        println!("{}", out);
     }
 }
 
-pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut ZilNode) -> Result<(), Box<dyn Error>> {
+pub fn build_tree<'a>(mut tokens: &mut Box<dyn TokenGen + 'a>) -> Result<Tree, ZilErr> {
+    let mut root = ZilNode::new(ZilNodeType::Unknown);
+
     match build_tree_recursively(&mut tokens, &mut root) {
-        Some(e) => return Err(Box::new(e)),
-        None => ()
-    };  
-
-    match validate_tree(&root, 0) {
-        Ok(()) => (),
-        Err(e) => return Err(Box::new(e))
-    }
-
-    match remove_comments(&mut root) {
-        Some(e) => return Err(Box::new(e)),
-        None => ()
+        (_, Some(e)) => return Err(e),
+        (_, None) => (),
     };
 
-    retain_child_routines(&mut root);
+    match validate_tree(&root) {
+        Ok(()) => (),
+        Err(e) => return Err(e),
+    }
 
-    remove_newlines(&mut root);
+    swallow_comments(&mut root);
 
-    Ok(())
+    root = bunch_tokens(root);
+
+    Ok(Tree { root: root })
 }
 
-fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut ZilNode) -> Option<io::Error> {
+fn build_tree_recursively<'a>(
+    tokens: &mut Box<dyn TokenGen + 'a>,
+    root: &mut ZilNode,
+) -> (Option<TokenType>, Option<ZilErr>) {
     loop {
         let t = match tokens.next() {
             Some(Ok(v)) => v,
-            Some(Err(e)) => return Some(e),
-            None => return None,
+            Some(Err(e)) => {
+                let msg = format!("Unable to get next token: {}", e);
+                return (None, Some(ZilErr::origin(msg)));
+            }
+            None => return (None, None),
         };
 
         match t.kind {
-            TokenType::LeftArrow | TokenType::LeftParen => {
-                let mut child = ZilNode::new();
-                child.push_token(t);
-                build_tree_recursively(tokens, &mut child);
+            TokenType::LeftArrow => {
+                let mut child = ZilNode::new(ZilNodeType::Cluster);
+
+                let (token_type, err) = build_tree_recursively(tokens, &mut child);
+                if token_type != Some(TokenType::RightArrow) {
+                    let msg = format!(
+                        "Routine does not end with RightArrow\n{}",
+                        tokens.get_location_string()
+                    );
+                    return (None, Some(ZilErr::origin(msg)));
+                } else if !err.is_none() {
+                    return (None, err);
+                }
+
                 root.push_child(child);
-            },
+            }
+            TokenType::LeftParen => {
+                let mut child = ZilNode::new(ZilNodeType::Group);
+
+                let (token_type, err) = build_tree_recursively(tokens, &mut child);
+                if token_type != Some(TokenType::RightParen) {
+                    let msg = format!(
+                        "Group does not end with RightParen\n{}",
+                        tokens.get_location_string()
+                    );
+                    return (None, Some(ZilErr::origin(msg)));
+                } else if !err.is_none() {
+                    return (None, err);
+                }
+
+                root.push_child(child);
+            }
             TokenType::RightArrow | TokenType::RightParen => {
-                root.push_token(t);
-                return None;
-            },
-            TokenType::Comment => {
-                let mut child = ZilNode::new();
-                child.push_token(t);
-                root.push_child(child);
-            },
-            TokenType::Text | TokenType::Word => {
-                let mut child = ZilNode::new();
-                child.push_token(t);
-                root.push_child(child);
+                return (Some(t.kind), None);
+            }
+            TokenType::Symbol => {
+                if t.value == ";" {
+                    root.push_child(ZilNode::new(ZilNodeType::Comment));
+                } else {
+                    root.push_child(ZilNode::from_token(t));
+                }
+            }
+            TokenType::Space | TokenType::Text | TokenType::Word => {
+                root.push_child(ZilNode::from_token(t));
             }
         }
     }
 }
 
-fn validate_tree(root: &ZilNode, depth: u64) -> Result<(), ZilErr> {
+fn validate_tree(root: &ZilNode) -> Result<(), ZilErr> {
     for n in root.children.iter() {
-        match validate_tree(n, depth+1) {
-            Ok(()) => (),
-            Err(e) => return Err(ZilErr::wrap(e, format!("from {}", n)))
-        };
-    }
-
-    match root.tokens.len() {
-        0 => {
-            if depth != 0 {
-                return Err(ZilErr::origin("Root ZilNode has no tokens.\n"));
+        if n.node_type == ZilNodeType::Token {
+            if n.has_children() {
+                let msg = format!("Token node has children: {}", n);
+                return Err(ZilErr::origin(msg));
             }
-        },
-        1 => {
-            match root.tokens[0].kind {
-                TokenType::Text | TokenType::Word | TokenType::Comment => {
-                    if root.children.len() > 0 {
-                        return Err(ZilErr::origin(format!("Text, Word, or Comment ZilNode has children.\nAt {}", root)));
-                    }
-                },
-                _ => return Err(ZilErr::origin(format!("Root ZilNode has only one token but it's not Text, Word, or Comment.\nAt {}", root))),
+            if !n.has_token() {
+                let msg = format!("Token node has no token: {}", n);
+                return Err(ZilErr::origin(msg));
             }
-        },
-        2 => {
-            match (root.tokens[0].kind, root.tokens[1].kind) {
-                (TokenType::LeftArrow, TokenType::RightArrow) => {
-                    if root.children.len() != 0 && !root.children[0].is_word() {
-                        return Err(ZilErr::origin(format!("Routine is not empty but does not start with a Word.\nAt {}", root)));
-                    }
-                },
-                (TokenType::LeftParen, TokenType::RightParen) => (),
-                _ => return Err(ZilErr::origin(format!("Root ZilNode has two tokens but is not Routine or Grouping.\nAt {}", root))),
+        } else if n.node_type == ZilNodeType::Unknown {
+            let msg = format!("Unknown node: {}", n);
+            return Err(ZilErr::origin(msg));
+        } else {
+            match validate_tree(n) {
+                Ok(()) => (),
+                Err(e) => return Err(e),
             }
-        },
-        x => return Err(ZilErr::origin(format!("Root ZilNode has {} tokens; that's too many.\nAt {}", x, root))),
+        }
     }
 
     Ok(())
 }
 
-fn remove_comments(root: &mut ZilNode) -> Option<ZilErr> {
-    let mut to_remove = Vec::new();
+fn swallow_comments(root: &mut ZilNode) {
+    let mut comment_indices: Vec<usize> = Vec::new();
+
     for (i, n) in root.children.iter().enumerate() {
-        if n.is_comment() {
-            to_remove.push(i);
-            to_remove.push(i+1);
+        if n.node_type == ZilNodeType::Comment {
+            comment_indices.push(i);
         }
     }
-    for i in to_remove.iter().rev() {
-        if root.children.len() <= *i {
-            return Some(ZilErr::origin("Unable to remove comments: unexpected tree structure"));
-        }
-        root.children.remove(*i);
-    }
-    for i in 0..root.children.len() {
-        match remove_comments(&mut root.children[i]) {
-            Some(e) => return Some(e),
-            None => ()
+
+    for i in comment_indices.into_iter().rev() {
+        if root.children.len() >= i + 2 {
+            let commented = root.children.remove(i + 1);
+            root.children[i].push_child(commented);
         }
     }
-    None
+
+    for n in root.children.iter_mut() {
+        if n.node_type != ZilNodeType::Comment {
+            swallow_comments(n);
+        }
+    }
 }
 
-// at the top level, we only care about things inside a <>
-fn retain_child_routines(root: &mut ZilNode) {
-    root.children.retain(|n| n.is_routine());
-}
+pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
+    let mut token_buf: Vec<Token> = Vec::new();
+    let mut new_children: Vec<ZilNode> = Vec::new();
 
-fn remove_newlines(root: &mut ZilNode) {
-    let mut to_remove = Vec::new();
-    for (i, n) in root.children.iter().enumerate() {
-        if n.is_word() && n.tokens[0].value == String::from('\n') {
-            to_remove.push(i);
+    fn bunch_token_buf(token_buf: Vec<Token>, new_children: &mut Vec<ZilNode>) {
+        if token_buf.len() == 0 {
+            return;
+        }
+
+        let mut bunch = ZilNode::new(ZilNodeType::TokenBunch);
+        for t in token_buf {
+            bunch.push_child(ZilNode::from_token(t));
+        }
+
+        new_children.push(bunch);
+    };
+
+    for n in root.children {
+        match n.node_type {
+            ZilNodeType::Unknown => panic!("Unknown node type in stats::lookups::get_name_tokens"),
+            ZilNodeType::TokenBunch => panic!("Already bunched in stats::lookups::get_name_tokens"),
+            ZilNodeType::Comment => continue,
+            ZilNodeType::Group | ZilNodeType::Cluster => {
+                bunch_token_buf(token_buf, &mut new_children);
+                new_children.push(n);
+                token_buf = Vec::new();
+            }
+            ZilNodeType::Token => {
+                let token = n.token.unwrap();
+                match token.kind {
+                    TokenType::Space => {
+                        bunch_token_buf(token_buf, &mut new_children);
+                        token_buf = Vec::new();
+                    }
+                    TokenType::Text | TokenType::Word | TokenType::Symbol => token_buf.push(token),
+                    _ => panic!(
+                        "Bad token type in stats::lookups::get_name_tokens, {}",
+                        token.kind
+                    ),
+                }
+            }
         }
     }
-    for i in to_remove.iter().rev() {
-        root.children.remove(*i);
+
+    bunch_token_buf(token_buf, &mut new_children);
+
+    root.children = Vec::new();
+    for n in new_children {
+        if n.node_type == ZilNodeType::TokenBunch {
+            root.push_child(n);
+        } else {
+            root.push_child(bunch_tokens(n));
+        }
     }
-    for i in 0..root.children.len() {
-        remove_newlines(&mut root.children[i]);
-    }
+
+    root
 }

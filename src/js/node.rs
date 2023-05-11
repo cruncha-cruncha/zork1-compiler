@@ -11,9 +11,9 @@ pub trait HandleJS {
 #[derive(Copy, Clone, PartialEq)]
 pub enum JSNodeType {
   Unknown,
-  Routine,
+  Cluster,
   EmptyRoutine,
-  Grouping,
+  Group,
   Text,
   Word,
   Int
@@ -23,9 +23,9 @@ impl From<InterNodeType> for JSNodeType {
   fn from(kind: InterNodeType) -> Self {
     match kind {
       InterNodeType::Unknown => JSNodeType::Unknown,
-      InterNodeType::Routine => JSNodeType::Routine,
+      InterNodeType::Cluster => JSNodeType::Cluster,
       InterNodeType::EmptyRoutine => JSNodeType::EmptyRoutine,
-      InterNodeType::Grouping => JSNodeType::Grouping,
+      InterNodeType::Group => JSNodeType::Group,
       InterNodeType::Text => JSNodeType::Text,
       InterNodeType::Word => JSNodeType::Word,
       InterNodeType::Int => JSNodeType::Int
