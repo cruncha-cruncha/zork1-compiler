@@ -3,7 +3,7 @@ use zil::file_table::FileKey;
 
 use super::file_table::FileTableLocation;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum TokenType {
     LeftArrow,
     RightArrow,

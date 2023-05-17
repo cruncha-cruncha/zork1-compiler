@@ -1,39 +1,72 @@
 use std::collections::HashSet;
 
-use crate::zil::node::{ZilNode};
+use crate::zil::node::{ZilNode, ZilNodeType, TokenBunchType};
 
-use super::helpers::{get_bunch_name, Has};
+use super::{top_level::Codex, helpers::get_bunch_name};
 
 pub struct DirectionCodex<'a> {
-    basis: &'a ZilNode,
+    basis: Option<&'a ZilNode>,
     pub options: HashSet<String>,
 }
 
 impl<'a> DirectionCodex<'a> {
-    pub fn new(basis: &'a ZilNode) -> DirectionCodex<'a> {
+    pub fn new() -> DirectionCodex<'a> {
         DirectionCodex {
-            basis,
+            basis: None,
             options: HashSet::new(),
-        }
-    }
-
-    pub fn populate(&mut self) {
-        self.populate_options();
-    }
-
-    fn populate_options(&mut self) {
-        if self.basis.children.len() <= 0 {
-            panic!("No directions");
-        }
-
-        for node in self.basis.children.iter().skip(1) {
-            self.options.insert(get_bunch_name(node));
         }
     }
 }
 
-impl<'a> Has<&str> for DirectionCodex<'a> {
-    fn has(&self, name: &str) -> bool {
-        self.options.contains(&name.to_string())
+impl IntoIterator for DirectionCodex<'_> {
+    type Item = String;
+    type IntoIter = std::collections::hash_set::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.options.into_iter()
+    }
+}
+
+impl<'a> Codex<'a> for DirectionCodex<'a> {
+    fn get_name(&self) -> String {
+        String::from("directions")
+    }
+
+    fn add_node(&mut self, node: &'a ZilNode) {
+        if self.basis.is_none() {
+            self.basis = Some(node);
+        } else {
+            panic!("DirectionCodex already has a basis");
+        }
+    }
+
+    fn crunch(&mut self) -> Result<(), String> {
+        if self.basis.is_none() {
+            return Err(String::from("DirectionCodex has no basis"));
+        }
+
+        if self.basis.unwrap().children.len() <= 1 {
+            panic!("No directions");
+        }
+
+        for node in self.basis.unwrap().children.iter().skip(1) {
+            if node.node_type != ZilNodeType::TokenBunch(TokenBunchType::Word) {
+                return Err(String::from("DirectionCodex has non-word child"));
+            }
+        }
+
+        for (i, node) in self.basis.unwrap().children.iter().skip(1).enumerate() {
+            self.options.insert(get_bunch_name(node));
+        }
+
+        Ok(())
+    }
+
+    fn lookup(&self, word: &str) -> Option<&ZilNode> {
+        if self.options.contains(word) {
+            return Some(self.basis.unwrap());
+        }
+
+        None
     }
 }

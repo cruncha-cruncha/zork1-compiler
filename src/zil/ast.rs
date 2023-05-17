@@ -1,5 +1,8 @@
+use crate::zil::{node::TokenBunchType, token};
+
 use super::{
     error::ZilErr,
+    file_table::format_file_location,
     node::{ZilNode, ZilNodeType},
     token::{Token, TokenType},
     token_gen::TokenGen,
@@ -10,14 +13,14 @@ pub struct Tree {
 }
 
 impl Tree {
-    #[allow(dead_code)]
-    pub fn print(&self) {
-        print_tree_recursive(&self.root, 0);
-    }
-
     pub fn get_root(&self) -> &ZilNode {
         &self.root
     }
+}
+
+#[allow(dead_code)]
+pub fn print(root: &ZilNode) {
+    print_tree_recursive(root, 0);
 }
 
 fn print_tree_recursive(root: &ZilNode, depth: u64) {
@@ -65,10 +68,10 @@ fn print_tree_recursive(root: &ZilNode, depth: u64) {
     }
 }
 
-pub fn build_tree<'a>(mut tokens: &mut Box<dyn TokenGen + 'a>) -> Result<Tree, ZilErr> {
+pub fn build_tree<'a>(tokens: &mut impl TokenGen) -> Result<Tree, ZilErr> {
     let mut root = ZilNode::new(ZilNodeType::Unknown);
 
-    match build_tree_recursively(&mut tokens, &mut root) {
+    match build_tree_recursively(tokens, &mut root) {
         (_, Some(e)) => return Err(e),
         (_, None) => (),
     };
@@ -86,7 +89,7 @@ pub fn build_tree<'a>(mut tokens: &mut Box<dyn TokenGen + 'a>) -> Result<Tree, Z
 }
 
 fn build_tree_recursively<'a>(
-    tokens: &mut Box<dyn TokenGen + 'a>,
+    tokens: &'a mut impl TokenGen,
     root: &mut ZilNode,
 ) -> (Option<TokenType>, Option<ZilErr>) {
     loop {
@@ -107,12 +110,15 @@ fn build_tree_recursively<'a>(
                 if token_type != Some(TokenType::RightArrow) {
                     let msg = format!(
                         "Routine does not end with RightArrow\n{}",
-                        tokens.get_location_string()
+                        format_file_location(tokens)
                     );
                     return (None, Some(ZilErr::origin(msg)));
                 } else if !err.is_none() {
                     return (None, err);
                 }
+
+                /* the trait bound `Box<dyn TokenGen<Item = std::result::Result<Token, std::io::Error>>>: FileTableLocation` is not satisfied
+                the trait `FileTableLocation` is not implemented for `Box<dyn TokenGen<Item = std::result::Result<Token, std::io::Error>>> */
 
                 root.push_child(child);
             }
@@ -123,7 +129,7 @@ fn build_tree_recursively<'a>(
                 if token_type != Some(TokenType::RightParen) {
                     let msg = format!(
                         "Group does not end with RightParen\n{}",
-                        tokens.get_location_string()
+                        format_file_location(tokens)
                     );
                     return (None, Some(ZilErr::origin(msg)));
                 } else if !err.is_none() {
@@ -206,7 +212,60 @@ pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
             return;
         }
 
-        let mut bunch = ZilNode::new(ZilNodeType::TokenBunch);
+        // validate token_buf, determine type
+
+        let mut has_text = false;
+        let mut is_number = true;
+
+        match token_buf[0].kind {
+            TokenType::Text => {
+                has_text = true;
+                is_number = false;
+            },
+            TokenType::Symbol => {
+                if &token_buf[0].value != "-" || token_buf.len() <= 1 {
+                    is_number = false;
+                }
+            },
+            TokenType::Word => {
+                for c in token_buf[0].value.chars() {
+                    if !c.is_digit(10) {
+                        is_number = false;
+                        break;
+                    }
+                }
+            },
+            _ => panic!("Bad token type in ast::bunch_tokens"),
+        }
+
+        for t in token_buf.iter().skip(1) {
+            if t.kind == TokenType::Text {
+                has_text = true;
+                is_number = false;
+                break;
+            }
+
+            if is_number {
+                for c in t.value.chars() {
+                    if !c.is_digit(10) {
+                        is_number = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        let mut bunch_type = TokenBunchType::Word;
+        if has_text {
+            if token_buf.len() > 1 {
+                panic!("Text token with other tokens in ast::bunch_tokens");
+            }
+            bunch_type = TokenBunchType::Text;
+        } else if is_number {
+            bunch_type = TokenBunchType::Number;
+        }
+
+        let mut bunch = ZilNode::new(ZilNodeType::TokenBunch(bunch_type));
         for t in token_buf {
             bunch.push_child(ZilNode::from_token(t));
         }
@@ -217,7 +276,9 @@ pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
     for n in root.children {
         match n.node_type {
             ZilNodeType::Unknown => panic!("Unknown node type in stats::lookups::get_name_tokens"),
-            ZilNodeType::TokenBunch => panic!("Already bunched in stats::lookups::get_name_tokens"),
+            ZilNodeType::TokenBunch(_) => {
+                panic!("Already bunched in stats::lookups::get_name_tokens")
+            }
             ZilNodeType::Comment => continue,
             ZilNodeType::Group | ZilNodeType::Cluster => {
                 bunch_token_buf(token_buf, &mut new_children);
@@ -245,10 +306,9 @@ pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
 
     root.children = Vec::new();
     for n in new_children {
-        if n.node_type == ZilNodeType::TokenBunch {
-            root.push_child(n);
-        } else {
-            root.push_child(bunch_tokens(n));
+        match n.node_type {
+            ZilNodeType::TokenBunch(_) => root.push_child(n),
+            _ => root.push_child(bunch_tokens(n)),
         }
     }
 

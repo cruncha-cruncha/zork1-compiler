@@ -76,8 +76,9 @@ pub fn get_nth_child_name(n: usize, node: &ZilNode) -> Option<String> {
     }
 
     let child = &node.children[n];
-    if child.node_type != ZilNodeType::TokenBunch {
-        return None;
+    match child.node_type {
+        ZilNodeType::TokenBunch(_) => (),
+        _ => return None,
     }
 
     let mut str_buf = String::new();
@@ -86,10 +87,6 @@ pub fn get_nth_child_name(n: usize, node: &ZilNode) -> Option<String> {
     }
 
     Some(str_buf)
-}
-
-pub trait Has<T> {
-    fn has(&self, key: T) -> bool;
 }
 
 pub fn get_bunch_name(node: &ZilNode) -> String {

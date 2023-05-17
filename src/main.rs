@@ -1,50 +1,48 @@
-use std::fs::File;
-use std::io::{BufReader};
-use std::path::Path;
+use std::{path::Path, sync::{Arc, Condvar, Mutex}, thread, time};
+
+use crate::{
+    stats::top_level::Codex,
+    zil::{ast, mess::Huh},
+};
 
 mod stats;
 mod zil;
-// mod js;
-// mod inter;
-// #[cfg(test)]
-// mod tests;
 
 fn main() {
     let mut files_lookup = zil::file_table::FileTable::new();
 
     let mut file_path = Path::new("..").join("dummy-data").join("test1.zil");
     files_lookup.add(file_path);
-    file_path = Path::new("..").join("dummy-data").join("test2.zil");
-    files_lookup.add(file_path);
+    // file_path = Path::new("..").join("dummy-data").join("test2.zil");
+    // files_lookup.add(file_path);
     println!("{}", files_lookup);
 
-    let char_gen = zil::char_gen::new(&mut files_lookup);
-    let mut token_gen = zil::token_gen::new(char_gen);
+    let mut char_gen = zil::char_gen::new(&mut files_lookup);
+    let mut token_gen = zil::token_gen::new(&mut char_gen);
 
-    let tree = match zil::ast::build_tree(&mut token_gen) {
+    let tree = match ast::build_tree(&mut token_gen) {
         Ok(t) => t,
         Err(e) => panic!("\nERROR\n{}", e),
     };
 
-    tree.print();
+    //ast::print(tree.get_root());
 
-    // let mut lookup = stats::top_level::CrossRef::new(&tree);
-    // lookup.populate();
+    let mut lookup = stats::top_level::CrossRef::new(&tree);
+    lookup.find_stuff();
 
-    // for k in lookup.rooms.keys() {
-    //     println!("{}", k);
-    // }
 
-    // let mut rooms = stats::rooms::RoomCodex::new(&lookup.rooms);
-    // rooms.populate();
+    let mut weaver = stats::weaver::Sigourney::new();
+    let recv = weaver.run_fn(|| lookup.globals.crunch());
 
-    // for v in rooms.subgroups.iter() {
+    recv.recv().unwrap().unwrap();
+
+    for n in lookup.globals.into_iter() {
+        println!("{}", n);
+    }
+
+    // for v in rooms.subgroup_names.iter() {
     //     println!("{}", v);
     // }
-
-
-
-
 
     // //inter::ast_stats::run_all(&root);
 
@@ -74,8 +72,6 @@ fn main() {
     //   }
     // };
 }
-
-
 
 // #[allow(non_snake_case)]
 // pub fn get_CustomBufWriter(file_path: &Path) -> Option<crate::js::custom_buf_writer::CustomBufWriter<File>> {

@@ -2,60 +2,80 @@ use std::collections::{HashMap, HashSet};
 
 use crate::zil::node::{ZilNode, ZilNodeType};
 
-use super::helpers::get_nth_child_name;
+use super::{helpers::get_nth_child_name, top_level::Codex};
 
 pub struct RoomCodex<'a> {
-    lookup: &'a HashMap<String, &'a ZilNode>,
-    pub subgroups: HashSet<String>,
+    basis: HashMap<String, &'a ZilNode>,
+    pub subgroup_names: HashSet<String>,
 }
 
 impl<'a> RoomCodex<'a> {
-    pub fn new(lookup: &'a HashMap<String, &ZilNode>) -> RoomCodex<'a> {
+    pub fn new() -> RoomCodex<'a> {
         RoomCodex {
-            lookup,
-            subgroups: HashSet::new(),
+            basis: HashMap::new(),
+            subgroup_names: HashSet::new(),
         }
     }
 
-    pub fn populate(&mut self) {
-        self.populate_subgroups();
-    }
-
-    fn populate_subgroups(&mut self) {
-        for node in self.lookup.values() {
+    fn populate_subgroup_names(&mut self) -> Result<(), String> {
+        for node in self.basis.values() {
             for c in node.children.iter() {
                 if c.node_type == ZilNodeType::Group {
                     match get_nth_child_name(0, c) {
                         Some(name) => {
-                            self.subgroups.insert(name);
+                            self.subgroup_names.insert(name);
                         }
-                        None => panic!("Group in room has no name"),
+                        None => return Err(String::from("Group in room has no name")),
                     }
                 }
             }
         }
+
+        Ok(())
     }
 }
 
-/*
-IN     // direction, but also a word
-LDESC
-DESC
-EAST   // direction
-DOWN   // direction
-SOUTH  // direction
-WEST   // direction
-FLAGS
-UP     // direction
-NORTH  // direction
-ACTION
-GLOBAL
-SW     // direction
-NW     // direction
-PSEUDO
-LAND   // direction
-NE     // direction
-SE     // direction
-OUT    // direction
-VALUE
-*/
+impl<'a> IntoIterator for RoomCodex<'a> {
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.basis.keys().map(|k| k.clone()).collect::<Vec<String>>().into_iter()
+    }
+}
+
+impl<'a> Codex<'a> for RoomCodex<'a> {
+    fn get_name(&self) -> String {
+        String::from("rooms")
+    }
+
+    fn add_node(&mut self, node: &'a ZilNode) {
+        let name = get_nth_child_name(1, node);
+        match name {
+            Some(name) => {
+                if self.basis.insert(name, node).is_some() {
+                    panic!("Room node has duplicate name");
+                }
+            }
+            None => panic!("Room node has no name"),
+        }
+    }
+
+    fn crunch(&mut self) -> Result<(), String> {
+        for n in self.basis.values() {
+            for c in n.children.iter().skip(2) {
+                if c.node_type != ZilNodeType::Group {
+                    return Err(String::from("Room node has non-group child"));
+                }
+            }
+        }
+
+        self.populate_subgroup_names()?;
+
+        Ok(())
+    }
+
+    fn lookup(&self, word: &str) -> Option<&ZilNode> {
+        self.basis.get(word).map(|n| *n)
+    }
+}

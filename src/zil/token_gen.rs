@@ -2,17 +2,16 @@ use std::collections::VecDeque;
 use std::io;
 use zil::file_table::FileKey;
 
+use crate::zil::file_table::format_file_location;
+
 use super::char_gen::{CharGen, CharInfo};
-use super::file_table::{FileTableLocation, FileTableLocationString};
+use super::file_table::FileTableLocation;
 use super::token::{Token, TokenType};
 
-pub trait TokenGen:
-    Iterator<Item = Result<Token, io::Error>> + FileTableLocation + FileTableLocationString
-{
-}
+pub trait TokenGen: Iterator<Item = Result<Token, io::Error>> + FileTableLocation {}
 
-struct TokenGenerator<'a> {
-    char_gen: Box<dyn CharGen + 'a>,
+pub struct TokenGenerator<'a> {
+    char_gen: &'a mut dyn CharGen,
     out_buf: VecDeque<Token>,
     in_word: bool,
     in_quotes: bool,
@@ -88,12 +87,6 @@ impl<'a> FileTableLocation for TokenGenerator<'a> {
     }
 }
 
-impl<'a> FileTableLocationString for TokenGenerator<'a> {
-    fn get_location_string(&self) -> String {
-        self.char_gen.get_location_string()
-    }
-}
-
 impl<'a> Iterator for TokenGenerator<'a> {
     type Item = Result<Token, io::Error>;
 
@@ -105,12 +98,9 @@ impl<'a> Iterator for TokenGenerator<'a> {
         let mut loop_count = 0;
         while self.out_buf.len() <= 0 {
             if self.in_quotes && loop_count > 5000 {
-                panic!(
-                    "String is too long\n{}",
-                    self.char_gen.get_location_string()
-                );
+                panic!("String is too long\n{}", format_file_location(self));
             } else if !self.in_quotes && loop_count > 200 {
-                panic!("Too many loops\n{}", self.char_gen.get_location_string());
+                panic!("Too many loops\n{}", format_file_location(self));
             }
 
             loop_count += 1;
@@ -120,7 +110,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
                 Some(Err(e)) => return Some(Err(e)),
                 None => {
                     if self.in_quotes {
-                        panic!("Unexpected EOF\n{}", self.char_gen.get_location_string());
+                        panic!("Unexpected EOF\n{}", format_file_location(self));
                     } else if self.in_word {
                         self.push_buf(TokenType::Word);
                         self.in_word = false;
@@ -209,8 +199,8 @@ impl<'a> Iterator for TokenGenerator<'a> {
 
 impl<'a> TokenGen for TokenGenerator<'a> {}
 
-pub fn new<'a>(char_gen: Box<dyn CharGen + 'a>) -> Box<dyn TokenGen + 'a> {
-    Box::new(TokenGenerator {
+pub fn new<'a>(char_gen: &'a mut impl CharGen) -> TokenGenerator<'a> {
+    TokenGenerator {
         char_gen,
         out_buf: VecDeque::new(),
         in_word: false,
@@ -222,5 +212,5 @@ pub fn new<'a>(char_gen: Box<dyn CharGen + 'a>) -> Box<dyn TokenGen + 'a> {
             line_number: 0,
             char_number: 0,
         },
-    })
+    }
 }

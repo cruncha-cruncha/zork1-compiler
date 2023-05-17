@@ -4,17 +4,13 @@ use std::io::BufRead;
 use std::io::BufReader;
 use zil::file_table::FileKey;
 
+use super::file_table::get_BufReader;
 use super::file_table::FileTable;
 use super::file_table::FileTableLocation;
-use super::file_table::FileTableLocationString;
-use super::file_table::get_BufReader;
 
-pub trait CharGen:
-    Iterator<Item = Result<CharInfo, io::Error>> + FileTableLocation + FileTableLocationString
-{
-}
+pub trait CharGen: Iterator<Item = Result<CharInfo, io::Error>> + FileTableLocation {}
 
-struct CharGenerator<'a> {
+pub struct CharGenerator<'a> {
     files: &'a mut FileTable,
     reader: Option<BufReader<File>>,
     char_buf: Vec<char>,
@@ -67,12 +63,6 @@ impl<'a> FileTableLocation for CharGenerator<'a> {
     }
 }
 
-impl<'a> FileTableLocationString for CharGenerator<'a> {
-    fn get_location_string(&self) -> String {
-        self.files.format_location(self)
-    }
-}
-
 impl<'a> Iterator for CharGenerator<'a> {
     type Item = Result<CharInfo, io::Error>;
 
@@ -121,13 +111,13 @@ impl<'a> Iterator for CharGenerator<'a> {
 
 impl<'a> CharGen for CharGenerator<'a> {}
 
-pub fn new<'a>(files: &'a mut FileTable) -> Box<dyn CharGen + 'a> {
-    Box::new(CharGenerator {
+pub fn new<'a>(files: &'a mut FileTable) -> CharGenerator<'a> {
+    CharGenerator {
         files,
         reader: None,
         char_buf: Vec::new(),
         buf_index: 0,
         file_key: 0,
         line_number: 0,
-    })
+    }
 }

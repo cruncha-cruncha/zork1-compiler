@@ -73,8 +73,13 @@ pub trait FileTableLocation {
     fn get_char_number(&self) -> u64;
 }
 
-pub trait FileTableLocationString {
-    fn get_location_string(&self) -> String;
+pub fn format_file_location(location: &impl FileTableLocation) -> String {
+    format!(
+        "in {} at line {}, char {}",
+        location.get_file_key(),
+        location.get_line_number(),
+        location.get_char_number()
+    )
 }
 
 impl Iterator for FileTable {
