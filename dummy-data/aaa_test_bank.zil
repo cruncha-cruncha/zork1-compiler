@@ -18,3 +18,5 @@
 		 <+ <* ,CURE-WAIT <- .WD 1>>
 		    <GET <INT I-CURE> ,C-TICK>>>
 		<TELL " moves.">)>
+
+<TELL ", especially in light of your condition.">

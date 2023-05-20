@@ -1,4 +1,4 @@
-use crate::zil::{node::TokenBunchType, token};
+use crate::zil::node::TokenBunchType;
 
 use super::{
     error::ZilErr,
@@ -81,9 +81,11 @@ pub fn build_tree<'a>(tokens: &mut impl TokenGen) -> Result<Tree, ZilErr> {
         Err(e) => return Err(e),
     }
 
+    root = bunch_tokens(root);
+
     swallow_comments(&mut root);
 
-    root = bunch_tokens(root);
+    clean_top_level(&mut root);
 
     Ok(Tree { root: root })
 }
@@ -180,6 +182,20 @@ fn validate_tree(root: &ZilNode) -> Result<(), ZilErr> {
     Ok(())
 }
 
+fn clean_top_level(root: &mut ZilNode) {
+    let mut indices: Vec<usize> = Vec::new();
+    for (i, n) in root.children.iter().enumerate() {
+        match n.node_type {
+            ZilNodeType::TokenBunch(_) => indices.push(i),
+            _ => (),
+        }
+    }
+
+    for i in indices.iter().rev() {
+        root.children.remove(*i);
+    }
+}
+
 fn swallow_comments(root: &mut ZilNode) {
     let mut comment_indices: Vec<usize> = Vec::new();
 
@@ -191,15 +207,13 @@ fn swallow_comments(root: &mut ZilNode) {
 
     for i in comment_indices.into_iter().rev() {
         if root.children.len() >= i + 2 {
-            let commented = root.children.remove(i + 1);
-            root.children[i].push_child(commented);
+            root.children.remove(i + 1);
         }
+        root.children.remove(i);
     }
 
     for n in root.children.iter_mut() {
-        if n.node_type != ZilNodeType::Comment {
-            swallow_comments(n);
-        }
+        swallow_comments(n);
     }
 }
 
@@ -221,12 +235,12 @@ pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
             TokenType::Text => {
                 has_text = true;
                 is_number = false;
-            },
+            }
             TokenType::Symbol => {
                 if &token_buf[0].value != "-" || token_buf.len() <= 1 {
                     is_number = false;
                 }
-            },
+            }
             TokenType::Word => {
                 for c in token_buf[0].value.chars() {
                     if !c.is_digit(10) {
@@ -234,7 +248,7 @@ pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
                         break;
                     }
                 }
-            },
+            }
             _ => panic!("Bad token type in ast::bunch_tokens"),
         }
 
@@ -271,7 +285,7 @@ pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
         }
 
         new_children.push(bunch);
-    };
+    }
 
     for n in root.children {
         match n.node_type {
@@ -279,8 +293,7 @@ pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
             ZilNodeType::TokenBunch(_) => {
                 panic!("Already bunched in stats::lookups::get_name_tokens")
             }
-            ZilNodeType::Comment => continue,
-            ZilNodeType::Group | ZilNodeType::Cluster => {
+            ZilNodeType::Comment | ZilNodeType::Group | ZilNodeType::Cluster => {
                 bunch_token_buf(token_buf, &mut new_children);
                 new_children.push(n);
                 token_buf = Vec::new();

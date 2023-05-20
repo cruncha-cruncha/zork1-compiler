@@ -35,7 +35,7 @@ impl<'a> Codex<'a> for GlobalCodex<'a> {
         match name {
             Some(name) => {
                 if self.basis.insert(name, node).is_some() {
-                    panic!("Global node has duplicate name");
+                    panic!("Global node has duplicate name {}", get_nth_child_name(1, node).unwrap());
                 }
             },
             None => panic!("Global node has no name"),

@@ -4,8 +4,8 @@ use crate::zil::{
 };
 
 use super::{
-    directions::DirectionCodex,
-    helpers::get_nth_child_name, globals::GlobalCodex, gdecls::GdeclPhodex, rooms::RoomCodex,
+    constants::ConstantCodex, directions::DirectionCodex, gdecls::GdeclPhodex,
+    globals::GlobalCodex, helpers::get_nth_child_name, objects::ObjectCodex, rooms::RoomCodex, buzzi::BuzzPhodex, routines::RoutineCodex, synonyms::SynonymCodex, syntax::SyntaxPhodex, conds::CondPhodex,
 };
 
 pub trait Codex<'a>: IntoIterator<Item = String> {
@@ -15,18 +15,26 @@ pub trait Codex<'a>: IntoIterator<Item = String> {
     fn lookup(&self, word: &str) -> Option<&ZilNode>;
 }
 
+pub trait Phodex<'a>: IntoIterator<Item = &'a ZilNode> {
+    fn get_name(&self) -> String;
+    fn add_node(&mut self, node: &'a ZilNode);
+    fn crunch(&mut self) -> Result<(), String>;
+}
+
 pub struct CrossRef<'a> {
     tree: &'a Tree,
     pub globals: GlobalCodex<'a>,
     pub gdecls: GdeclPhodex<'a>,
-    // pub constants: HashMap<String, &'a ZilNode>,
+    pub constants: ConstantCodex<'a>,
     pub directions: DirectionCodex<'a>,
     pub rooms: RoomCodex<'a>,
-    // pub objects: HashMap<String, &'a ZilNode>,
-    // pub buzzi: Vec<&'a ZilNode>,
-    // pub routines: HashMap<String, &'a ZilNode>,
-    // pub synonyms: HashMap<String, &'a ZilNode>,
-    // pub syntax: Vec<&'a ZilNode>,
+    pub objects: ObjectCodex<'a>,
+    pub buzzi: BuzzPhodex<'a>,
+    pub routines: RoutineCodex<'a>,
+    pub synonyms: SynonymCodex<'a>,
+    pub syntax: SyntaxPhodex<'a>,
+    pub conds: CondPhodex<'a>,
+    pub leftovers: Vec<&'a ZilNode>,
 }
 
 impl<'a> CrossRef<'a> {
@@ -35,84 +43,54 @@ impl<'a> CrossRef<'a> {
             tree,
             globals: GlobalCodex::new(),
             gdecls: GdeclPhodex::new(),
-            // constants: HashMap::new(),
+            constants: ConstantCodex::new(),
             directions: DirectionCodex::new(),
             rooms: RoomCodex::new(),
-            // objects: HashMap::new(),
-            // routines: HashMap::new(),
-            // buzzi: Vec::new(),
-            // synonyms: HashMap::new(),
-            // syntax: Vec::new(),
+            objects: ObjectCodex::new(),
+            routines: RoutineCodex::new(),
+            buzzi: BuzzPhodex::new(),
+            synonyms: SynonymCodex::new(),
+            syntax: SyntaxPhodex::new(),
+            conds: CondPhodex::new(),
+            leftovers: Vec::new(),
         }
     }
 
     pub fn find_stuff(&mut self) {
         let root = self.tree.get_root();
-        self.find_stuff_recursive(root)
-    }
 
-    fn find_stuff_recursive(&mut self, node: &'a ZilNode) {
-        for n in node.children.iter() {
+        for n in root.children.iter() {
             if n.node_type == ZilNodeType::Cluster {
                 match get_nth_child_name(0, n) {
                     Some(name) => {
                         self.handle_named_cluster(n, name);
                     }
-                    None => (),
+                    None => self.leftovers.push(n),
                 }
+            } else {
+                self.leftovers.push(n);
             }
+        }
 
-            self.find_stuff_recursive(n);
+        if self.leftovers.len() > 0 {
+            panic!("Leftover nodes after initial pass");
         }
     }
 
     fn handle_named_cluster(&mut self, root: &'a ZilNode, name: String) {
         match name.as_str() {
             "ROOM" => self.rooms.add_node(root),
-            // "OBJECT" => match get_nth_child_name(1, root) {
-            //     Some(name) => {
-            //         if self.objects.contains_key(&name) {
-            //             panic!("Duplicate object name {}", name);
-            //         }
-            //         self.objects.insert(name, root);
-            //     }
-            //     None => panic!("Object has no name"),
-            // },
+            "OBJECT" => self.objects.add_node(root),
             "DIRECTIONS" => self.directions.add_node(root),
-            // "ROUTINE" => match get_nth_child_name(1, root) {
-            //     Some(name) => {
-            //         if self.routines.contains_key(&name) {
-            //             panic!("Duplicate routine name {}", name);
-            //         }
-            //         self.routines.insert(name, root);
-            //     }
-            //     None => panic!("Routine has no name"),
-            // },
+            "ROUTINE" => self.routines.add_node(root),
             "GLOBAL" => self.globals.add_node(root),
             "GDECL" => self.gdecls.add_node(root),
-            // "CONSTANT" => match get_nth_child_name(1, root) {
-            //     Some(name) => {
-            //         if self.constants.contains_key(&name) {
-            //             panic!("Duplicate constant name {}", name);
-            //         }
-            //         self.constants.insert(name, root);
-            //     }
-            //     None => panic!("Constant has no name"),
-            // },
-            // "BUZZ" => {
-            //     self.buzzi.push(root);
-            // }
-            // "SYNONYM" => match get_nth_child_name(1, root) {
-            //     Some(name) => {
-            //         if self.synonyms.contains_key(&name) {
-            //             panic!("Duplicate synonym name {}", name);
-            //         }
-            //         self.synonyms.insert(name, root);
-            //     }
-            //     None => panic!("Synonym has no name"),
-            // },
-            // "SYNTAX" => self.syntax.push(root),
-            _ => (),
+            "CONSTANT" => self.constants.add_node(root),
+            "BUZZ" => self.buzzi.add_node(root),
+            "SYNONYM" => self.synonyms.add_node(root),
+            "SYNTAX" => self.syntax.add_node(root),
+            "COND" => self.conds.add_node(root),
+            _ => self.leftovers.push(root),
         }
     }
 }

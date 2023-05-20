@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use crate::zil::node::{ZilNode, ZilNodeType, TokenBunchType};
+use crate::zil::node::ZilNode;
 
-use super::{top_level::Codex, helpers::get_bunch_name};
+use super::{helpers::get_bunch_name, top_level::Codex};
 
 pub struct DirectionCodex<'a> {
     basis: Option<&'a ZilNode>,
@@ -23,7 +23,7 @@ impl IntoIterator for DirectionCodex<'_> {
     type IntoIter = std::collections::hash_set::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.options.into_iter()
+        self.options.clone().into_iter()
     }
 }
 
@@ -50,13 +50,12 @@ impl<'a> Codex<'a> for DirectionCodex<'a> {
         }
 
         for node in self.basis.unwrap().children.iter().skip(1) {
-            if node.node_type != ZilNodeType::TokenBunch(TokenBunchType::Word) {
-                return Err(String::from("DirectionCodex has non-word child"));
+            match get_bunch_name(node) {
+                Some(name) => {
+                    self.options.insert(name);
+                }
+                None => panic!("Direction node has non-word child"),
             }
-        }
-
-        for (i, node) in self.basis.unwrap().children.iter().skip(1).enumerate() {
-            self.options.insert(get_bunch_name(node));
         }
 
         Ok(())

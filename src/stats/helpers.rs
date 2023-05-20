@@ -1,6 +1,6 @@
 use crate::zil::{
     ast::Tree,
-    node::{ZilNode, ZilNodeType},
+    node::{ZilNode, ZilNodeType, TokenBunchType},
 };
 
 #[allow(dead_code)]
@@ -75,25 +75,19 @@ pub fn get_nth_child_name(n: usize, node: &ZilNode) -> Option<String> {
         return None;
     }
 
-    let child = &node.children[n];
-    match child.node_type {
-        ZilNodeType::TokenBunch(_) => (),
+    get_bunch_name(&node.children[n])
+}
+
+pub fn get_bunch_name(node: &ZilNode) -> Option<String> {
+    match node.node_type {
+        ZilNodeType::TokenBunch(TokenBunchType::Word) => (),
         _ => return None,
     }
 
-    let mut str_buf = String::new();
-    for cc in child.children.iter() {
-        str_buf.push_str(&cc.token_val());
-    }
-
-    Some(str_buf)
-}
-
-pub fn get_bunch_name(node: &ZilNode) -> String {
     let mut str_buf = String::new();
     for cc in node.children.iter() {
         str_buf.push_str(&cc.token_val());
     }
 
-    str_buf
+    Some(str_buf)
 }

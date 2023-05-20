@@ -52,6 +52,7 @@ impl FileTable {
         None
     }
 
+    #[allow(dead_code)]
     pub fn format_location(&self, location: &impl FileTableLocation) -> String {
         let info = match self.get(location.get_file_key()) {
             Some(v) => v,

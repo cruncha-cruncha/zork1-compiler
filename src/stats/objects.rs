@@ -4,44 +4,40 @@ use crate::zil::node::{ZilNode, ZilNodeType};
 
 use super::{helpers::get_nth_child_name, top_level::Codex};
 
-pub struct RoomCodex<'a> {
+pub struct ObjectCodex<'a> {
     basis: HashMap<String, &'a ZilNode>,
     pub subgroup_names: HashSet<String>,
 }
 
 /*
-NORTH
-LDESC
-ACTION
-DESC
-SW
-SE
-OUT
-VALUE
-EAST
-SOUTH
-NW
-IN
-WEST
-DOWN
+SIZE
+VTYPE
 FLAGS
-GLOBAL
-UP
-LAND
-PSEUDO
-NE
+SYNONYM
+LDESC
+TVALUE
+DESC
+IN
+FDESC
+TEXT
+STRENGTH
+ACTION
+DESCFCN
+ADJECTIVE
+VALUE
+CAPACITY
 */
 
-impl<'a> RoomCodex<'a> {
-    pub fn new() -> RoomCodex<'a> {
-        RoomCodex {
+impl<'a> ObjectCodex<'a> {
+    pub fn new() -> ObjectCodex<'a> {
+        ObjectCodex {
             basis: HashMap::new(),
             subgroup_names: HashSet::new(),
         }
     }
 }
 
-impl<'a> IntoIterator for RoomCodex<'a> {
+impl<'a> IntoIterator for ObjectCodex<'a> {
     type Item = String;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -50,9 +46,9 @@ impl<'a> IntoIterator for RoomCodex<'a> {
     }
 }
 
-impl<'a> Codex<'a> for RoomCodex<'a> {
+impl<'a> Codex<'a> for ObjectCodex<'a> {
     fn get_name(&self) -> String {
-        String::from("rooms")
+        String::from("objects")
     }
 
     fn add_node(&mut self, node: &'a ZilNode) {
@@ -60,10 +56,10 @@ impl<'a> Codex<'a> for RoomCodex<'a> {
         match name {
             Some(name) => {
                 if self.basis.insert(name, node).is_some() {
-                    panic!("Room node has duplicate name {}", get_nth_child_name(1, node).unwrap());
+                    panic!("Object node has duplicate name {}", get_nth_child_name(1, node).unwrap());
                 }
             }
-            None => panic!("Room node has no name"),
+            None => panic!("Object node has no name"),
         }
     }
 
@@ -71,14 +67,14 @@ impl<'a> Codex<'a> for RoomCodex<'a> {
         for n in self.basis.values() {
             for c in n.children.iter().skip(2) {
                 if c.node_type != ZilNodeType::Group {
-                    return Err(String::from("Room node has non-group child"));
+                    return Err(String::from("Object node has non-group child"));
                 }
 
                 match get_nth_child_name(0, c) {
                     Some(name) => {
                         self.subgroup_names.insert(name);
                     }
-                    None => return Err(String::from("Group in room has no name")),
+                    None => return Err(String::from("Group in object has no name")),
                 }
             }
         }
