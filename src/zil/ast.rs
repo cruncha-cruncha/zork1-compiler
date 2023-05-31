@@ -107,6 +107,7 @@ fn build_tree_recursively<'a>(
         match t.kind {
             TokenType::LeftArrow => {
                 let mut child = ZilNode::new(ZilNodeType::Cluster);
+                child.token = Some(t);
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightArrow) {
@@ -115,17 +116,15 @@ fn build_tree_recursively<'a>(
                         format_file_location(tokens)
                     );
                     return (None, Some(ZilErr::origin(msg)));
-                } else if !err.is_none() {
+                } else if err.is_some() {
                     return (None, err);
                 }
-
-                /* the trait bound `Box<dyn TokenGen<Item = std::result::Result<Token, std::io::Error>>>: FileTableLocation` is not satisfied
-                the trait `FileTableLocation` is not implemented for `Box<dyn TokenGen<Item = std::result::Result<Token, std::io::Error>>> */
 
                 root.push_child(child);
             }
             TokenType::LeftParen => {
                 let mut child = ZilNode::new(ZilNodeType::Group);
+                child.token = Some(t);
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightParen) {
@@ -134,7 +133,7 @@ fn build_tree_recursively<'a>(
                         format_file_location(tokens)
                     );
                     return (None, Some(ZilErr::origin(msg)));
-                } else if !err.is_none() {
+                } else if err.is_some() {
                     return (None, err);
                 }
 

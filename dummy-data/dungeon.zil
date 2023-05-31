@@ -1237,7 +1237,6 @@ have, as the mainspring seems sprung.")>
 "SUBTITLE FOREST AND OUTSIDE OF HOUSE"
 
 <ROOM WEST-OF-HOUSE
-      (IN ROOMS)
       (DESC "West of House")
       (NORTH TO NORTH-OF-HOUSE)
       (SOUTH TO SOUTH-OF-HOUSE)
@@ -1252,7 +1251,6 @@ have, as the mainspring seems sprung.")>
       (GLOBAL WHITE-HOUSE BOARD FOREST)>
 
 <ROOM STONE-BARROW
-      (IN ROOMS)
       (LDESC
 "You are standing in front of a massive barrow of stone. In the east face
 is a huge stone door which is open. You cannot see into the dark of the tomb.")
@@ -1262,7 +1260,6 @@ is a huge stone door which is open. You cannot see into the dark of the tomb.")
       (FLAGS RLANDBIT ONBIT SACREDBIT)>
 
 <ROOM NORTH-OF-HOUSE
-      (IN ROOMS)
       (LDESC
 "You are facing the north side of a white house. There is no door here,
 and all the windows are boarded up. To the north a narrow path winds through
@@ -1278,7 +1275,6 @@ the trees.")
       (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)>
 
 <ROOM SOUTH-OF-HOUSE
-      (IN ROOMS)
       (LDESC
 "You are facing the south side of a white house. There is no door here,
 and all the windows are boarded.")
@@ -1293,7 +1289,6 @@ and all the windows are boarded.")
       (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)>
 
 <ROOM EAST-OF-HOUSE
-      (IN ROOMS)
       (DESC "Behind House")
       (NORTH TO NORTH-OF-HOUSE)
       (SOUTH TO SOUTH-OF-HOUSE)
@@ -1307,7 +1302,6 @@ and all the windows are boarded.")
       (GLOBAL WHITE-HOUSE KITCHEN-WINDOW FOREST)>
 
 <ROOM FOREST-1
-      (IN ROOMS)
       (LDESC
 "This is a forest, with trees in all directions. To the east,
 there appears to be sunlight.")
@@ -1322,7 +1316,6 @@ there appears to be sunlight.")
       (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)>
 
 <ROOM FOREST-2
-      (IN ROOMS)
       (LDESC "This is a dimly lit forest, with large trees all around.")
       (DESC "Forest")
       (UP "There is no tree here suitable for climbing.")
@@ -1335,7 +1328,6 @@ there appears to be sunlight.")
       (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)>
 
 <ROOM MOUNTAINS
-      (IN ROOMS)
       (LDESC "The forest thins out, revealing impassable mountains.")
       (DESC "Forest")
       (UP "The mountains are impassable.")
@@ -1347,7 +1339,6 @@ there appears to be sunlight.")
       (GLOBAL TREE WHITE-HOUSE)>
 
 <ROOM FOREST-3
-      (IN ROOMS)
       (LDESC "This is a dimly lit forest, with large trees all around.")
       (DESC "Forest")
       (UP "There is no tree here suitable for climbing.")
@@ -1361,7 +1352,6 @@ there appears to be sunlight.")
       (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)>
 
 <ROOM PATH
-      (IN ROOMS)
       (LDESC
 "This is a path winding through a dimly lit forest. The path heads
 north-south here. One particularly large tree with some low branches
@@ -1377,7 +1367,6 @@ stands at the edge of the path.")
       (GLOBAL TREE SONGBIRD WHITE-HOUSE FOREST)>
 
 <ROOM UP-A-TREE
-      (IN ROOMS)
       (DESC "Up a Tree")
       (DOWN TO PATH)
       (UP "You cannot climb any higher.")
@@ -1386,7 +1375,6 @@ stands at the edge of the path.")
       (GLOBAL TREE FOREST SONGBIRD WHITE-HOUSE)>
 
 <ROOM GRATING-CLEARING
-      (IN ROOMS)
       (DESC "Clearing")
       (NORTH "The forest becomes impenetrable to the north.")
       (EAST TO FOREST-2)
@@ -1408,7 +1396,6 @@ stands at the edge of the path.")
 	       (T <TELL "You can't go that way." CR> <RFALSE>)>>
 
 <ROOM CLEARING
-      (IN ROOMS)
       (LDESC
 "You are in a small clearing in a well marked forest path that
 extends to the east and west.")
@@ -1427,7 +1414,6 @@ extends to the east and west.")
 "SUBTITLE HOUSE"
 
 <ROOM KITCHEN
-      (IN ROOMS)
       (DESC "Kitchen")
       (EAST TO EAST-OF-HOUSE IF KITCHEN-WINDOW IS OPEN)
       (WEST TO LIVING-ROOM)
@@ -1441,7 +1427,6 @@ extends to the east and west.")
       (GLOBAL KITCHEN-WINDOW CHIMNEY STAIRS)>
 
 <ROOM ATTIC
-      (IN ROOMS)
       (LDESC "This is the attic. The only exit is a stairway leading down.")
       (DESC "Attic")
       (DOWN TO KITCHEN)
@@ -1449,7 +1434,6 @@ extends to the east and west.")
       (GLOBAL STAIRS)>
 
 <ROOM LIVING-ROOM
-      (IN ROOMS)
       (DESC "Living Room")
       (EAST TO KITCHEN)
       (WEST TO STRANGE-PASSAGE IF MAGIC-FLAG ELSE "The door is nailed shut.")
@@ -1464,7 +1448,6 @@ extends to the east and west.")
 "SUBTITLE CELLAR AND VICINITY"
 
 <ROOM CELLAR
-      (IN ROOMS)
       (DESC "Cellar")
       (NORTH TO TROLL-ROOM)
       (SOUTH TO EAST-OF-CHASM)
@@ -1477,7 +1460,6 @@ extends to the east and west.")
       (GLOBAL TRAP-DOOR SLIDE STAIRS)>
 
 <ROOM TROLL-ROOM
-      (IN ROOMS)
       (LDESC
 "This is a small room with passages to the east and south and a
 forbidding hole leading west. Bloodstains and deep scratches
@@ -1492,7 +1474,6 @@ forbidding hole leading west. Bloodstains and deep scratches
       (ACTION TROLL-ROOM-F)>
 
 <ROOM EAST-OF-CHASM
-      (IN ROOMS)
       (LDESC
 "You are on the east edge of a chasm, the bottom of which cannot be
 seen. A narrow passage goes north, and the path you are on continues
@@ -1505,7 +1486,6 @@ to the east.")
       (PSEUDO "CHASM" CHASM-PSEUDO)>
 
 <ROOM GALLERY
-      (IN ROOMS)
       (LDESC
 "This is an art gallery. Most of the paintings have been stolen by
 vandals with exceptional taste. The vandals left through either the
@@ -1516,7 +1496,6 @@ north or west exits.")
       (FLAGS RLANDBIT ONBIT)>
 
 <ROOM STUDIO
-      (IN ROOMS)
       (LDESC
 "This appears to have been an artist's studio. The walls and floors are
 splattered with paints of 69 different colors. Strangely enough, nothing
@@ -1536,7 +1515,6 @@ you could get back down.")
 "SUBTITLE MAZE"
 
 <ROOM MAZE-1
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (EAST TO TROLL-ROOM)
@@ -1546,7 +1524,6 @@ you could get back down.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-2
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (SOUTH TO MAZE-1)
@@ -1555,7 +1532,6 @@ you could get back down.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-3
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (WEST TO MAZE-2)
@@ -1564,7 +1540,6 @@ you could get back down.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-4
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (WEST TO MAZE-3)
@@ -1573,14 +1548,12 @@ you could get back down.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM DEAD-END-1
-      (IN ROOMS)
       (DESC "Dead End")
       (LDESC "You have come to a dead end in the maze.")
       (SOUTH TO MAZE-4)
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-5
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.
 A skeleton, probably the remains of a luckless adventurer, lies here.")
       (DESC "Maze")
@@ -1590,14 +1563,12 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM DEAD-END-2
-      (IN ROOMS)
       (DESC "Dead End")
       (LDESC "You have come to a dead end in the maze.")
       (WEST TO MAZE-5)
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-6
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (DOWN TO MAZE-5)
@@ -1607,7 +1578,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-7
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (UP TO MAZE-14)
@@ -1618,7 +1588,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-8
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (NE TO MAZE-7)
@@ -1627,14 +1596,12 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM DEAD-END-3
-      (IN ROOMS)
       (DESC "Dead End")
       (LDESC "You have come to a dead end in the maze.")
       (NORTH TO MAZE-8)
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-9
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (NORTH TO MAZE-6)
@@ -1646,7 +1613,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-10
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (EAST TO MAZE-9)
@@ -1655,7 +1621,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-11
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
        (NE TO GRATING-ROOM)
@@ -1665,7 +1630,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM GRATING-ROOM
-      (IN ROOMS)
       (DESC "Grating Room")
       (SW TO MAZE-11)
       (UP TO GRATING-CLEARING
@@ -1675,7 +1639,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT)>
 
 <ROOM MAZE-12
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (DOWN PER MAZE-DIODES) ;"to MAZE-5"
@@ -1686,14 +1649,12 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM DEAD-END-4
-      (IN ROOMS)
       (DESC "Dead End")
       (LDESC "You have come to a dead end in the maze.")
       (SOUTH TO MAZE-12)
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-13
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (EAST TO MAZE-9)
@@ -1703,7 +1664,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-14
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
        (WEST TO MAZE-15)
@@ -1713,7 +1673,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (FLAGS RLANDBIT MAZEBIT)>
 
 <ROOM MAZE-15
-      (IN ROOMS)
       (LDESC "This is part of a maze of twisty little passages, all alike.")
       (DESC "Maze")
       (WEST TO MAZE-14)
@@ -1726,7 +1685,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
 "SUBTITLE CYCLOPS AND HIDEAWAY"
 
 <ROOM CYCLOPS-ROOM
-      (IN ROOMS)
       (DESC "Cyclops Room")
       (NW TO MAZE-15)
       (EAST TO STRANGE-PASSAGE
@@ -1738,7 +1696,6 @@ A skeleton, probably the remains of a luckless adventurer, lies here.")
       (GLOBAL STAIRS)>
 
 <ROOM STRANGE-PASSAGE
-      (IN ROOMS)
       (LDESC
 "This is a long passage. To the west is one entrance. On the
 east there is an old wooden door, with a large opening in it (about
@@ -1750,7 +1707,6 @@ cyclops sized).")
       (FLAGS RLANDBIT)>
 
 <ROOM TREASURE-ROOM
-      (IN ROOMS)
       (LDESC
 "This is a large room, whose east wall is solid granite. A number
 of discarded bags, which crumble at your touch, are scattered about
@@ -1767,7 +1723,6 @@ on the floor. There is an exit down a staircase.")
 "SUBTITLE RESERVOIR AREA"
 
 <ROOM RESERVOIR-SOUTH
-      (IN ROOMS)
       (DESC "Reservoir South")
       (SE TO DEEP-CANYON)
       (SW TO CHASM-ROOM)
@@ -1781,7 +1736,6 @@ on the floor. There is an exit down a staircase.")
       (PSEUDO "LAKE" LAKE-PSEUDO "CHASM" CHASM-PSEUDO)>
 
 <ROOM RESERVOIR
-      (IN ROOMS)
       (DESC "Reservoir")
       (NORTH TO RESERVOIR-NORTH)
       (SOUTH TO RESERVOIR-SOUTH)
@@ -1794,7 +1748,6 @@ on the floor. There is an exit down a staircase.")
       (GLOBAL GLOBAL-WATER)>
 
 <ROOM RESERVOIR-NORTH
-      (IN ROOMS)
       (DESC "Reservoir North")
       (NORTH TO ATLANTIS-ROOM)
       (SOUTH TO RESERVOIR
@@ -1805,7 +1758,6 @@ on the floor. There is an exit down a staircase.")
       (PSEUDO "LAKE" LAKE-PSEUDO)>
 
 <ROOM STREAM-VIEW
-      (IN ROOMS)
       (LDESC
 "You are standing on a path beside a gently flowing stream. The path
 follows the stream, which flows from west to east.")
@@ -1817,7 +1769,6 @@ follows the stream, which flows from west to east.")
       (PSEUDO "STREAM" STREAM-PSEUDO)>
 
 <ROOM IN-STREAM
-      (IN ROOMS)
       (LDESC
 "You are on the gently flowing stream. The upstream route is too narrow
 to navigate, and the downstream route is invisible due to twisting
@@ -1837,7 +1788,6 @@ walls. There is a narrow beach to land on.")
 "SUBTITLE MIRROR ROOMS AND VICINITY"
 
 <ROOM MIRROR-ROOM-1
-      (IN ROOMS)
       (DESC "Mirror Room")
       (NORTH TO COLD-PASSAGE)
       (WEST TO TWISTING-PASSAGE)
@@ -1846,7 +1796,6 @@ walls. There is a narrow beach to land on.")
       (FLAGS RLANDBIT)>
 
 <ROOM MIRROR-ROOM-2
-      (IN ROOMS)
       (DESC "Mirror Room")
       (WEST TO WINDING-PASSAGE)
       (NORTH TO NARROW-PASSAGE)
@@ -1855,7 +1804,6 @@ walls. There is a narrow beach to land on.")
       (FLAGS RLANDBIT ONBIT)>
 
 <ROOM SMALL-CAVE
-      (IN ROOMS)
       (LDESC
 "This is a tiny cave with entrances west and north, and a staircase
 leading down.")
@@ -1868,7 +1816,6 @@ leading down.")
       (GLOBAL STAIRS)>
 
 <ROOM TINY-CAVE
-      (IN ROOMS)
       (LDESC
 "This is a tiny cave with entrances west and north, and a dark,
 forbidding staircase leading down.")
@@ -1881,7 +1828,6 @@ forbidding staircase leading down.")
       (GLOBAL STAIRS)>
 
 <ROOM COLD-PASSAGE
-      (IN ROOMS)
       (LDESC
 "This is a cold and damp corridor where a long east-west passageway
 turns into a southward path.")
@@ -1891,7 +1837,6 @@ turns into a southward path.")
       (FLAGS RLANDBIT)>
 
 <ROOM NARROW-PASSAGE
-      (IN ROOMS)
       (LDESC
 "This is a long and narrow corridor where a long north-south passageway
 briefly narrows even further.")
@@ -1901,7 +1846,6 @@ briefly narrows even further.")
       (FLAGS RLANDBIT)>
 
 <ROOM WINDING-PASSAGE
-      (IN ROOMS)
       (LDESC
 "This is a winding passage. It seems that there are only exits
 on the east and north.")
@@ -1911,7 +1855,6 @@ on the east and north.")
       (FLAGS RLANDBIT)>
 
 <ROOM TWISTING-PASSAGE
-      (IN ROOMS)
       (LDESC
 "This is a winding passage. It seems that there are only exits
 on the east and north.")
@@ -1921,7 +1864,6 @@ on the east and north.")
       (FLAGS RLANDBIT)>
 
 <ROOM ATLANTIS-ROOM
-      (IN ROOMS)
       (LDESC
 "This is an ancient room, long under water. There is an exit to
 the south and a staircase leading up.")
@@ -1936,7 +1878,6 @@ the south and a staircase leading up.")
 "SUBTITLE ROUND ROOM AND VICINITY"
 
 <ROOM EW-PASSAGE
-      (IN ROOMS)
       (LDESC
 "This is a narrow east-west passageway. There is a narrow stairway
 leading down at the north end of the room.")
@@ -1950,7 +1891,6 @@ leading down at the north end of the room.")
       (GLOBAL STAIRS)>
 
 <ROOM ROUND-ROOM
-      (IN ROOMS)
       (LDESC
 "This is a circular stone room with passages in all directions. Several
 of them have unfortunately been blocked by cave-ins.")
@@ -1963,7 +1903,6 @@ of them have unfortunately been blocked by cave-ins.")
       (FLAGS RLANDBIT)>
 
 <ROOM DEEP-CANYON
-      (IN ROOMS)
       (DESC "Deep Canyon")
       (NW TO RESERVOIR-SOUTH) ;COFFIN-CURE
       (EAST TO DAM-ROOM)
@@ -1974,7 +1913,6 @@ of them have unfortunately been blocked by cave-ins.")
       (GLOBAL STAIRS)>
 
 <ROOM DAMP-CAVE
-      (IN ROOMS)
       (LDESC
 "This cave has exits to the west and east, and narrows to a crack toward
 the south. The earth is particularly damp here.")
@@ -1986,7 +1924,6 @@ the south. The earth is particularly damp here.")
       (GLOBAL CRACK)>
 
 <ROOM LOUD-ROOM
-      (IN ROOMS)
       (DESC "Loud Room")
       (EAST TO DAMP-CAVE)
       (WEST TO ROUND-ROOM)
@@ -1996,7 +1933,6 @@ the south. The earth is particularly damp here.")
       (GLOBAL STAIRS)>
 
 <ROOM NS-PASSAGE
-      (IN ROOMS)
       (LDESC
 "This is a high north-south passage, which forks to the northeast.")
       (DESC "North-South Passage")
@@ -2006,7 +1942,6 @@ the south. The earth is particularly damp here.")
       (FLAGS RLANDBIT)>
 
 <ROOM CHASM-ROOM
-      (IN ROOMS)
       (LDESC
 "A chasm runs southwest to northeast and the path follows it. You are
 on the south side of the chasm, where a crack opens into a passage.")
@@ -2025,7 +1960,6 @@ on the south side of the chasm, where a crack opens into a passage.")
 "SUBTITLE HADES ET AL"
 
 <ROOM ENTRANCE-TO-HADES
-      (IN ROOMS)
       (DESC "Entrance to Hades")
       (UP TO TINY-CAVE)
       (IN TO LAND-OF-LIVING-DEAD IF LLD-FLAG
@@ -2038,7 +1972,6 @@ on the south side of the chasm, where a crack opens into a passage.")
       (PSEUDO "GATE" GATE-PSEUDO "GATES" GATE-PSEUDO)>
 
 <ROOM LAND-OF-LIVING-DEAD
-      (IN ROOMS)
       (LDESC
 "You have entered the Land of the Living Dead. Thousands of lost souls
 can be heard weeping and moaning. In the corner are stacked the remains
@@ -2055,7 +1988,6 @@ A passage exits to the north.")
 "SUBTITLE DOME, TEMPLE, EGYPT"
 
 <ROOM ENGRAVINGS-CAVE	;"was CAVE4"
-      (IN ROOMS)
       (LDESC
 "You have entered a low cave with passages leading northwest and east.")
       (DESC "Engravings Cave")
@@ -2064,7 +1996,6 @@ A passage exits to the north.")
       (FLAGS RLANDBIT)>
 
 <ROOM EGYPT-ROOM	;"was EGYPT"
-      (IN ROOMS)
       (LDESC
 "This is a room which looks like an Egyptian tomb. There is an
 ascending staircase to the west.")
@@ -2075,7 +2006,6 @@ ascending staircase to the west.")
       (GLOBAL STAIRS)>
 
 <ROOM DOME-ROOM	;"was DOME"
-      (IN ROOMS)
       (DESC "Dome Room")
       (WEST TO ENGRAVINGS-CAVE)
       (DOWN TO TORCH-ROOM
@@ -2085,7 +2015,6 @@ ascending staircase to the west.")
       (PSEUDO "DOME" DOME-PSEUDO)>
 
 <ROOM TORCH-ROOM
-      (IN ROOMS)
       (DESC "Torch Room")
       (UP "You cannot reach the rope.")
       (SOUTH TO NORTH-TEMPLE)
@@ -2096,7 +2025,6 @@ ascending staircase to the west.")
       (PSEUDO "DOME" DOME-PSEUDO)>
 
 <ROOM NORTH-TEMPLE	;"was TEMP1"
-      (IN ROOMS)
       (LDESC
 "This is the north end of a large temple. On the east wall is an
 ancient inscription, probably a prayer in a long-forgotten language.
@@ -2114,9 +2042,7 @@ marble pillars.")
       (GLOBAL STAIRS)>
 
 <ROOM SOUTH-TEMPLE	;"was TEMP2"
-      (IN ROOMS)
       (LDESC
-
 "This is the south end of a large temple. In front of you is what
 appears to be an altar. In one corner is a small hole in the floor
 which leads into darkness. You probably could not get back up it.")
@@ -2133,7 +2059,6 @@ which leads into darkness. You probably could not get back up it.")
 "SUBTITLE FLOOD CONTROL DAM #3"
 
 <ROOM DAM-ROOM	;"was DAM"
-      (IN ROOMS)
       (DESC "Dam")
       (SOUTH TO DEEP-CANYON)
       (DOWN TO DAM-BASE)
@@ -2145,7 +2070,6 @@ which leads into darkness. You probably could not get back up it.")
       (GLOBAL GLOBAL-WATER)>
 
 <ROOM DAM-LOBBY	;"was LOBBY"
-      (IN ROOMS)
       (LDESC
 "This room appears to have been the waiting room for groups touring
 the dam. There are open doorways here to the north and east marked
@@ -2157,7 +2081,6 @@ the dam. There are open doorways here to the north and east marked
       (FLAGS RLANDBIT ONBIT)>
 
 <ROOM MAINTENANCE-ROOM	;"was MAINT"
-      (IN ROOMS)
       (LDESC
 "This is what appears to have been the maintenance room for Flood
 Control Dam #3. Apparently, this room has been ransacked recently, for
@@ -2174,7 +2097,6 @@ the west and south.")
 "SUBTITLE RIVER AREA"
 
 <ROOM DAM-BASE	;"was DOCK"
-      (IN ROOMS)
       (LDESC
 "You are at the base of Flood Control Dam #3, which looms above you
 and to the north. The river Frigid is flowing by here. Along the
@@ -2188,7 +2110,6 @@ way downstream.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM RIVER-1	;"was RIVR1"
-      (IN ROOMS)
       (LDESC
 "You are on the Frigid River in the vicinity of the Dam. The river
 flows quietly here. There is a landing on the west shore.")
@@ -2202,7 +2123,6 @@ flows quietly here. There is a landing on the west shore.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM RIVER-2	;"was RIVR2"
-      (IN ROOMS)
       (LDESC
 "The river turns a corner here making it impossible to see the
 Dam. The White Cliffs loom on the east bank and large rocks prevent
@@ -2217,7 +2137,6 @@ landing on the west.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM RIVER-3	;"was RIVR3"
-      (IN ROOMS)
       (LDESC
 "The river descends here into a valley. There is a narrow beach on the
 west shore below the cliffs. In the distance a faint rumbling can be
@@ -2231,7 +2150,6 @@ heard.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM WHITE-CLIFFS-NORTH	;"was WCLF1"
-      (IN ROOMS)
       (LDESC
 "You are on a narrow strip of beach which runs along the base of the
 White Cliffs. There is a narrow path heading south along the Cliffs
@@ -2244,7 +2162,6 @@ and a tight passage leading west into the cliffs themselves.")
       (GLOBAL GLOBAL-WATER WHITE-CLIFF RIVER)>
 
 <ROOM WHITE-CLIFFS-SOUTH	;"was WCLF2"
-      (IN ROOMS)
       (LDESC
 "You are on a rocky, narrow strip of beach beside the Cliffs. A
 narrow path leads north along the shore.")
@@ -2256,7 +2173,6 @@ narrow path leads north along the shore.")
       (GLOBAL GLOBAL-WATER WHITE-CLIFF RIVER)>
 
 <ROOM RIVER-4	;"was RIVR4"
-      (IN ROOMS)
       (LDESC
 "The river is running faster here and the sound ahead appears to be
 that of rushing water. On the east shore is a sandy beach. A small
@@ -2272,7 +2188,6 @@ area of beach can also be seen below the cliffs on the west shore.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM RIVER-5	;"was RIVR5"
-      (IN ROOMS)
       (LDESC
 "The sound of rushing water is nearly unbearable here. On the east
 shore is a large landing area.")
@@ -2284,7 +2199,6 @@ shore is a large landing area.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM SHORE	;"was FANTE"
-      (IN ROOMS)
       (LDESC
 "You are on the east shore of the river. The water here seems somewhat
 treacherous. A path travels from north to south here, the south end
@@ -2296,9 +2210,7 @@ quickly turning around a sharp corner.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM SANDY-BEACH	;"was BEACH"
-      (IN ROOMS)
       (LDESC
-
 "You are on a large sandy beach on the east shore of the river, which is
 flowing quickly by. A path runs beside the river to the south here, and
 a passage is partially buried in sand to the northeast.")
@@ -2309,7 +2221,6 @@ a passage is partially buried in sand to the northeast.")
       (GLOBAL GLOBAL-WATER RIVER)>
 
 <ROOM SANDY-CAVE	;"was TCAVE"
-      (IN ROOMS)
       (LDESC
 "This is a sand-filled cave whose exit is to the southwest.")
       (DESC "Sandy Cave")
@@ -2317,7 +2228,6 @@ a passage is partially buried in sand to the northeast.")
       (FLAGS RLANDBIT)>
 
 <ROOM ARAGAIN-FALLS	;"was FALLS"
-      (IN ROOMS)
       (DESC "Aragain Falls")
       (WEST TO ON-RAINBOW IF RAINBOW-FLAG)
       (DOWN "It's a long way...")
@@ -2328,7 +2238,6 @@ a passage is partially buried in sand to the northeast.")
       (GLOBAL GLOBAL-WATER RIVER RAINBOW)>
 
 <ROOM ON-RAINBOW	;"was RAINB"
-      (IN ROOMS)
       (LDESC
 "You are on top of a rainbow (I bet you never thought you would walk
 on a rainbow), with a magnificent view of the Falls. The rainbow
@@ -2340,7 +2249,6 @@ travels east-west here.")
       (GLOBAL RAINBOW)>
 
 <ROOM END-OF-RAINBOW	;"was POG"
-      (IN ROOMS)
       (LDESC
 "You are on a small, rocky beach on the continuation of the Frigid
 River past the Falls. The beach is narrow due to the presence of the
@@ -2356,7 +2264,6 @@ path continues to the southwest.")
       (GLOBAL GLOBAL-WATER RAINBOW RIVER)>
 
 <ROOM CANYON-BOTTOM	;"was CLBOT"
-      (IN ROOMS)
       (LDESC
 "You are beneath the walls of the river canyon which may be climbable
 here. The lesser part of the runoff of Aragain Falls flows by below.
@@ -2368,7 +2275,6 @@ To the north is a narrow path.")
       (GLOBAL GLOBAL-WATER CLIMBABLE-CLIFF RIVER)>
 
 <ROOM CLIFF-MIDDLE	;"was CLMID"
-      (IN ROOMS)
       (LDESC
 "You are on a ledge about halfway up the wall of the river canyon.
 You can see from here that the main flow from Aragain Falls twists
@@ -2382,7 +2288,6 @@ climbable.")
       (GLOBAL CLIMBABLE-CLIFF RIVER)>
 
 <ROOM CANYON-VIEW	;"was CLTOP"
-      (IN ROOMS)
       (LDESC
 "You are at the top of the Great Canyon on its west wall. From here
 there is a marvelous view of the canyon and parts of the Frigid River
@@ -2416,9 +2321,7 @@ the canyon from here.")
 "SUBTITLE COAL MINE AREA"
 
 <ROOM MINE-ENTRANCE	;"was ENTRA"
-      (IN ROOMS)
       (LDESC
-
 "You are standing at the entrance of what might have been a coal mine.
 The shaft enters the west wall, and there is another exit on the south
 end of the room.")
@@ -2429,7 +2332,6 @@ end of the room.")
       (FLAGS RLANDBIT)>
 
 <ROOM SQUEEKY-ROOM	;"was SQUEE"
-      (IN ROOMS)
       (LDESC
 "You are in a small room. Strange squeaky sounds may be heard coming
 from the passage at the north end. You may also escape to the east.")
@@ -2439,7 +2341,6 @@ from the passage at the north end. You may also escape to the east.")
       (FLAGS RLANDBIT)>
 
 <ROOM BAT-ROOM	;"was BATS"
-      (IN ROOMS)
       (DESC "Bat Room")
       (SOUTH TO SQUEEKY-ROOM)
       (EAST TO SHAFT-ROOM)
@@ -2447,7 +2348,6 @@ from the passage at the north end. You may also escape to the east.")
       (FLAGS RLANDBIT SACREDBIT)>
 
 <ROOM SHAFT-ROOM	;"was TSHAF"
-      (IN ROOMS)
       (LDESC
 "This is a large room, in the middle of which is a small shaft
 descending through the floor into darkness below. To the west and
@@ -2461,7 +2361,6 @@ shaft is a metal framework to which a heavy iron chain is attached.")
       (PSEUDO "CHAIN" CHAIN-PSEUDO)>
 
 <ROOM SMELLY-ROOM	;"was SMELL"
-      (IN ROOMS)
       (LDESC
 "This is a small nondescript room. However, from the direction
 of a small descending staircase a foul odor can be detected. To the
@@ -2474,7 +2373,6 @@ south is a narrow tunnel.")
       (PSEUDO "ODOR" GAS-PSEUDO "GAS" GAS-PSEUDO)>
 
 <ROOM GAS-ROOM	;"was BOOM"
-      (IN ROOMS)
       (LDESC
 "This is a small room which smells strongly of coal gas. There is a
 short climb up some stairs and a narrow tunnel leading east.")
@@ -2487,7 +2385,6 @@ short climb up some stairs and a narrow tunnel leading east.")
       (PSEUDO "GAS" GAS-PSEUDO "ODOR" GAS-PSEUDO)>
 
 <ROOM LADDER-TOP	;"was TLADD"
-      (IN ROOMS)
       (LDESC
 "This is a very small room. In the corner is a rickety wooden
 ladder, leading downward. It might be safe to descend. There is
@@ -2499,7 +2396,6 @@ also a staircase leading upward.")
       (GLOBAL LADDER STAIRS)>
 
 <ROOM LADDER-BOTTOM	;"was BLADD"
-      (IN ROOMS)
       (LDESC
 "This is a rather wide room. On one side is the bottom of a
 narrow wooden ladder. To the west and the south are passages
@@ -2512,14 +2408,12 @@ leaving the room.")
       (GLOBAL LADDER)>
 
 <ROOM DEAD-END-5	;"was DEAD7"
-      (IN ROOMS)
       (DESC "Dead End")
       (LDESC "You have come to a dead end in the mine.")
       (NORTH TO LADDER-BOTTOM)
       (FLAGS RLANDBIT)>
 
 <ROOM TIMBER-ROOM	;"was TIMBE"
-      (IN ROOMS)
       (LDESC
 "This is a long and narrow passage, which is cluttered with broken
 timbers. A wide passage comes from the east and turns at the
@@ -2534,7 +2428,6 @@ comes a strong draft.")
       (FLAGS RLANDBIT SACREDBIT)>
 
 <ROOM LOWER-SHAFT	;"was BSHAF"
-      (IN ROOMS)
       (LDESC
 "This is a small drafty room in which is the bottom of a long
 shaft. To the south is a passageway and to the east a very narrow
@@ -2552,7 +2445,6 @@ passage. In the shaft can be seen a heavy iron chain.")
       (PSEUDO "CHAIN" CHAIN-PSEUDO)>
 
 <ROOM MACHINE-ROOM	;"was MACHI"
-      (IN ROOMS)
       (DESC "Machine Room")
       (NORTH TO LOWER-SHAFT)
       (ACTION MACHINE-ROOM-FCN)
@@ -2563,7 +2455,6 @@ passage. In the shaft can be seen a heavy iron chain.")
 "SUBTITLE COAL MINE"
 
 <ROOM MINE-1	;"was MINE1"
-      (IN ROOMS)
       (LDESC "This is a nondescript part of a coal mine.")
       (DESC "Coal Mine")
       (NORTH TO GAS-ROOM)
@@ -2572,7 +2463,6 @@ passage. In the shaft can be seen a heavy iron chain.")
       (FLAGS RLANDBIT)>
 
 <ROOM MINE-2	;"was MINE2"
-      (IN ROOMS)
       (LDESC "This is a nondescript part of a coal mine.")
       (DESC "Coal Mine")
       (NORTH TO MINE-2)
@@ -2581,7 +2471,6 @@ passage. In the shaft can be seen a heavy iron chain.")
       (FLAGS RLANDBIT)>
 
 <ROOM MINE-3	;"was MINE3"
-      (IN ROOMS)
       (LDESC "This is a nondescript part of a coal mine.")
       (DESC "Coal Mine")
       (SOUTH TO MINE-3)
@@ -2590,7 +2479,6 @@ passage. In the shaft can be seen a heavy iron chain.")
       (FLAGS RLANDBIT)>
 
 <ROOM MINE-4	;"was MINE4"
-      (IN ROOMS)
       (LDESC "This is a nondescript part of a coal mine.")
       (DESC "Coal Mine")
       (NORTH TO MINE-3)
@@ -2599,7 +2487,6 @@ passage. In the shaft can be seen a heavy iron chain.")
       (FLAGS RLANDBIT)>
 
 <ROOM SLIDE-ROOM	;"was SLIDE"
-      (IN ROOMS)
       (LDESC
 "This is a small chamber, which appears to have been part of a
 coal mine. On the south wall of the chamber the letters \"Granite

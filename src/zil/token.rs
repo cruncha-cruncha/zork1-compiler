@@ -57,7 +57,7 @@ impl Token {
     }
 }
 
-impl FileTableLocation for Token {
+impl FileTableLocation for &Token {
     fn get_file_key(&self) -> FileKey {
         self.file_key
     }

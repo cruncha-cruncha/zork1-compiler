@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
-use crate::zil::node::{ZilNode, ZilNodeType};
+use crate::zil::{
+    file_table::format_file_location,
+    node::{ZilNode, ZilNodeType},
+};
 
-use super::{helpers::get_nth_child_name, top_level::Codex};
+use crate::stats::{cross_ref::Codex, helpers::get_nth_child_name};
 
 pub struct ConstantCodex<'a> {
     basis: HashMap<String, &'a ZilNode>,
@@ -16,19 +19,6 @@ impl<'a> ConstantCodex<'a> {
     }
 }
 
-impl<'a> IntoIterator for ConstantCodex<'a> {
-    type Item = String;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.basis
-            .keys()
-            .map(|k| k.clone())
-            .collect::<Vec<String>>()
-            .into_iter()
-    }
-}
-
 impl<'a> Codex<'a> for ConstantCodex<'a> {
     fn get_name(&self) -> String {
         String::from("constants")
@@ -39,31 +29,41 @@ impl<'a> Codex<'a> for ConstantCodex<'a> {
         match name {
             Some(name) => {
                 if self.basis.insert(name, node).is_some() {
-                    panic!("Constant node has duplicate name {}", get_nth_child_name(1, node).unwrap());
+                    panic!(
+                        "Constant node has duplicate name {}",
+                        get_nth_child_name(1, node).unwrap()
+                    );
                 }
             }
-            None => panic!("Constant node has no name"),
+            None => panic!("Constant node has no name\n{}", format_file_location(&node)),
         }
     }
 
     fn crunch(&mut self) -> Result<(), String> {
         for n in self.basis.values() {
             if n.children.len() != 3 {
-                return Err(String::from(
-                    "Constant node does not have exactly three children",
+                return Err(format!(
+                    "Constant node does not have exactly three children\n{}",
+                    format_file_location(n)
                 ));
             }
 
             match n.children[2].node_type {
                 ZilNodeType::Cluster => {
                     if n.children[2].children.len() > 0 {
-                        return Err(String::from(
-                            "Constant node has non-empty cluster as third child",
+                        return Err(format!(
+                            "Constant node has non-empty cluster as third child\n{}",
+                            format_file_location(n)
                         ));
                     }
                 }
                 ZilNodeType::TokenBunch(_) => (),
-                _ => return Err(String::from("Constant node has invalid third child type")),
+                _ => {
+                    return Err(format!(
+                        "Constant node has invalid third child type\n{}",
+                        format_file_location(n)
+                    ))
+                }
             }
         }
 
@@ -72,5 +72,13 @@ impl<'a> Codex<'a> for ConstantCodex<'a> {
 
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
         self.basis.get(word).map(|n| *n)
+    }
+
+    fn into_iter(&self) -> std::vec::IntoIter<String> {
+        self.basis
+            .keys()
+            .map(|k| k.clone())
+            .collect::<Vec<String>>()
+            .into_iter()
     }
 }

@@ -38,7 +38,7 @@ impl<'a> CharGenerator<'a> {
 
             out = get_BufReader(&file_path);
 
-            if !out.is_none() {
+            if out.is_some() {
                 self.file_key = file_key;
                 self.line_number = 0;
                 break;

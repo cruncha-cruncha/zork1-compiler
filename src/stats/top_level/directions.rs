@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::zil::node::ZilNode;
 
-use super::{helpers::get_bunch_name, top_level::Codex};
+use crate::stats::{cross_ref::Codex, helpers::get_bunch_name};
 
 pub struct DirectionCodex<'a> {
     basis: Option<&'a ZilNode>,
@@ -15,15 +15,6 @@ impl<'a> DirectionCodex<'a> {
             basis: None,
             options: HashSet::new(),
         }
-    }
-}
-
-impl IntoIterator for DirectionCodex<'_> {
-    type Item = String;
-    type IntoIter = std::collections::hash_set::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.options.clone().into_iter()
     }
 }
 
@@ -67,5 +58,13 @@ impl<'a> Codex<'a> for DirectionCodex<'a> {
         }
 
         None
+    }
+
+    fn into_iter(&self) -> std::vec::IntoIter<String> {
+        self.options
+            .clone()
+            .into_iter()
+            .collect::<Vec<String>>()
+            .into_iter()
     }
 }

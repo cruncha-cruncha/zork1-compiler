@@ -1,6 +1,9 @@
 use std::path::Path;
 
-use crate::zil::{ast, mess::Huh};
+extern crate regex;
+extern crate once_cell;
+
+use crate::{zil::{ast, mess::Huh}};
 
 mod stats;
 mod zil;
@@ -14,15 +17,24 @@ fn main() {
     let tree = build_tree(&mut files_lookup);
     // ast::print(tree.get_root());
 
-    let mut lookup = stats::top_level::CrossRef::new(&tree);
+    let mut lookup = stats::cross_ref::CrossRef::new(&tree);
     lookup.find_stuff();
+    match lookup.crunch(&mut thread_pool) {
+        Ok(_) => println!("lookup crunched"),
+        Err(e) => panic!("lookup crunch error\n{}", e),
+    }
 
-    // let receiver = thread_pool.run_fn(|| lookup.buzzi.crunch());
-    // receiver.recv().unwrap().unwrap();
+    println!("");
 
-    // for n in lookup.objects.into_iter() {
-    //     println!("{}", n);
-    // }
+    for fw in lookup.rooms.groups.flag_words.iter() {
+        println!("{}", fw);
+    }
+
+    println!("");
+
+    for d in lookup.rooms.groups.direction_names.iter() {
+        println!("{}", d);
+    }
 
     // for n in lookup.leftovers.iter() {
     //     match n.node_type {
@@ -92,18 +104,18 @@ fn main() {
 fn get_files_lookup() -> zil::file_table::FileTable {
     let mut files_lookup = zil::file_table::FileTable::new();
 
-    // let mut file_path = Path::new("..").join("dummy-data").join("aaa_test1.zil");
+    // let mut file_path = Path::new(".").join("dummy-data").join("aaa_test1.zil");
     // files_lookup.add(file_path);
 
-    let mut file_path = Path::new("..").join("dummy-data").join("actions.zil");
+    let mut file_path = Path::new(".").join("dummy-data").join("actions.zil");
     files_lookup.add(file_path);
-    file_path = Path::new("..").join("dummy-data").join("dungeon.zil");
+    file_path = Path::new(".").join("dummy-data").join("dungeon.zil");
     files_lookup.add(file_path);
-    file_path = Path::new("..").join("dummy-data").join("globals.zil");
+    file_path = Path::new(".").join("dummy-data").join("globals.zil");
     files_lookup.add(file_path);
-    file_path = Path::new("..").join("dummy-data").join("syntax.zil");
+    file_path = Path::new(".").join("dummy-data").join("syntax.zil");
     files_lookup.add(file_path);
-    file_path = Path::new("..").join("dummy-data").join("verbs.zil");
+    file_path = Path::new(".").join("dummy-data").join("verbs.zil");
     files_lookup.add(file_path);
 
     files_lookup

@@ -1,31 +1,28 @@
 use std::collections::HashMap;
 
-use crate::zil::node::ZilNode;
+use crate::zil::{node::ZilNode, file_table::format_file_location};
 
-use super::{helpers::get_nth_child_name, top_level::Codex};
+use crate::stats::{cross_ref::Codex, helpers::get_nth_child_name};
 
 pub struct RoutineCodex<'a> {
     basis: HashMap<String, &'a ZilNode>,
 }
+
+// <VERB? WORD1 WORD2 ...>
+// corresponds to all syntax with = V-WORD1 or = V-WORD2 etc.
+
+// <FSET? WORD1 WORD2>, <FCLEAR WORD1 WORD2>
+// WORD1 is a room or object
+
+// wtf is <QUEUE ...>
+
+// <INTEGRAL-PART> is a ROUTINE
 
 impl<'a> RoutineCodex<'a> {
     pub fn new() -> RoutineCodex<'a> {
         RoutineCodex {
             basis: HashMap::new(),
         }
-    }
-}
-
-impl<'a> IntoIterator for RoutineCodex<'a> {
-    type Item = String;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.basis
-            .keys()
-            .map(|k| k.clone())
-            .collect::<Vec<String>>()
-            .into_iter()
     }
 }
 
@@ -42,7 +39,7 @@ impl<'a> Codex<'a> for RoutineCodex<'a> {
                     panic!("Routine node has duplicate name {}", get_nth_child_name(1, node).unwrap());
                 }
             }
-            None => panic!("Routine node has no name"),
+            None => panic!("Routine node has no name\n{}", format_file_location(&node)),
         }
     }
 
@@ -52,5 +49,13 @@ impl<'a> Codex<'a> for RoutineCodex<'a> {
 
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
         self.basis.get(word).map(|n| *n)
+    }
+
+    fn into_iter(&self) -> std::vec::IntoIter<String> {
+        self.basis
+            .keys()
+            .map(|k| k.clone())
+            .collect::<Vec<String>>()
+            .into_iter()
     }
 }

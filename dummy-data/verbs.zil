@@ -1203,13 +1203,6 @@ you kill yourself, just as he might have done!" CR>
 	       (T
 		<TELL "That doesn't make sends." CR>)>>
 
-<ROUTINE PRE-SGIVE ()
-	 <PERFORM ,V?GIVE ,PRSI ,PRSO>
-	 <RTRUE>>
-
-<ROUTINE V-SGIVE ()
-	 <TELL "Foo!" CR>>
-
 <ROUTINE V-SHAKE ()
 	 <COND (<FSET? ,PRSO ,ACTORBIT>
 		<TELL "This seems to have no effect." CR>)
@@ -2186,10 +2179,6 @@ stumbled into an authentic grue lair!">))
 
 <ROUTINE THIS-IS-IT (OBJ)
 	 <SETG P-IT-OBJECT .OBJ>>
-
-<COND (<N==? ,ZORK-NUMBER 3>
-       <GLOBAL SWIMYUKS
-	       <LTABLE 0 "You can't swim in the dungeon.">>)>
 
 <GLOBAL HELLOS
 	<LTABLE 0 "Hello."

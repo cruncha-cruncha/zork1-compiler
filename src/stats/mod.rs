@@ -1,14 +1,4 @@
-pub mod top_level;
+pub mod cross_ref;
 pub mod helpers;
-pub mod rooms;
-pub mod directions;
-pub mod globals;
-pub mod gdecls;
 pub mod weaver;
-pub mod constants;
-pub mod objects;
-pub mod buzzi;
-pub mod routines;
-pub mod synonyms;
-pub mod syntax;
-pub mod conds;
+pub mod top_level;

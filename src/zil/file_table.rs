@@ -76,7 +76,7 @@ pub trait FileTableLocation {
 
 pub fn format_file_location(location: &impl FileTableLocation) -> String {
     format!(
-        "in {} at line {}, char {}",
+        "in file {} at line {}, char {}",
         location.get_file_key(),
         location.get_line_number(),
         location.get_char_number()

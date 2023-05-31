@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use crate::zil::{node::ZilNode, file_table::format_file_location};
+use crate::zil::{file_table::format_file_location, node::ZilNode};
 
-use super::{helpers::get_bunch_name, top_level::Phodex};
+use crate::stats::{cross_ref::Phodex, helpers::get_bunch_name};
 
 pub struct BuzzPhodex<'a> {
     basis: Vec<&'a ZilNode>,
@@ -42,10 +42,13 @@ impl<'a> Phodex<'a> for BuzzPhodex<'a> {
                 match get_bunch_name(c) {
                     Some(name) => {
                         if !self.all.insert(name) {
-                            panic!("Buzz node has duplicate child word {}", get_bunch_name(c).unwrap());
+                            panic!(
+                                "Buzz node has duplicate child word {}",
+                                get_bunch_name(c).unwrap()
+                            );
                         }
                     }
-                    None => panic!("Buzz node has non-word child"),
+                    None => panic!("Buzz node has non-word child\n{}", format_file_location(&c)),
                 }
             }
         }

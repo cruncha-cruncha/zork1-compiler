@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::token::Token;
+use super::{token::Token, file_table::{FileTableLocation, FileKey}};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ZilNodeType {
@@ -99,5 +99,45 @@ impl ZilNode {
 
     pub fn token_val(&self) -> String {
         self.token.as_ref().unwrap().value.clone()
+    }
+
+    pub fn get_first_token(&self) -> Option<&Token> {
+        if !self.token.is_none() {
+            return self.token.as_ref();
+        }
+
+        for c in self.children.iter() {
+            match c.get_first_token() {
+                Some(t) => {
+                    return Some(t);
+                },
+                None => (),
+            }
+        }
+
+        None
+    }
+}
+
+impl FileTableLocation for &ZilNode {
+    fn get_file_key(&self) -> FileKey {
+        match self.get_first_token() {
+            Some(token) => token.get_file_key(),
+            None => 0,
+        }
+    }
+
+    fn get_line_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_line_number(),
+            None => 0,
+        }
+    }
+
+    fn get_char_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_char_number(),
+            None => 0,
+        }
     }
 }
