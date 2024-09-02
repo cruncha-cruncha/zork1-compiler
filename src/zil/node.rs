@@ -1,19 +1,20 @@
 use std::fmt;
 
-use super::{token::Token, file_table::{FileTableLocation, FileKey}};
+use super::{
+    file_table::{FileKey, FileTableLocation},
+    token::Token,
+};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ZilNodeType {
     Unknown,
     Cluster,
     Group,
-    Comment,
-    TokenBunch(TokenBunchType),
-    Token,
+    Token(TokenType),
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum TokenBunchType {
+pub enum TokenType {
     Text,
     Word,
     Number,
@@ -31,15 +32,16 @@ impl ZilNodeType {
             ZilNodeType::Unknown => "UNKNOWN".to_string(),
             ZilNodeType::Cluster => "CLUSTER".to_string(),
             ZilNodeType::Group => "GROUP".to_string(),
-            ZilNodeType::Comment => "COMMENT".to_string(),
-            ZilNodeType::TokenBunch(t) => {
-                match t {
-                    TokenBunchType::Text => "TOKEN_BUNCH(TEXT)".to_string(),
-                    TokenBunchType::Word => "TOKEN_BUNCH(WORD)".to_string(),
-                    TokenBunchType::Number => "TOKEN_BUNCH(NUMBER)".to_string(),
-                }
-            }
-            ZilNodeType::Token => "TOKEN".to_string(),
+            // ZilNodeType::Marker(t) => match t {
+            //     MarkerType::Comment => "MARKER(COMMENT)".to_string(),
+            //     MarkerType::Metacode => "MARKER(METACODE)".to_string(),
+            //     MarkerType::MetacodeOutput => "MARKER(METACODE_OUTPUT)".to_string(),
+            // },
+            ZilNodeType::Token(t) => match t {
+                TokenType::Text => "TOKEN(TEXT)".to_string(),
+                TokenType::Word => "TOKEN(WORD)".to_string(),
+                TokenType::Number => "TOKEN(NUMBER)".to_string(),
+            },
         }
     }
 }
@@ -69,18 +71,18 @@ impl fmt::Display for ZilNode {
 }
 
 impl ZilNode {
-    pub fn new(node_type: ZilNodeType) -> ZilNode {
+    pub fn new(node_type: ZilNodeType, token: Token) -> ZilNode {
         return ZilNode {
             node_type,
-            token: None,
+            token: Some(token),
             children: Vec::new(),
         };
     }
 
-    pub fn from_token(token: Token) -> ZilNode {
+    pub fn new_no_token(node_type: ZilNodeType) -> ZilNode {
         return ZilNode {
-            node_type: ZilNodeType::Token,
-            token: Some(token),
+            node_type,
+            token: None,
             children: Vec::new(),
         };
     }
@@ -110,7 +112,7 @@ impl ZilNode {
             match c.get_first_token() {
                 Some(t) => {
                     return Some(t);
-                },
+                }
                 None => (),
             }
         }

@@ -1,9 +1,0 @@
-<ROUTINE FIND-WEAPON (O "AUX" W)
-	 <SET W <FIRST? .O>>
-	 <COND (<NOT .W>
-		<RFALSE>)>
-	 <REPEAT ()
-		 <COND (<OR <EQUAL? .W ,STILETTO ,AXE ,SWORD>
-			    <EQUAL? .W ,KNIFE ,RUSTY-KNIFE>>
-			<RETURN .W>)
-		       (<NOT <SET W <NEXT? .W>>> <RFALSE>)>>>

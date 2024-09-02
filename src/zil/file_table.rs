@@ -1,6 +1,8 @@
 use std::{
     fmt,
-    path::{Path, PathBuf}, io::BufReader, fs::File,
+    fs::File,
+    io::BufReader,
+    path::{Path, PathBuf},
 };
 
 pub type FileKey = usize;

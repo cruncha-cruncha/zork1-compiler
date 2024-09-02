@@ -1,20 +1,21 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    stats::cross_ref::Codex,
+    stats::{cross_ref::Codex, helpers::get_token_as_word},
     zil::{
         file_table::format_file_location,
-        node::{TokenBunchType, ZilNode, ZilNodeType},
+        node::{TokenType, ZilNode, ZilNodeType},
     },
 };
 
-use crate::stats::{cross_ref::Phodex, helpers::get_bunch_name};
+use crate::stats::cross_ref::Populator;
 
 use regex::Regex;
 
 use once_cell::sync::Lazy;
 
-static ILLEGAL: Lazy<Regex> = Lazy::new(|| Regex::new(r#"[\.\,\?\!\"\'\}\{\[\]\|\_<>]"#).unwrap());
+pub static ILLEGAL: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"[\.\,\?\!\"\'\}\{\[\]\|\_<>]"#).unwrap());
 
 static VERB: Lazy<Regex> = Lazy::new(|| Regex::new(r#"^V-(?P<raw>.*)$"#).unwrap());
 
@@ -38,26 +39,28 @@ static MAX_CMD_LENGTH: usize = 16;
 // first OBJECT is always PRSO
 // second OBJECT is always PRSI
 
-pub struct SyntaxPhodex<'a> {
+pub struct SyntaxStats<'a> {
     basis: Vec<&'a ZilNode>,
-    all_syntax: HashMap<String, Vec<Vec<SyntaxType>>>,
-    all_verbs: HashSet<String>,
-    all_pres: HashSet<String>,
+    pub all_syntax: HashMap<String, Vec<Vec<SyntaxType>>>,
+    pub all_verbs: HashSet<String>,
+    pub all_pres: HashSet<String>,
+    pub prepositions: HashSet<String>,
     pub firsts: HashSet<String>,
 }
 
-impl<'a> SyntaxPhodex<'a> {
-    pub fn new() -> SyntaxPhodex<'a> {
-        SyntaxPhodex {
+impl<'a> SyntaxStats<'a> {
+    pub fn new() -> SyntaxStats<'a> {
+        SyntaxStats {
             basis: Vec::new(),
             all_syntax: HashMap::new(),
             all_verbs: HashSet::new(),
             all_pres: HashSet::new(),
+            prepositions: HashSet::new(),
             firsts: HashSet::new(),
         }
     }
 
-    pub fn validate_actions(&self, routines: &impl Codex<'a>) -> Result<(), String> {
+    pub fn validate_actions(&self, routines: &impl Codex) -> Result<(), String> {
         for v in self.all_verbs.iter() {
             let routine = format!("V-{}", v);
             if routines.lookup(&routine).is_none() {
@@ -76,11 +79,7 @@ impl<'a> SyntaxPhodex<'a> {
     }
 }
 
-impl<'a> Phodex<'a> for SyntaxPhodex<'a> {
-    fn get_name(&self) -> String {
-        String::from("syntax")
-    }
-
+impl<'a> Populator<'a> for SyntaxStats<'a> {
     fn add_node(&mut self, node: &'a ZilNode) {
         self.basis.push(node);
     }
@@ -95,19 +94,17 @@ impl<'a> Phodex<'a> for SyntaxPhodex<'a> {
                 ));
             }
 
-            if n.children[1].node_type != ZilNodeType::TokenBunch(TokenBunchType::Word) {
+            if n.children[1].node_type != ZilNodeType::Token(TokenType::Word) {
                 return Err(format!(
                     "Syntax node has non-word second child\n{}",
-                    format_file_location(&&n.children[1]) // TODO: why double ampersand?
+                    format_file_location(&&n.children[1])
                 ));
             }
 
-            let first = get_bunch_name(&n.children[1]).unwrap();
+            let first = get_token_as_word(&n.children[1]).unwrap();
             self.firsts.insert(first.clone());
 
-            if n.children[n.children.len() - 1].node_type
-                != ZilNodeType::TokenBunch(TokenBunchType::Word)
-            {
+            if n.children[n.children.len() - 1].node_type != ZilNodeType::Token(TokenType::Word) {
                 return Err(format!(
                     "Syntax node has non-word last child\n{}",
                     format_file_location(&&n.children[1])
@@ -124,8 +121,8 @@ impl<'a> Phodex<'a> for SyntaxPhodex<'a> {
                 .enumerate()
             {
                 match c.node_type {
-                    ZilNodeType::TokenBunch(TokenBunchType::Word) => {
-                        let name = get_bunch_name(c).unwrap();
+                    ZilNodeType::Token(TokenType::Word) => {
+                        let name = get_token_as_word(c).unwrap();
                         if name == "=" {
                             if equality_index.is_some() {
                                 return Err(format!(
@@ -141,7 +138,7 @@ impl<'a> Phodex<'a> for SyntaxPhodex<'a> {
                     }
                     ZilNodeType::Group => {
                         for gc in c.children.iter() {
-                            if gc.node_type != ZilNodeType::TokenBunch(TokenBunchType::Word) {
+                            if gc.node_type != ZilNodeType::Token(TokenType::Word) {
                                 return Err(format!(
                                     "Synonym node has non-word child in group\n{}",
                                     format_file_location(&gc)
@@ -173,7 +170,7 @@ impl<'a> Phodex<'a> for SyntaxPhodex<'a> {
             }
 
             let what_what = WhatWhat {
-                cmd: n.children[0..equality_index.unwrap()].iter().collect(),
+                cmd: n.children[1..equality_index.unwrap()].iter().collect(),
                 action: n.children[(equality_index.unwrap() + 1)..n.children.len()]
                     .iter()
                     .collect(),
@@ -187,9 +184,16 @@ impl<'a> Phodex<'a> for SyntaxPhodex<'a> {
                 self.all_syntax = built.all_syntax;
                 self.all_verbs = built.all_verbs;
                 self.all_pres = built.all_pres;
+                self.prepositions = built.prepositions;
             }
             Err(e) => return Err(e),
         }
+
+        Ok(())
+    }
+
+    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
+        self.validate_actions(&cross_ref.routines)?;
 
         Ok(())
     }
@@ -200,21 +204,24 @@ pub struct WhatWhat<'a> {
     action: Vec<&'a ZilNode>,
 }
 
-enum SyntaxType {
+pub enum SyntaxType {
     Action(Action),
     Cmd(Cmd),
     Object(Object),
 }
 
+#[derive(Clone)]
 pub struct Cmd {
     pub name: String,
 }
 
+#[derive(Clone)]
 pub struct Object {
     pub find: Option<String>,
     pub restrictions: Vec<String>,
 }
 
+#[derive(Clone)]
 pub struct Action {
     pub verb: String,
     pub pre: Option<String>,
@@ -224,6 +231,8 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
     let mut all_syntax: HashMap<String, Vec<Vec<SyntaxType>>> = HashMap::new();
     let mut all_verbs: HashSet<String> = HashSet::new();
     let mut all_pres: HashSet<String> = HashSet::new();
+    let mut prepositions: HashSet<String> = HashSet::new();
+
     for what in whats.iter() {
         // check length
         if what.cmd.len() > MAX_CMD_LENGTH {
@@ -234,10 +243,10 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
         }
 
         // sort out the action
-        let verb = get_bunch_name(what.action[0]).unwrap();
+        let verb = get_token_as_word(what.action[0]).unwrap();
         let pre = match what.action.len() {
             1 => None,
-            2 => Some(get_bunch_name(what.action[1]).unwrap()),
+            2 => Some(get_token_as_word(what.action[1]).unwrap()),
             _ => {
                 return Err(format!(
                     "Syntax has more than two action children\n{}",
@@ -288,8 +297,8 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
                 let before = what.cmd[i];
                 match before.node_type {
                     ZilNodeType::Group => (),
-                    ZilNodeType::TokenBunch(TokenBunchType::Word) => {
-                        if get_bunch_name(before).unwrap() != "OBJECT" {
+                    ZilNodeType::Token(TokenType::Word) => {
+                        if get_token_as_word(before).unwrap() != "OBJECT" {
                             return bad_group_order();
                         }
                     }
@@ -308,14 +317,13 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
         }));
 
         // build cmd
-        let mut index = what.cmd.len() - 1;
         let mut find: Option<String> = None;
         let mut restrictions: Vec<String> = Vec::new();
-        loop {
-            let child = what.cmd[index];
+        for i in (1..what.cmd.len()).rev() {
+            let child = what.cmd[i];
             match child.node_type {
                 ZilNodeType::Group => {
-                    if get_bunch_name(&child.children[0]).unwrap() == "FIND" {
+                    if get_token_as_word(&child.children[0]).unwrap() == "FIND" {
                         if find.is_some() {
                             return Err(format!(
                                 "Multiple FIND groups on the same OBJECT in syntax\n{}",
@@ -324,7 +332,7 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
                         }
 
                         if child.children.len() == 2 {
-                            find = Some(get_bunch_name(&child.children[1]).unwrap());
+                            find = Some(get_token_as_word(&child.children[1]).unwrap());
                         } else {
                             return Err(format!(
                                 "FIND group with bad number of children in syntax\n{}",
@@ -340,12 +348,12 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
                         }
 
                         for c in child.children.iter() {
-                            restrictions.push(get_bunch_name(c).unwrap());
+                            restrictions.push(get_token_as_word(c).unwrap());
                         }
                     }
                 }
-                ZilNodeType::TokenBunch(TokenBunchType::Word) => {
-                    let name = get_bunch_name(child).unwrap();
+                ZilNodeType::Token(TokenType::Word) => {
+                    let name = get_token_as_word(child).unwrap();
                     if name == "OBJECT" {
                         commands.insert(
                             0,
@@ -366,16 +374,27 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
                             ));
                         }
 
+                        prepositions.insert(name.clone());
                         commands.insert(0, SyntaxType::Cmd(Cmd { name: name }));
                     }
                 }
                 _ => unreachable!(),
             }
+        }
 
-            if index <= 0 {
-                break;
+        match what.cmd[0].node_type {
+            ZilNodeType::Token(TokenType::Word) => {
+                let name = get_token_as_word(what.cmd[0]).unwrap();
+                if name == "OBJECT" {
+                    return Err(format!(
+                        "Syntax node has OBJECT as first child\n{}",
+                        format_file_location(&what.cmd[0])
+                    ));
+                }
+
+                commands.insert(0, SyntaxType::Cmd(Cmd { name: name }));
             }
-            index -= 1;
+            _ => unreachable!(),
         }
 
         // save to all_syntax
@@ -401,6 +420,7 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
         all_syntax: all_syntax,
         all_verbs: all_verbs,
         all_pres: all_pres,
+        prepositions: prepositions,
     })
 }
 
@@ -408,17 +428,18 @@ pub struct Built {
     all_syntax: HashMap<String, Vec<Vec<SyntaxType>>>,
     all_verbs: HashSet<String>,
     all_pres: HashSet<String>,
+    prepositions: HashSet<String>,
 }
 
 fn get_command_key(commands: &Vec<SyntaxType>) -> String {
     let mut out = String::new();
     for cmd in commands.iter() {
         match cmd {
-            SyntaxType::Action(action) => (),
+            SyntaxType::Action(_) => (),
             SyntaxType::Cmd(cmd) => {
                 out.push_str(&format!("_{}", cmd.name));
             }
-            SyntaxType::Object(object) => {
+            SyntaxType::Object(_) => {
                 out.push_str("_OBJECT");
             }
         }

@@ -1,37 +1,38 @@
 use std::collections::HashMap;
 
-use crate::zil::{
-    file_table::format_file_location,
-    node::{ZilNode, ZilNodeType},
+use crate::{
+    stats::{cross_ref::Populator, helpers::get_nth_child_as_word},
+    zil::{
+        file_table::format_file_location,
+        node::{TokenType, ZilNode, ZilNodeType},
+    },
 };
 
-use crate::stats::{cross_ref::Codex, helpers::get_nth_child_name};
+use crate::stats::cross_ref::Codex;
 
-pub struct ConstantCodex<'a> {
+pub struct ConstantStats<'a> {
     basis: HashMap<String, &'a ZilNode>,
+    pub values: HashMap<String, i32>,
 }
 
-impl<'a> ConstantCodex<'a> {
-    pub fn new() -> ConstantCodex<'a> {
-        ConstantCodex {
+impl<'a> ConstantStats<'a> {
+    pub fn new() -> ConstantStats<'a> {
+        ConstantStats {
             basis: HashMap::new(),
+            values: HashMap::new(),
         }
     }
 }
 
-impl<'a> Codex<'a> for ConstantCodex<'a> {
-    fn get_name(&self) -> String {
-        String::from("constants")
-    }
-
+impl<'a> Populator<'a> for ConstantStats<'a> {
     fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_name(1, node);
+        let name = get_nth_child_as_word(1, node);
         match name {
             Some(name) => {
                 if self.basis.insert(name, node).is_some() {
                     panic!(
                         "Constant node has duplicate name {}",
-                        get_nth_child_name(1, node).unwrap()
+                        get_nth_child_as_word(1, node).unwrap()
                     );
                 }
             }
@@ -40,7 +41,7 @@ impl<'a> Codex<'a> for ConstantCodex<'a> {
     }
 
     fn crunch(&mut self) -> Result<(), String> {
-        for n in self.basis.values() {
+        for (k, n) in self.basis.iter() {
             if n.children.len() != 3 {
                 return Err(format!(
                     "Constant node does not have exactly three children\n{}",
@@ -48,16 +49,46 @@ impl<'a> Codex<'a> for ConstantCodex<'a> {
                 ));
             }
 
+            match n.children[1].node_type {
+                ZilNodeType::Token(TokenType::Word) => (),
+                _ => {
+                    return Err(format!(
+                        "Constant node has invalid second child type\n{}",
+                        format_file_location(n)
+                    ))
+                }
+            }
+
             match n.children[2].node_type {
-                ZilNodeType::Cluster => {
-                    if n.children[2].children.len() > 0 {
-                        return Err(format!(
-                            "Constant node has non-empty cluster as third child\n{}",
-                            format_file_location(n)
-                        ));
+                ZilNodeType::Token(TokenType::Number) => {
+                    let value = n.children[2]
+                        .get_first_token()
+                        .unwrap()
+                        .value
+                        .parse::<i32>();
+                    match value {
+                        Ok(value) => {
+                            self.values.insert(k.clone(), value);
+                        }
+                        Err(_) => {
+                            return Err(format!(
+                                "Constant node has invalid third child value\n{}",
+                                format_file_location(n)
+                            ))
+                        }
                     }
                 }
-                ZilNodeType::TokenBunch(_) => (),
+                ZilNodeType::Cluster => {
+                    if n.children[2].children.len() != 0 {
+                        return Err(format!(
+                            "Constant node has invalid third child type\n{}",
+                            format_file_location(n)
+                        ));
+                    } else {
+                        // 0 is not exactly null, but it might have to do
+                        self.values.insert(k.clone(), 0);
+                    }
+                }
                 _ => {
                     return Err(format!(
                         "Constant node has invalid third child type\n{}",
@@ -70,15 +101,13 @@ impl<'a> Codex<'a> for ConstantCodex<'a> {
         Ok(())
     }
 
+    fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl<'a> Codex for ConstantStats<'a> {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
         self.basis.get(word).map(|n| *n)
-    }
-
-    fn into_iter(&self) -> std::vec::IntoIter<String> {
-        self.basis
-            .keys()
-            .map(|k| k.clone())
-            .collect::<Vec<String>>()
-            .into_iter()
     }
 }

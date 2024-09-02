@@ -9,10 +9,9 @@ pub enum TokenType {
     RightArrow,
     LeftParen,
     RightParen,
-    Text,   // inbetween double quotes
-    Word,   // [A-Za-z0-9]
-    Symbol, // single char, and not any other type
-    Space,  // any whitespace
+    Text,  // " ... "
+    Space, // any whitespace outside of text
+    Word,  // not anything else
 }
 
 impl fmt::Display for TokenType {
@@ -29,9 +28,8 @@ impl TokenType {
             TokenType::LeftParen => "L_PAREN".to_string(),
             TokenType::RightParen => "R_PAREN".to_string(),
             TokenType::Text => "TEXT".to_string(),
-            TokenType::Word => "WORD".to_string(),
-            TokenType::Symbol => "SYMBOL".to_string(),
             TokenType::Space => "SPACE".to_string(),
+            TokenType::Word => "WORD".to_string(),
         }
     }
 }
@@ -69,4 +67,23 @@ impl FileTableLocation for &Token {
     fn get_char_number(&self) -> u64 {
         self.char_number
     }
+}
+
+pub fn word_is_integer(word: &str) -> bool {
+    if word.len() < 1 {
+        return false;
+    }
+
+    let first_char = word.chars().next().unwrap();
+    if !first_char.is_digit(10) && first_char != '-' {
+        return false;
+    }
+
+    for c in word.chars().skip(1) {
+        if !c.is_digit(10) {
+            return false;
+        }
+    }
+
+    true
 }

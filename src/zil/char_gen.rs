@@ -19,6 +19,7 @@ pub struct CharGenerator<'a> {
     line_number: u64,
 }
 
+#[derive(Copy, Clone)]
 pub struct CharInfo {
     pub val: char,
     pub file_key: FileKey,

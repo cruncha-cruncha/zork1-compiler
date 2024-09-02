@@ -1,10 +1,10 @@
-use crate::zil::node::TokenBunchType;
+use crate::{stats::helpers::get_token_as_word, zil::node::TokenType as NodeTokenType};
 
 use super::{
     error::ZilErr,
     file_table::format_file_location,
     node::{ZilNode, ZilNodeType},
-    token::{Token, TokenType},
+    token::{word_is_integer, TokenType},
     token_gen::TokenGen,
 };
 
@@ -23,53 +23,29 @@ pub fn print(root: &ZilNode) {
     print_tree_recursive(root, 0);
 }
 
-fn print_tree_recursive(root: &ZilNode, depth: u64) {
+fn print_tree_recursive(root: &ZilNode, offset: u64) {
     let spacer = String::from("  ");
-    let mut out = String::new();
-    for _ in 0..depth {
-        out.push_str(&spacer);
+    let mut spaces = String::new();
+    for _ in 0..offset {
+        spaces.push_str(&spacer);
     }
 
-    out.push_str(&format!("{}: ", root.node_type));
-
-    let mut dirty = true;
     for n in root.children.iter() {
-        if n.node_type == ZilNodeType::Token {
-            if !dirty && n.token.as_ref().unwrap().kind == TokenType::Space {
-                continue;
+        match n.node_type {
+            ZilNodeType::Token(_) => {
+                println!("{}{}: {}", spaces, n.node_type, n.token_val());
             }
-
-            let val = &n.token_val();
-            if n.token.as_ref().unwrap().kind == TokenType::Text {
-                out.push_str(&format!("\"{}\"", val));
-            } else {
-                out.push_str(val);
+            ZilNodeType::Cluster | ZilNodeType::Group => {
+                println!("{}{}", spaces, n.node_type);
+                print_tree_recursive(n, offset + 1);
             }
-
-            dirty = true;
-        } else {
-            if dirty {
-                println!("{}", out);
-                dirty = false;
-            }
-
-            print_tree_recursive(n, depth + 1);
-
-            out = String::new();
-            out.push_str(&spacer);
-            for _ in 0..depth {
-                out.push_str(&spacer);
-            }
+            _ => (),
         }
-    }
-
-    if dirty {
-        println!("{}", out);
     }
 }
 
 pub fn build_tree<'a>(tokens: &mut impl TokenGen) -> Result<Tree, ZilErr> {
-    let mut root = ZilNode::new(ZilNodeType::Unknown);
+    let mut root = ZilNode::new_no_token(ZilNodeType::Unknown);
 
     match build_tree_recursively(tokens, &mut root) {
         (_, Some(e)) => return Err(e),
@@ -81,11 +57,7 @@ pub fn build_tree<'a>(tokens: &mut impl TokenGen) -> Result<Tree, ZilErr> {
         Err(e) => return Err(e),
     }
 
-    root = bunch_tokens(root);
-
     swallow_comments(&mut root);
-
-    clean_top_level(&mut root);
 
     Ok(Tree { root: root })
 }
@@ -106,8 +78,7 @@ fn build_tree_recursively<'a>(
 
         match t.kind {
             TokenType::LeftArrow => {
-                let mut child = ZilNode::new(ZilNodeType::Cluster);
-                child.token = Some(t);
+                let mut child = ZilNode::new(ZilNodeType::Cluster, t);
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightArrow) {
@@ -123,8 +94,7 @@ fn build_tree_recursively<'a>(
                 root.push_child(child);
             }
             TokenType::LeftParen => {
-                let mut child = ZilNode::new(ZilNodeType::Group);
-                child.token = Some(t);
+                let mut child = ZilNode::new(ZilNodeType::Group, t);
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightParen) {
@@ -142,15 +112,19 @@ fn build_tree_recursively<'a>(
             TokenType::RightArrow | TokenType::RightParen => {
                 return (Some(t.kind), None);
             }
-            TokenType::Symbol => {
-                if t.value == ";" {
-                    root.push_child(ZilNode::new(ZilNodeType::Comment));
+            TokenType::Text => {
+                root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Text), t));
+            }
+            TokenType::Word => {
+                // determine if word is an integer
+                if word_is_integer(&t.value) {
+                    root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Number), t));
                 } else {
-                    root.push_child(ZilNode::from_token(t));
+                    root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Word), t));
                 }
             }
-            TokenType::Space | TokenType::Text | TokenType::Word => {
-                root.push_child(ZilNode::from_token(t));
+            TokenType::Space => {
+                // discard
             }
         }
     }
@@ -158,22 +132,25 @@ fn build_tree_recursively<'a>(
 
 fn validate_tree(root: &ZilNode) -> Result<(), ZilErr> {
     for n in root.children.iter() {
-        if n.node_type == ZilNodeType::Token {
-            if n.has_children() {
-                let msg = format!("Token node has children: {}", n);
-                return Err(ZilErr::origin(msg));
+        match n.node_type {
+            ZilNodeType::Token(_) => {
+                if n.has_children() {
+                    let msg = format!("Token node has children: {}", n);
+                    return Err(ZilErr::origin(msg));
+                }
+
+                if !n.has_token() {
+                    let msg = format!("Token node has no token: {}", n);
+                    return Err(ZilErr::origin(msg));
+                }
             }
-            if !n.has_token() {
-                let msg = format!("Token node has no token: {}", n);
-                return Err(ZilErr::origin(msg));
-            }
-        } else if n.node_type == ZilNodeType::Unknown {
-            let msg = format!("Unknown node: {}", n);
-            return Err(ZilErr::origin(msg));
-        } else {
-            match validate_tree(n) {
+            ZilNodeType::Cluster | ZilNodeType::Group => match validate_tree(n) {
                 Ok(()) => (),
                 Err(e) => return Err(e),
+            },
+            ZilNodeType::Unknown => {
+                let msg = format!("Unknown node: {}", n);
+                return Err(ZilErr::origin(msg));
             }
         }
     }
@@ -181,25 +158,15 @@ fn validate_tree(root: &ZilNode) -> Result<(), ZilErr> {
     Ok(())
 }
 
-fn clean_top_level(root: &mut ZilNode) {
-    let mut indices: Vec<usize> = Vec::new();
-    for (i, n) in root.children.iter().enumerate() {
-        match n.node_type {
-            ZilNodeType::TokenBunch(_) => indices.push(i),
-            _ => (),
-        }
-    }
-
-    for i in indices.iter().rev() {
-        root.children.remove(*i);
-    }
-}
-
 fn swallow_comments(root: &mut ZilNode) {
     let mut comment_indices: Vec<usize> = Vec::new();
 
+    let marker = String::from(";");
+
     for (i, n) in root.children.iter().enumerate() {
-        if n.node_type == ZilNodeType::Comment {
+        if n.node_type == ZilNodeType::Token(NodeTokenType::Word)
+            && get_token_as_word(n).unwrap_or_default() == marker
+        {
             comment_indices.push(i);
         }
     }
@@ -214,115 +181,4 @@ fn swallow_comments(root: &mut ZilNode) {
     for n in root.children.iter_mut() {
         swallow_comments(n);
     }
-}
-
-pub fn bunch_tokens(mut root: ZilNode) -> ZilNode {
-    let mut token_buf: Vec<Token> = Vec::new();
-    let mut new_children: Vec<ZilNode> = Vec::new();
-
-    fn bunch_token_buf(token_buf: Vec<Token>, new_children: &mut Vec<ZilNode>) {
-        if token_buf.len() == 0 {
-            return;
-        }
-
-        // validate token_buf, determine type
-
-        let mut has_text = false;
-        let mut is_number = true;
-
-        match token_buf[0].kind {
-            TokenType::Text => {
-                has_text = true;
-                is_number = false;
-            }
-            TokenType::Symbol => {
-                if &token_buf[0].value != "-" || token_buf.len() <= 1 {
-                    is_number = false;
-                }
-            }
-            TokenType::Word => {
-                for c in token_buf[0].value.chars() {
-                    if !c.is_digit(10) {
-                        is_number = false;
-                        break;
-                    }
-                }
-            }
-            _ => panic!("Bad token type in ast::bunch_tokens"),
-        }
-
-        for t in token_buf.iter().skip(1) {
-            if t.kind == TokenType::Text {
-                has_text = true;
-                is_number = false;
-                break;
-            }
-
-            if is_number {
-                for c in t.value.chars() {
-                    if !c.is_digit(10) {
-                        is_number = false;
-                        break;
-                    }
-                }
-            }
-        }
-
-        let mut bunch_type = TokenBunchType::Word;
-        if has_text {
-            if token_buf.len() > 1 {
-                panic!("Text token with other tokens in ast::bunch_tokens");
-            }
-            bunch_type = TokenBunchType::Text;
-        } else if is_number {
-            bunch_type = TokenBunchType::Number;
-        }
-
-        let mut bunch = ZilNode::new(ZilNodeType::TokenBunch(bunch_type));
-        for t in token_buf {
-            bunch.push_child(ZilNode::from_token(t));
-        }
-
-        new_children.push(bunch);
-    }
-
-    for n in root.children {
-        match n.node_type {
-            ZilNodeType::Unknown => panic!("Unknown node type in stats::lookups::get_name_tokens"),
-            ZilNodeType::TokenBunch(_) => {
-                panic!("Already bunched in stats::lookups::get_name_tokens")
-            }
-            ZilNodeType::Comment | ZilNodeType::Group | ZilNodeType::Cluster => {
-                bunch_token_buf(token_buf, &mut new_children);
-                new_children.push(n);
-                token_buf = Vec::new();
-            }
-            ZilNodeType::Token => {
-                let token = n.token.unwrap();
-                match token.kind {
-                    TokenType::Space => {
-                        bunch_token_buf(token_buf, &mut new_children);
-                        token_buf = Vec::new();
-                    }
-                    TokenType::Text | TokenType::Word | TokenType::Symbol => token_buf.push(token),
-                    _ => panic!(
-                        "Bad token type in stats::lookups::get_name_tokens, {}",
-                        token.kind
-                    ),
-                }
-            }
-        }
-    }
-
-    bunch_token_buf(token_buf, &mut new_children);
-
-    root.children = Vec::new();
-    for n in new_children {
-        match n.node_type {
-            ZilNodeType::TokenBunch(_) => root.push_child(n),
-            _ => root.push_child(bunch_tokens(n)),
-        }
-    }
-
-    root
 }

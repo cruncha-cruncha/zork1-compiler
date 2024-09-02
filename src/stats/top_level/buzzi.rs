@@ -1,37 +1,58 @@
 use std::collections::HashSet;
 
+use crate::stats::helpers::get_token_as_word;
 use crate::zil::{file_table::format_file_location, node::ZilNode};
 
-use crate::stats::{cross_ref::Phodex, helpers::get_bunch_name};
+use crate::stats::cross_ref::Populator;
 
-pub struct BuzzPhodex<'a> {
+pub struct BuzzStats<'a> {
     basis: Vec<&'a ZilNode>,
     pub all: HashSet<String>,
 }
 
-impl<'a> BuzzPhodex<'a> {
-    pub fn new() -> BuzzPhodex<'a> {
-        BuzzPhodex {
+impl<'a> BuzzStats<'a> {
+    pub fn new() -> BuzzStats<'a> {
+        BuzzStats {
             basis: Vec::new(),
             all: HashSet::new(),
         }
     }
-}
 
-impl<'a> IntoIterator for BuzzPhodex<'a> {
-    type Item = &'a ZilNode;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
+    pub fn validate_object_synonyms(
+        &self,
+        object_synonyms: &HashSet<String>,
+    ) -> Result<(), String> {
+        for s in self.all.iter() {
+            if object_synonyms.contains(s) {
+                return Err(format!("BUZZ has object synonym {}", s));
+            }
+        }
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.basis.clone().into_iter()
+        Ok(())
+    }
+
+    pub fn validate_prepositions(&self, prepositions: &HashSet<String>) -> Result<(), String> {
+        for s in self.all.iter() {
+            if prepositions.contains(s) {
+                return Err(format!("BUZZ has preposition {}", s));
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn validate_verbs(&self, verbs: &HashSet<String>) -> Result<(), String> {
+        for s in self.all.iter() {
+            if verbs.contains(s) {
+                return Err(format!("BUZZ has verb {}", s));
+            }
+        }
+
+        Ok(())
     }
 }
 
-impl<'a> Phodex<'a> for BuzzPhodex<'a> {
-    fn get_name(&self) -> String {
-        String::from("buzzi")
-    }
-
+impl<'a> Populator<'a> for BuzzStats<'a> {
     fn add_node(&mut self, node: &'a ZilNode) {
         self.basis.push(node);
     }
@@ -39,12 +60,12 @@ impl<'a> Phodex<'a> for BuzzPhodex<'a> {
     fn crunch(&mut self) -> Result<(), String> {
         for n in self.basis.iter() {
             for c in n.children.iter().skip(1) {
-                match get_bunch_name(c) {
+                match get_token_as_word(c) {
                     Some(name) => {
                         if !self.all.insert(name) {
                             panic!(
                                 "Buzz node has duplicate child word {}",
-                                get_bunch_name(c).unwrap()
+                                get_token_as_word(c).unwrap()
                             );
                         }
                     }
@@ -52,6 +73,14 @@ impl<'a> Phodex<'a> for BuzzPhodex<'a> {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
+        self.validate_object_synonyms(&cross_ref.objects.groups.synonyms)?;
+        self.validate_prepositions(&cross_ref.syntax.prepositions)?;
+        self.validate_verbs(&cross_ref.syntax.firsts)?;
 
         Ok(())
     }

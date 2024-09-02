@@ -1,18 +1,25 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    stats::helpers::get_bunch_name,
+    stats::{
+        cross_ref::Populator,
+        helpers::{get_nth_child_as_word, get_token_as_number, get_token_as_word},
+    },
     zil::{
         file_table::format_file_location,
-        node::{TokenBunchType, ZilNode, ZilNodeType},
+        node::{TokenType, ZilNode, ZilNodeType},
     },
 };
 
-use crate::stats::{cross_ref::Codex, helpers::get_nth_child_name};
+use crate::stats::cross_ref::Codex;
 
-pub struct ObjectCodex<'a> {
+use super::syntax::ILLEGAL;
+
+pub const UNDEFINED_LOC: &str = "NOWHERE";
+
+pub struct ObjectStats<'a> {
     basis: HashMap<String, &'a ZilNode>,
-    info: HashMap<String, ObjectInfo<'a>>,
+    pub info: HashMap<String, ObjectInfo>,
     pub groups: GroupCruncher,
 }
 
@@ -26,9 +33,9 @@ pub struct GroupCruncher {
     pub vtypes: HashSet<String>,     // idk
 }
 
-pub struct ObjectInfo<'a> {
+pub struct ObjectInfo {
     pub name: String,
-    pub in_room: Option<String>,
+    pub loc: Option<String>,
     pub adjectives: HashSet<String>,
     pub synonyms: HashSet<String>,
     pub desc_fcn: Option<String>,
@@ -38,25 +45,24 @@ pub struct ObjectInfo<'a> {
     pub ldesc: Option<String>,
     pub fdesc: Option<String>,
     pub flags: HashSet<String>,
-    pub capacity: Option<usize>,
-    pub size: Option<usize>,
-    pub globals: HashSet<String>,
-    pub strength: Option<usize>,
-    pub value: Option<usize>,
-    pub tvalue: Option<usize>,
-    pub vtype: Option<&'a ZilNode>, // TODO
+    pub capacity: Option<i32>,
+    pub size: Option<i32>,
+    pub strength: Option<i32>,
+    pub value: Option<i32>,
+    pub tvalue: Option<i32>,
+    pub vtype: Option<String>,
 }
 
-impl<'a> ObjectCodex<'a> {
-    pub fn new() -> ObjectCodex<'a> {
-        ObjectCodex {
+impl<'a> ObjectStats<'a> {
+    pub fn new() -> ObjectStats<'a> {
+        ObjectStats {
             basis: HashMap::new(),
             info: HashMap::new(),
             groups: GroupCruncher::new(),
         }
     }
 
-    pub fn validate_routines(&self, routines: &impl Codex<'a>) -> Result<(), String> {
+    pub fn validate_routines(&self, routines: &impl Codex) -> Result<(), String> {
         for r in self.groups.routines.iter() {
             if routines.lookup(r).is_none() {
                 return Err(format!("ROUTINE {} not found", r));
@@ -66,14 +72,13 @@ impl<'a> ObjectCodex<'a> {
         Ok(())
     }
 
-    pub fn validate_room_or_object(&self, rooms: &impl Codex<'a>) -> Result<(), String> {
+    pub fn validate_room_or_object(&self, rooms: &impl Codex) -> Result<(), String> {
         for roo in self.groups.room_or_object.iter() {
             if self.lookup(roo).is_none() {
                 if rooms.lookup(roo).is_none() {
                     return Err(format!("ROOM or OBJECT {} not found", roo));
                 }
             }
-            
         }
 
         Ok(())
@@ -90,19 +95,19 @@ impl<'a> ObjectCodex<'a> {
     }
 }
 
-impl<'a> Codex<'a> for ObjectCodex<'a> {
-    fn get_name(&self) -> String {
-        String::from("objects")
-    }
-
+impl<'a> Populator<'a> for ObjectStats<'a> {
     fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_name(1, node);
+        let name = get_nth_child_as_word(1, node);
         match name {
             Some(name) => {
+                if ILLEGAL.is_match(&name) {
+                    panic!("Object node has illegal name {}", &name);
+                }
+
                 if self.basis.insert(name, node).is_some() {
                     panic!(
                         "Object node has duplicate name {}",
-                        get_nth_child_name(1, node).unwrap()
+                        get_nth_child_as_word(1, node).unwrap()
                     );
                 }
             }
@@ -129,16 +134,18 @@ impl<'a> Codex<'a> for ObjectCodex<'a> {
         Ok(())
     }
 
+    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
+        self.validate_routines(&cross_ref.routines)?;
+        self.validate_room_or_object(&cross_ref.rooms)?;
+        self.validate_objects()?;
+
+        Ok(())
+    }
+}
+
+impl<'a> Codex for ObjectStats<'a> {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
         self.basis.get(word).map(|n| *n)
-    }
-
-    fn into_iter(&self) -> std::vec::IntoIter<String> {
-        self.basis
-            .keys()
-            .map(|k| k.clone())
-            .collect::<Vec<String>>()
-            .into_iter()
     }
 }
 
@@ -155,8 +162,26 @@ impl<'a> GroupCruncher {
         }
     }
 
-    pub fn munch(&mut self, node: &'a ZilNode) -> Result<ObjectInfo<'a>, String> {
+    pub fn munch(&mut self, node: &'a ZilNode) -> Result<ObjectInfo, String> {
         let mut out = ObjectInfo::new();
+
+        if node.children.len() < 2 {
+            return Err(format!(
+                "Object node has less than two children\n{}",
+                format_file_location(&node)
+            ));
+        }
+
+        match get_nth_child_as_word(1, node) {
+            Some(name) => out.name = name,
+            None => {
+                return Err(format!(
+                    "Object node has no name\n{}",
+                    format_file_location(&node)
+                ))
+            }
+        }
+
         for c in node.children.iter().skip(2) {
             if c.node_type != ZilNodeType::Group {
                 return Err(format!(
@@ -165,7 +190,7 @@ impl<'a> GroupCruncher {
                 ));
             }
 
-            let name = match get_nth_child_name(0, c) {
+            let name = match get_nth_child_as_word(0, c) {
                 Some(name) => name,
                 None => {
                     return Err(format!(
@@ -184,7 +209,7 @@ impl<'a> GroupCruncher {
                         ));
                     }
 
-                    match get_nth_child_name(1, c) {
+                    match get_nth_child_as_word(1, c) {
                         Some(name) => {
                             if out.action.is_some() {
                                 return Err(format!(
@@ -220,14 +245,14 @@ impl<'a> GroupCruncher {
                     }
 
                     for child in c.children.iter().skip(1) {
-                        if child.node_type != ZilNodeType::TokenBunch(TokenBunchType::Word) {
+                        if child.node_type != ZilNodeType::Token(TokenType::Word) {
                             return Err(format!(
                                 "ADJECTIVE group in object has non-word child\n{}",
                                 format_file_location(&node)
                             ));
                         }
 
-                        let val = get_bunch_name(child).unwrap();
+                        let val = get_token_as_word(child).unwrap();
                         out.adjectives.insert(val.clone());
                         self.adjectives.insert(val);
                     }
@@ -248,14 +273,14 @@ impl<'a> GroupCruncher {
                     }
 
                     for child in c.children.iter().skip(1) {
-                        if child.node_type != ZilNodeType::TokenBunch(TokenBunchType::Word) {
+                        if child.node_type != ZilNodeType::Token(TokenType::Word) {
                             return Err(format!(
                                 "SYNONYM group in object has non-word child\n{}",
                                 format_file_location(&node)
                             ));
                         }
 
-                        let val = get_bunch_name(child).unwrap();
+                        let val = get_token_as_word(child).unwrap();
                         out.synonyms.insert(val.clone());
                         self.synonyms.insert(val);
                     }
@@ -269,7 +294,7 @@ impl<'a> GroupCruncher {
                         ));
                     }
 
-                    if c.children[1].node_type != ZilNodeType::TokenBunch(TokenBunchType::Text) {
+                    if c.children[1].node_type != ZilNodeType::Token(TokenType::Text) {
                         return Err(format!(
                             "{} group in object doesn't have a text type second child\n{}",
                             name,
@@ -315,36 +340,6 @@ impl<'a> GroupCruncher {
                         _ => unreachable!(),
                     }
                 }
-                "GLOBAL" => {
-                    if c.children.len() < 2 {
-                        return Err(format!(
-                            "GLOBAL group in object doesn't have enough children\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if out.globals.len() > 0 {
-                        return Err(format!(
-                            "Object has multiple GLOBAL groups\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    for c in c.children.iter().skip(1) {
-                        match get_bunch_name(c) {
-                            Some(name) => {
-                                out.globals.insert(name.clone());
-                                self.objects.insert(name);
-                            }
-                            None => {
-                                return Err(format!(
-                                    "GLOBAL group in object has a child that isn't a word\n{}",
-                                    format_file_location(&node)
-                                ));
-                            }
-                        }
-                    }
-                }
                 "DESCFCN" => {
                     if c.children.len() != 2 {
                         return Err(format!(
@@ -353,7 +348,7 @@ impl<'a> GroupCruncher {
                         ));
                     }
 
-                    if c.children[1].node_type != ZilNodeType::TokenBunch(TokenBunchType::Word) {
+                    if c.children[1].node_type != ZilNodeType::Token(TokenType::Word) {
                         return Err(format!(
                             "DESCFCN group in object doesn't have a word type second child\n{}",
                             format_file_location(&node)
@@ -367,7 +362,7 @@ impl<'a> GroupCruncher {
                         ));
                     }
 
-                    let val = get_bunch_name(&c.children[1]).unwrap();
+                    let val = get_token_as_word(&c.children[1]).unwrap();
                     out.desc_fcn = Some(val.clone());
                     self.routines.insert(val);
                 }
@@ -387,7 +382,7 @@ impl<'a> GroupCruncher {
                     }
 
                     for c in c.children.iter().skip(1) {
-                        match get_bunch_name(c) {
+                        match get_token_as_word(c) {
                             Some(name) => {
                                 out.flags.insert(name.clone());
                                 self.flag_words.insert(name);
@@ -403,17 +398,17 @@ impl<'a> GroupCruncher {
                 }
                 "IN" => {
                     if c.children.len() == 2
-                        && c.children[1].node_type == ZilNodeType::TokenBunch(TokenBunchType::Word)
+                        && c.children[1].node_type == ZilNodeType::Token(TokenType::Word)
                     {
-                        let name = get_nth_child_name(1, c).unwrap();
-                        if out.in_room.is_some() {
+                        let name = get_nth_child_as_word(1, c).unwrap();
+                        if out.loc.is_some() {
                             return Err(format!(
                                 "Object has multiple IN groups\n{}",
                                 format_file_location(&node)
                             ));
                         }
 
-                        out.in_room = Some(name.clone());
+                        out.loc = Some(name.clone());
                         self.room_or_object.insert(name);
                     } else {
                         return Err(format!(
@@ -431,7 +426,7 @@ impl<'a> GroupCruncher {
                         ));
                     }
 
-                    if c.children[1].node_type != ZilNodeType::TokenBunch(TokenBunchType::Number) {
+                    if c.children[1].node_type != ZilNodeType::Token(TokenType::Number) {
                         return Err(format!(
                             "{} group in room doesn't have a number type second child\n{}",
                             name,
@@ -447,13 +442,7 @@ impl<'a> GroupCruncher {
                         ))
                     };
 
-                    let val = c.children[1]
-                        .get_first_token()
-                        .unwrap()
-                        .value
-                        .clone()
-                        .parse::<usize>()
-                        .unwrap();
+                    let val = get_token_as_number(&c.children[1]).unwrap();
 
                     match name.as_str() {
                         "CAPACITY" => {
@@ -498,10 +487,19 @@ impl<'a> GroupCruncher {
                     }
 
                     for c in c.children.iter().skip(1) {
-                        self.vtypes.insert(c.get_first_token().unwrap().value.clone());
+                        match get_token_as_word(c) {
+                            Some(name) => {
+                                out.vtype = Some(name.clone());
+                                self.vtypes.insert(name);
+                            }
+                            None => {
+                                return Err(format!(
+                                    "VTYPE group in object has a child that isn't a word\n{}",
+                                    format_file_location(&node)
+                                ));
+                            }
+                        }
                     }
-
-                    out.vtype = Some(c);
                 }
                 _ => {
                     return Err(format!(
@@ -513,12 +511,16 @@ impl<'a> GroupCruncher {
             }
         }
 
+        if out.loc.is_none() {
+            out.loc = Some(String::from(UNDEFINED_LOC));
+        }
+
         Ok(out)
     }
 }
 
-impl<'a> ObjectInfo<'a> {
-    pub fn new() -> ObjectInfo<'a> {
+impl<'a> ObjectInfo {
+    pub fn new() -> ObjectInfo {
         ObjectInfo {
             name: String::new(),
             text: None,
@@ -527,7 +529,7 @@ impl<'a> ObjectInfo<'a> {
             fdesc: None,
             desc_fcn: None,
             flags: HashSet::new(),
-            in_room: None,
+            loc: None,
             capacity: None,
             size: None,
             strength: None,
@@ -537,7 +539,6 @@ impl<'a> ObjectInfo<'a> {
             synonyms: HashSet::new(),
             action: None,
             vtype: None,
-            globals: HashSet::new(),
         }
     }
 }

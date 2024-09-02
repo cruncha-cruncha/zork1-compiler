@@ -1,10 +1,11 @@
-use std::path::Path;
+use std::{fs, path::Path};
 
-extern crate regex;
 extern crate once_cell;
+extern crate regex;
 
-use crate::{zil::{ast, mess::Huh}};
+use crate::zil::ast;
 
+mod js;
 mod stats;
 mod zil;
 
@@ -18,23 +19,36 @@ fn main() {
     // ast::print(tree.get_root());
 
     let mut lookup = stats::cross_ref::CrossRef::new(&tree);
-    lookup.find_stuff();
-    match lookup.crunch(&mut thread_pool) {
-        Ok(_) => println!("lookup crunched"),
-        Err(e) => panic!("lookup crunch error\n{}", e),
+    lookup.add_nodes();
+    match lookup.crunch_top_level(&mut thread_pool) {
+        Ok(_) => println!("lookups crunched"),
+        Err(e) => panic!("ERROR while crunching lookups\n{}", e),
     }
 
     println!("");
 
-    for fw in lookup.rooms.groups.flag_words.iter() {
-        println!("{}", fw);
+    match lookup.validate_routines() {
+        Ok(_) => println!("lookups validated"),
+        Err(e) => panic!("ERROR while validating lookups\n{}", e),
     }
 
     println!("");
 
-    for d in lookup.rooms.groups.direction_names.iter() {
-        println!("{}", d);
-    }
+    // write_rooms("./out/rooms.js", &lookup.rooms);
+    // write_objects("./out/objects.js", &lookup.objects);
+    // write_globals_and_constants(
+    //     "./out/globals_and_constants.js",
+    //     &lookup.constants,
+    //     &lookup.globals,
+    // );
+    // write_syntax("./out/syntax.js", &lookup.syntax);
+    // write_other_syntax(
+    //     "./out/other_syntax.js",
+    //     &lookup.syntax,
+    //     &lookup.synonyms,
+    //     &lookup.directions,
+    //     &lookup.buzzi,
+    // );
 
     // for n in lookup.leftovers.iter() {
     //     match n.node_type {
@@ -48,9 +62,9 @@ fn main() {
     //                 println!("Empty cluster");
     //             }
     //         },
-    //         zil::node::ZilNodeType::TokenBunch(x) => {
+    //         zil::node::ZilNodeType::Token(x) => {
     //             match x {
-    //                 zil::node::TokenBunchType::Word => {
+    //                 zil::node::TokenType::Word => {
     //                     println!("Token bunch {}", stats::helpers::get_bunch_name(n).unwrap());
     //                 },
     //                 _ => println!("Token bunch type {:?}", x),
@@ -64,13 +78,6 @@ fn main() {
     // for v in rooms.subgroup_names.iter() {
     //     println!("{}", v);
     // }
-
-
-
-
-
-
-    
 
     // //inter::ast_stats::run_all(&root);
 
@@ -104,19 +111,11 @@ fn main() {
 fn get_files_lookup() -> zil::file_table::FileTable {
     let mut files_lookup = zil::file_table::FileTable::new();
 
-    // let mut file_path = Path::new(".").join("dummy-data").join("aaa_test1.zil");
-    // files_lookup.add(file_path);
+    let paths = fs::read_dir(Path::new(".").join("input-files")).unwrap();
 
-    let mut file_path = Path::new(".").join("dummy-data").join("actions.zil");
-    files_lookup.add(file_path);
-    file_path = Path::new(".").join("dummy-data").join("dungeon.zil");
-    files_lookup.add(file_path);
-    file_path = Path::new(".").join("dummy-data").join("globals.zil");
-    files_lookup.add(file_path);
-    file_path = Path::new(".").join("dummy-data").join("syntax.zil");
-    files_lookup.add(file_path);
-    file_path = Path::new(".").join("dummy-data").join("verbs.zil");
-    files_lookup.add(file_path);
+    for path in paths {
+        files_lookup.add(path.unwrap().path());
+    }
 
     files_lookup
 }

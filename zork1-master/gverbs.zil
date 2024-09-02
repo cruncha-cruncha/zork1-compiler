@@ -1851,7 +1851,7 @@ long description (fdesc or ldesc), otherwise will print short."
 <ROUTINE SCORE-UPD (NUM)
 	 <SETG BASE-SCORE <+ ,BASE-SCORE .NUM>>
 	 <SETG SCORE <+ ,SCORE .NUM>>
-	 %<COND (<==? ,ZORK-NUMBER 1>
+	 COND (<==? ,ZORK-NUMBER 1>
 		 '<COND (<AND <EQUAL? ,SCORE 350>
 		              <NOT ,WON-FLAG>>
 		         <SETG WON-FLAG T>

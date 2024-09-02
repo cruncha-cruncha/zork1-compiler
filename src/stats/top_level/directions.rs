@@ -1,28 +1,29 @@
 use std::collections::HashSet;
 
+use crate::stats::cross_ref::Populator;
+use crate::stats::helpers::get_token_as_word;
+use crate::zil::file_table::format_file_location;
 use crate::zil::node::ZilNode;
 
-use crate::stats::{cross_ref::Codex, helpers::get_bunch_name};
+use crate::stats::cross_ref::Codex;
 
-pub struct DirectionCodex<'a> {
+use super::syntax::ILLEGAL;
+
+pub struct DirectionStats<'a> {
     basis: Option<&'a ZilNode>,
     pub options: HashSet<String>,
 }
 
-impl<'a> DirectionCodex<'a> {
-    pub fn new() -> DirectionCodex<'a> {
-        DirectionCodex {
+impl<'a> DirectionStats<'a> {
+    pub fn new() -> DirectionStats<'a> {
+        DirectionStats {
             basis: None,
             options: HashSet::new(),
         }
     }
 }
 
-impl<'a> Codex<'a> for DirectionCodex<'a> {
-    fn get_name(&self) -> String {
-        String::from("directions")
-    }
-
+impl<'a> Populator<'a> for DirectionStats<'a> {
     fn add_node(&mut self, node: &'a ZilNode) {
         if self.basis.is_none() {
             self.basis = Some(node);
@@ -33,7 +34,8 @@ impl<'a> Codex<'a> for DirectionCodex<'a> {
 
     fn crunch(&mut self) -> Result<(), String> {
         if self.basis.is_none() {
-            return Err(String::from("DirectionCodex has no basis"));
+            println!("WARNING: DirectionCodex has no basis. Please specify a <DIRECTIONS ... > cluster in one of input files.");
+            return Ok(());
         }
 
         if self.basis.unwrap().children.len() <= 1 {
@@ -41,8 +43,16 @@ impl<'a> Codex<'a> for DirectionCodex<'a> {
         }
 
         for node in self.basis.unwrap().children.iter().skip(1) {
-            match get_bunch_name(node) {
+            match get_token_as_word(node) {
                 Some(name) => {
+                    if ILLEGAL.is_match(&name) {
+                        return Err(format!(
+                            "Direction ({}) has illegal char\n{}",
+                            &name,
+                            format_file_location(&node)
+                        ));
+                    }
+
                     self.options.insert(name);
                 }
                 None => panic!("Direction node has non-word child"),
@@ -52,19 +62,17 @@ impl<'a> Codex<'a> for DirectionCodex<'a> {
         Ok(())
     }
 
+    fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl<'a> Codex for DirectionStats<'a> {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
         if self.options.contains(word) {
             return Some(self.basis.unwrap());
         }
 
         None
-    }
-
-    fn into_iter(&self) -> std::vec::IntoIter<String> {
-        self.options
-            .clone()
-            .into_iter()
-            .collect::<Vec<String>>()
-            .into_iter()
     }
 }
