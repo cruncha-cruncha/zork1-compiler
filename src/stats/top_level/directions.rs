@@ -9,13 +9,13 @@ use crate::stats::cross_ref::Codex;
 
 use super::syntax::ILLEGAL;
 
-pub struct DirectionStats<'a> {
-    basis: Option<&'a ZilNode>,
+pub struct DirectionStats {
+    basis: Option<ZilNode>,
     pub options: HashSet<String>,
 }
 
-impl<'a> DirectionStats<'a> {
-    pub fn new() -> DirectionStats<'a> {
+impl DirectionStats {
+    pub fn new() -> DirectionStats {
         DirectionStats {
             basis: None,
             options: HashSet::new(),
@@ -23,8 +23,8 @@ impl<'a> DirectionStats<'a> {
     }
 }
 
-impl<'a> Populator<'a> for DirectionStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
+impl Populator for DirectionStats {
+    fn add_node(&mut self, node: ZilNode) {
         if self.basis.is_none() {
             self.basis = Some(node);
         } else {
@@ -38,11 +38,11 @@ impl<'a> Populator<'a> for DirectionStats<'a> {
             return Ok(());
         }
 
-        if self.basis.unwrap().children.len() <= 1 {
+        if self.basis.as_ref().unwrap().children.len() <= 1 {
             panic!("No directions");
         }
 
-        for node in self.basis.unwrap().children.iter().skip(1) {
+        for node in self.basis.as_ref().unwrap().children.iter().skip(1) {
             match get_token_as_word(node) {
                 Some(name) => {
                     if ILLEGAL.is_match(&name) {
@@ -67,10 +67,10 @@ impl<'a> Populator<'a> for DirectionStats<'a> {
     }
 }
 
-impl<'a> Codex for DirectionStats<'a> {
+impl Codex for DirectionStats {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
         if self.options.contains(word) {
-            return Some(self.basis.unwrap());
+            return Some(self.basis.as_ref().unwrap());
         }
 
         None

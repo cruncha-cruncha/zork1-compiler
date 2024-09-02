@@ -18,21 +18,17 @@ fn main() {
     let tree = build_tree(&mut files_lookup);
     // ast::print(tree.get_root());
 
-    let mut lookup = stats::cross_ref::CrossRef::new(&tree);
+    let mut lookup = stats::cross_ref::CrossRef::new(tree);
     lookup.add_nodes();
     match lookup.crunch_top_level(&mut thread_pool) {
         Ok(_) => println!("lookups crunched"),
         Err(e) => panic!("ERROR while crunching lookups\n{}", e),
     }
 
-    println!("");
-
     match lookup.validate_routines() {
         Ok(_) => println!("lookups validated"),
         Err(e) => panic!("ERROR while validating lookups\n{}", e),
     }
-
-    println!("");
 
     // write_rooms("./out/rooms.js", &lookup.rooms);
     // write_objects("./out/objects.js", &lookup.objects);

@@ -10,33 +10,33 @@ use crate::{
 
 use crate::stats::{cross_ref::Codex, cross_ref::Populator};
 
-pub struct GlobalStats<'a> {
-    basis: HashMap<String, &'a ZilNode>,
+pub struct GlobalStats {
+    basis: HashMap<String, ZilNode>,
     pub info: HashMap<String, GlobalValType>,
 }
 
 pub enum GlobalValType {
-    Table(bool, Vec<GlobalValType>), // bool == LTABLE
     Empty,
+    Table(bool, Vec<GlobalValType>), // bool == LTABLE
     Text(String),
     Word(String),
     Number(i32),
 }
 
-impl<'a> GlobalStats<'a> {
-    pub fn new() -> GlobalStats<'a> {
+impl GlobalStats {
+    pub fn new() -> GlobalStats {
         GlobalStats {
             basis: HashMap::new(),
             info: HashMap::new(),
         }
     }
 
-    fn validate_nested_cluster(&self, node: &'a ZilNode) -> Result<GlobalValType, String> {
+    fn validate_nested_cluster(&self, node: &ZilNode) -> Result<GlobalValType, String> {
         if node.children.len() < 1 {
             return Ok(GlobalValType::Empty);
         }
 
-        let name = match get_nth_child_as_word(0, node) {
+        let name = match get_nth_child_as_word(0, &node) {
             Some(name) => name,
             None => {
                 return Err(format!(
@@ -133,16 +133,13 @@ impl<'a> GlobalStats<'a> {
 //     }
 // }
 
-impl<'a> Populator<'a> for GlobalStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_as_word(1, node);
+impl Populator for GlobalStats {
+    fn add_node(&mut self, node: ZilNode) {
+        let name = get_nth_child_as_word(1, &node);
         match name {
             Some(name) => {
-                if self.basis.insert(name, node).is_some() {
-                    panic!(
-                        "Global node has duplicate name {}",
-                        get_nth_child_as_word(1, node).unwrap()
-                    );
+                if self.basis.insert(name.clone(), node).is_some() {
+                    panic!("Global node has duplicate name {}", name);
                 }
             }
             None => panic!("Global node has no name\n{}", format_file_location(&node)),
@@ -194,8 +191,8 @@ impl<'a> Populator<'a> for GlobalStats<'a> {
     }
 }
 
-impl<'a> Codex for GlobalStats<'a> {
+impl Codex for GlobalStats {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word).map(|n| *n)
+        self.basis.get(word)
     }
 }

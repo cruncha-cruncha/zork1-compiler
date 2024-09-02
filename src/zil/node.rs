@@ -11,6 +11,7 @@ pub enum ZilNodeType {
     Cluster,
     Group,
     Token(TokenType),
+    Space,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -32,20 +33,17 @@ impl ZilNodeType {
             ZilNodeType::Unknown => "UNKNOWN".to_string(),
             ZilNodeType::Cluster => "CLUSTER".to_string(),
             ZilNodeType::Group => "GROUP".to_string(),
-            // ZilNodeType::Marker(t) => match t {
-            //     MarkerType::Comment => "MARKER(COMMENT)".to_string(),
-            //     MarkerType::Metacode => "MARKER(METACODE)".to_string(),
-            //     MarkerType::MetacodeOutput => "MARKER(METACODE_OUTPUT)".to_string(),
-            // },
             ZilNodeType::Token(t) => match t {
                 TokenType::Text => "TOKEN(TEXT)".to_string(),
                 TokenType::Word => "TOKEN(WORD)".to_string(),
                 TokenType::Number => "TOKEN(NUMBER)".to_string(),
             },
+            ZilNodeType::Space => "SPACE".to_string(),
         }
     }
 }
 
+#[derive(Clone)]
 pub struct ZilNode {
     pub node_type: ZilNodeType,
     pub token: Option<Token>,
@@ -59,7 +57,10 @@ impl fmt::Display for ZilNode {
         if self.token.is_none() {
             out.push_str("no token\n");
         } else {
-            out.push_str(&format!("token:\n  value: {}\n", self.token_val()));
+            out.push_str(&format!(
+                "token:\n  value: {}\n",
+                self.token_val().unwrap_or_default()
+            ));
         }
         if self.children.len() > 0 {
             out.push_str("has children\n");
@@ -99,8 +100,11 @@ impl ZilNode {
         self.children.len() > 0
     }
 
-    pub fn token_val(&self) -> String {
-        self.token.as_ref().unwrap().value.clone()
+    pub fn token_val(&self) -> Option<String> {
+        match self.token {
+            Some(ref t) => Some(t.value.clone()),
+            None => None,
+        }
     }
 
     pub fn get_first_token(&self) -> Option<&Token> {
@@ -122,6 +126,52 @@ impl ZilNode {
 }
 
 impl FileTableLocation for &ZilNode {
+    fn get_file_key(&self) -> FileKey {
+        match self.get_first_token() {
+            Some(token) => token.get_file_key(),
+            None => 0,
+        }
+    }
+
+    fn get_line_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_line_number(),
+            None => 0,
+        }
+    }
+
+    fn get_char_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_char_number(),
+            None => 0,
+        }
+    }
+}
+
+impl FileTableLocation for &mut ZilNode {
+    fn get_file_key(&self) -> FileKey {
+        match self.get_first_token() {
+            Some(token) => token.get_file_key(),
+            None => 0,
+        }
+    }
+
+    fn get_line_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_line_number(),
+            None => 0,
+        }
+    }
+
+    fn get_char_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_char_number(),
+            None => 0,
+        }
+    }
+}
+
+impl FileTableLocation for ZilNode {
     fn get_file_key(&self) -> FileKey {
         match self.get_first_token() {
             Some(token) => token.get_file_key(),

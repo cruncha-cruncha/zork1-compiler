@@ -5,13 +5,13 @@ use crate::zil::{file_table::format_file_location, node::ZilNode};
 
 use crate::stats::cross_ref::Populator;
 
-pub struct BuzzStats<'a> {
-    basis: Vec<&'a ZilNode>,
+pub struct BuzzStats {
+    basis: Vec<ZilNode>,
     pub all: HashSet<String>,
 }
 
-impl<'a> BuzzStats<'a> {
-    pub fn new() -> BuzzStats<'a> {
+impl BuzzStats {
+    pub fn new() -> BuzzStats {
         BuzzStats {
             basis: Vec::new(),
             all: HashSet::new(),
@@ -52,8 +52,8 @@ impl<'a> BuzzStats<'a> {
     }
 }
 
-impl<'a> Populator<'a> for BuzzStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
+impl Populator for BuzzStats {
+    fn add_node(&mut self, node: ZilNode) {
         self.basis.push(node);
     }
 

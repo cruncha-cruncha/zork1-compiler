@@ -17,8 +17,8 @@ use super::syntax::ILLEGAL;
 
 pub const UNDEFINED_LOC: &str = "NOWHERE";
 
-pub struct ObjectStats<'a> {
-    basis: HashMap<String, &'a ZilNode>,
+pub struct ObjectStats {
+    basis: HashMap<String, ZilNode>,
     pub info: HashMap<String, ObjectInfo>,
     pub groups: GroupCruncher,
 }
@@ -53,8 +53,8 @@ pub struct ObjectInfo {
     pub vtype: Option<String>,
 }
 
-impl<'a> ObjectStats<'a> {
-    pub fn new() -> ObjectStats<'a> {
+impl ObjectStats {
+    pub fn new() -> ObjectStats {
         ObjectStats {
             basis: HashMap::new(),
             info: HashMap::new(),
@@ -95,20 +95,17 @@ impl<'a> ObjectStats<'a> {
     }
 }
 
-impl<'a> Populator<'a> for ObjectStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_as_word(1, node);
+impl Populator for ObjectStats {
+    fn add_node(&mut self, node: ZilNode) {
+        let name = get_nth_child_as_word(1, &node);
         match name {
             Some(name) => {
                 if ILLEGAL.is_match(&name) {
                     panic!("Object node has illegal name {}", &name);
                 }
 
-                if self.basis.insert(name, node).is_some() {
-                    panic!(
-                        "Object node has duplicate name {}",
-                        get_nth_child_as_word(1, node).unwrap()
-                    );
+                if self.basis.insert(name.clone(), node).is_some() {
+                    panic!("Object node has duplicate name {}", name);
                 }
             }
             None => panic!("Object node has no name\n{}", format_file_location(&node)),
@@ -143,9 +140,9 @@ impl<'a> Populator<'a> for ObjectStats<'a> {
     }
 }
 
-impl<'a> Codex for ObjectStats<'a> {
+impl Codex for ObjectStats {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word).map(|n| *n)
+        self.basis.get(word)
     }
 }
 

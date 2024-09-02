@@ -15,9 +15,9 @@ use crate::stats::cross_ref::Codex;
 
 use super::syntax::ILLEGAL;
 
-pub struct RoomStats<'a> {
-    basis: HashMap<String, &'a ZilNode>,
-    pub info: HashMap<String, RoomInfo<'a>>,
+pub struct RoomStats {
+    basis: HashMap<String, ZilNode>,
+    pub info: HashMap<String, RoomInfo>,
     pub groups: GroupCruncher,
 }
 
@@ -32,7 +32,7 @@ pub struct GroupCruncher {
     pub pseudo_text: HashSet<String>, // not sure what these mean. Possibly fake objects? (like they take the place of objects in a SYNTAX)
 }
 
-pub struct RoomInfo<'a> {
+pub struct RoomInfo {
     pub name: String,
     pub action: Option<String>,
     pub desc: Option<String>,
@@ -41,7 +41,7 @@ pub struct RoomInfo<'a> {
     pub pseudo: Vec<Pseudo>,
     pub globals: HashSet<String>,
     pub value: Option<i32>,
-    pub directions: HashMap<String, Direction<'a>>,
+    pub directions: HashMap<String, Direction>,
 }
 
 pub struct Pseudo {
@@ -49,10 +49,10 @@ pub struct Pseudo {
     pub routine: String,
 }
 
-pub struct Direction<'a> {
+pub struct Direction {
     pub name: String,
     pub kind: DirectionType,
-    pub basis: &'a ZilNode,
+    pub basis: ZilNode,
 }
 
 #[derive(Clone, Copy)]
@@ -66,8 +66,8 @@ pub enum DirectionType {
     SIX,   // SW TO <ROOM> IF <OBJECT> IS OPEN ELSE <TEXT>
 }
 
-impl<'a> RoomStats<'a> {
-    pub fn new() -> RoomStats<'a> {
+impl RoomStats {
+    pub fn new() -> RoomStats {
         RoomStats {
             basis: HashMap::new(),
             groups: GroupCruncher::new(),
@@ -141,20 +141,17 @@ impl<'a> RoomStats<'a> {
     }
 }
 
-impl<'a> Populator<'a> for RoomStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_as_word(1, node);
+impl Populator for RoomStats {
+    fn add_node(&mut self, node: ZilNode) {
+        let name = get_nth_child_as_word(1, &node);
         match name {
             Some(name) => {
                 if ILLEGAL.is_match(&name) {
                     panic!("Room node has illegal name {}", &name);
                 }
 
-                if self.basis.insert(name, node).is_some() {
-                    panic!(
-                        "Room node has duplicate name {}",
-                        get_nth_child_as_word(1, node).unwrap()
-                    );
+                if self.basis.insert(name.clone(), node).is_some() {
+                    panic!("Room node has duplicate name {}", name);
                 }
             }
             None => panic!("Room node has no name\n{}", format_file_location(&node)),
@@ -192,13 +189,13 @@ impl<'a> Populator<'a> for RoomStats<'a> {
     }
 }
 
-impl<'a> Codex for RoomStats<'a> {
+impl Codex for RoomStats {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word).map(|n| *n)
+        self.basis.get(word)
     }
 }
 
-impl<'a> GroupCruncher {
+impl GroupCruncher {
     pub fn new() -> GroupCruncher {
         GroupCruncher {
             direction_names: HashSet::new(),
@@ -212,7 +209,7 @@ impl<'a> GroupCruncher {
         }
     }
 
-    pub fn munch(&mut self, node: &'a ZilNode) -> Result<RoomInfo<'a>, String> {
+    pub fn munch(&mut self, node: &ZilNode) -> Result<RoomInfo, String> {
         let mut out = RoomInfo::new();
 
         if node.children.len() < 2 {
@@ -472,7 +469,7 @@ impl<'a> GroupCruncher {
         Ok(out)
     }
 
-    pub fn parse_direction(&mut self, node: &'a ZilNode) -> Option<Direction<'a>> {
+    pub fn parse_direction(&mut self, node: &ZilNode) -> Option<Direction> {
         if node.children.len() < 2 {
             return None;
         }
@@ -485,7 +482,7 @@ impl<'a> GroupCruncher {
         };
 
         let mut out = Direction {
-            basis: node,
+            basis: node.clone(),
             name: name,
             kind: DirectionType::ZERO,
         };
@@ -613,8 +610,8 @@ impl<'a> GroupCruncher {
     }
 }
 
-impl<'a> RoomInfo<'a> {
-    pub fn new() -> RoomInfo<'a> {
+impl RoomInfo {
+    pub fn new() -> RoomInfo {
         RoomInfo {
             name: String::new(),
             action: None,

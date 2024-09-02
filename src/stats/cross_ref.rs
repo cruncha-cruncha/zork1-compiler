@@ -8,6 +8,7 @@ use crate::zil::{
 
 use super::{
     helpers::get_nth_child_as_word,
+    meta_handler::MetaHandler,
     top_level::{
         buzzi::BuzzStats, constants::ConstantStats, directions::DirectionStats,
         globals::GlobalStats, objects::ObjectStats, rooms::RoomStats, routines::RoutineStats,
@@ -16,8 +17,8 @@ use super::{
     weaver::Sigourney,
 };
 
-pub trait Populator<'a> {
-    fn add_node(&mut self, node: &'a ZilNode);
+pub trait Populator {
+    fn add_node(&mut self, node: ZilNode);
     fn crunch(&mut self) -> Result<(), String>;
     fn validate(&self, cross_ref: &CrossRef) -> Result<(), String>;
 }
@@ -26,24 +27,24 @@ pub trait Codex {
     fn lookup(&self, word: &str) -> Option<&ZilNode>;
 }
 
-pub struct CrossRef<'a> {
-    tree: &'a Tree,
-    pub globals: GlobalStats<'a>,
-    pub constants: ConstantStats<'a>,
-    pub directions: DirectionStats<'a>,
-    pub rooms: RoomStats<'a>,
-    pub objects: ObjectStats<'a>,
-    pub buzzi: BuzzStats<'a>,
-    pub routines: RoutineStats<'a>,
-    pub synonyms: SynonymStats<'a>,
-    pub syntax: SyntaxStats<'a>,
-    pub leftovers: Vec<&'a ZilNode>,
+pub struct CrossRef {
+    tree: Option<Tree>,
+    pub globals: GlobalStats,
+    pub constants: ConstantStats,
+    pub directions: DirectionStats,
+    pub rooms: RoomStats,
+    pub objects: ObjectStats,
+    pub buzzi: BuzzStats,
+    pub routines: RoutineStats,
+    pub synonyms: SynonymStats,
+    pub syntax: SyntaxStats,
+    pub others: Vec<ZilNode>,
 }
 
-impl<'a> CrossRef<'a> {
-    pub fn new(tree: &Tree) -> CrossRef {
+impl CrossRef {
+    pub fn new(tree: Tree) -> CrossRef {
         CrossRef {
-            tree,
+            tree: Some(tree),
             globals: GlobalStats::new(),
             constants: ConstantStats::new(),
             directions: DirectionStats::new(),
@@ -53,38 +54,40 @@ impl<'a> CrossRef<'a> {
             buzzi: BuzzStats::new(),
             synonyms: SynonymStats::new(),
             syntax: SyntaxStats::new(),
-            leftovers: Vec::new(),
+            others: Vec::new(),
         }
     }
 
     pub fn add_nodes(&mut self) {
-        let root = self.tree.get_root();
+        if self.tree.is_none() {
+            panic!("CrossRef has no tree");
+        }
 
-        for n in root.children.iter() {
+        let root = self.tree.take().unwrap().root;
+
+        for n in root.children.into_iter() {
             if n.node_type == ZilNodeType::Cluster {
-                match get_nth_child_as_word(0, n) {
+                match get_nth_child_as_word(0, &n) {
                     Some(name) => {
                         self.handle_named_cluster(n, name);
                     }
-                    None => self.leftovers.push(n),
+                    None => self.others.push(n),
                 }
             } else {
-                self.leftovers.push(n);
+                self.others.push(n);
             }
         }
 
-        if self.leftovers.len() > 0 {
+        if self.others.len() > 0 {
             let lim = 10;
 
-            for n in self.leftovers.iter().take(lim) {
-                println!("{}", format_file_location(n));
+            for n in self.others.iter().take(lim) {
+                println!("unknown top-level node at: {}", format_file_location(n));
             }
 
-            if self.leftovers.len() > lim {
+            if self.others.len() > lim {
                 println!("...");
             }
-
-            panic!("Leftover top-level nodes after initial pass");
         }
     }
 
@@ -133,13 +136,22 @@ impl<'a> CrossRef<'a> {
         Ok(())
     }
 
-    pub fn validate_routines(&self) -> Result<(), String> {
+    pub fn validate_routines(&mut self) -> Result<(), String> {
+        let meta_handler = MetaHandler::new();
+
+        let replaced_something = self.routines.resolve_meta_code(&meta_handler)?;
+
+        println!(
+            "resolved meta code, replaced_something: {}",
+            replaced_something
+        );
+
         let v = super::validate_recursive::Validator::new(self);
 
         self.routines.validate_recursive(&v)
     }
 
-    fn handle_named_cluster(&mut self, root: &'a ZilNode, name: String) {
+    fn handle_named_cluster(&mut self, root: ZilNode, name: String) {
         match name.as_str() {
             "ROOM" => self.rooms.add_node(root),
             "OBJECT" => self.objects.add_node(root),
@@ -150,7 +162,7 @@ impl<'a> CrossRef<'a> {
             "BUZZ" => self.buzzi.add_node(root),
             "SYNONYM" => self.synonyms.add_node(root),
             "SYNTAX" => self.syntax.add_node(root),
-            _ => self.leftovers.push(root),
+            _ => self.others.push(root),
         }
     }
 }

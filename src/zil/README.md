@@ -5,7 +5,7 @@ Tree nodes look like:
 ```
 pub struct ZilNode {
     pub node_type: ZilNodeType,
-    pub token: Option<Token>, // in general only leaf nodes will have a token
+    pub token: Option<Token>,    // in general only leaf nodes will have a token
     pub children: Vec<ZilNode>,
 }
 ```
@@ -18,6 +18,7 @@ pub enum ZilNodeType {
     Cluster,          // < ... >
     Group,            // ( ... )
     Token(TokenType), // leaf node, must have a token
+    Space,            // any whitespace outside of text
 }
 
 pub enum TokenType {
@@ -45,7 +46,7 @@ pub enum TokenType {
     RightParen, // )
     Text,       // " ... "
     Space,      // any whitespace outside of text
-    Word,       // anything else
+    Word,       // anything else, like V-SAVE or ,P?WEST or T
 }
 ```
 

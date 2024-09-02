@@ -1,8 +1,8 @@
-Takes a tree, starts to massage it. Does not modify the original tree (or take ownership of it's nodes). Every file (and corresponding struct) in ./top_level implements Populator, and may implement Codex.
+Takes ownership of a tree and breaks it down. Every file (and corresponding struct) in ./top_level implements Populator, and may implement Codex.
 
 ```
-pub trait Populator<'a> {
-    fn add_node(&mut self, node: &'a ZilNode);
+pub trait Populator {
+    fn add_node(&mut self, node: ZilNode);
     fn populate(&mut self) -> Result<(), String>;
     fn validate(&self, cross_ref: &CrossRef) -> Result<(), String>;
 }

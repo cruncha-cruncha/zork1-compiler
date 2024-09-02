@@ -39,8 +39,8 @@ static MAX_CMD_LENGTH: usize = 16;
 // first OBJECT is always PRSO
 // second OBJECT is always PRSI
 
-pub struct SyntaxStats<'a> {
-    basis: Vec<&'a ZilNode>,
+pub struct SyntaxStats {
+    basis: Vec<ZilNode>,
     pub all_syntax: HashMap<String, Vec<Vec<SyntaxType>>>,
     pub all_verbs: HashSet<String>,
     pub all_pres: HashSet<String>,
@@ -48,8 +48,8 @@ pub struct SyntaxStats<'a> {
     pub firsts: HashSet<String>,
 }
 
-impl<'a> SyntaxStats<'a> {
-    pub fn new() -> SyntaxStats<'a> {
+impl SyntaxStats {
+    pub fn new() -> SyntaxStats {
         SyntaxStats {
             basis: Vec::new(),
             all_syntax: HashMap::new(),
@@ -79,8 +79,8 @@ impl<'a> SyntaxStats<'a> {
     }
 }
 
-impl<'a> Populator<'a> for SyntaxStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
+impl Populator for SyntaxStats {
+    fn add_node(&mut self, node: ZilNode) {
         self.basis.push(node);
     }
 

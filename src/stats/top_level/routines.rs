@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::stats::cross_ref::Populator;
 use crate::stats::helpers::{get_nth_child_as_word, get_token_as_number, get_token_as_word};
+use crate::stats::meta_handler::MetaHandler;
 use crate::stats::validate_recursive::Validator;
 use crate::zil::node::{TokenType, ZilNodeType};
 use crate::zil::{file_table::format_file_location, node::ZilNode};
@@ -15,30 +16,29 @@ use once_cell::sync::Lazy;
 pub static ILLEGAL: Lazy<Regex> =
     Lazy::new(|| Regex::new(r#"[\;\.\,\"\'\%\}\{\[\]\|\_<>]"#).unwrap());
 
-pub struct RoutineStats<'a> {
-    basis: HashMap<String, &'a ZilNode>,
+pub struct RoutineStats {
+    basis: HashMap<String, ZilNode>,
     pub sub_names: HashSet<String>,
     pub args_as_routines: HashSet<String>,
     pub aux_as_routines: HashSet<String>,
-    pub info: HashMap<String, RoutineInfo<'a>>,
+    pub info: HashMap<String, RoutineInfo>,
 }
 
-pub struct RoutineInfo<'a> {
+pub struct RoutineInfo {
     pub name: String,
-    pub args: Vec<RoutineArg<'a>>,
-    pub optional: Vec<RoutineArg<'a>>,
-    pub aux: Vec<RoutineArg<'a>>,
-    pub body: Vec<&'a ZilNode>,
+    pub args: Vec<RoutineArg>,
+    pub optional: Vec<RoutineArg>,
+    pub aux: Vec<RoutineArg>,
 }
 
-pub struct RoutineArg<'a> {
+pub struct RoutineArg {
     pub name: String,
-    pub value: Option<ArgValue<'a>>,
+    pub value: Option<ArgValue>,
 }
 
-pub enum ArgValue<'a> {
+pub enum ArgValue {
     Empty,
-    Routine(&'a ZilNode),
+    Routine(ZilNode),
     Text(String),
     Word(String),
     Number(i32),
@@ -57,8 +57,8 @@ pub enum ArgValue<'a> {
 // routine with ("OPTIONAL" ...) declares optional arguments, and all must have a default value?
 // order of args must be: regular, optional, aux
 
-impl<'a> RoutineStats<'a> {
-    pub fn new() -> RoutineStats<'a> {
+impl RoutineStats {
+    pub fn new() -> RoutineStats {
         RoutineStats {
             basis: HashMap::new(),
             sub_names: HashSet::new(),
@@ -68,16 +68,25 @@ impl<'a> RoutineStats<'a> {
         }
     }
 
+    pub fn resolve_meta_code(&mut self, meta_handler: &MetaHandler) -> Result<bool, String> {
+        let mut replaced_something = false;
+
+        for (_k, n) in self.basis.iter_mut() {
+            let status = meta_handler.replace_meta_recursively(n);
+
+            if status.is_err() {
+                return status;
+            } else if status.unwrap_or_default() {
+                replaced_something = true;
+            }
+        }
+
+        Ok(replaced_something)
+    }
+
     pub fn validate_recursive(&self, v: &Validator) -> Result<(), String> {
         for (_k, n) in self.basis.iter() {
             for (i, c) in n.children.iter().skip(3).enumerate() {
-                // TODO: most children should be a cluster, except for:
-                // #DECL ( ... )
-                // %< ... >
-                // ... T>
-
-                // I don't think we should support #DECL, but the other two need to be handled
-
                 if c.node_type == ZilNodeType::Token(TokenType::Word) {
                     let name = get_token_as_word(c).unwrap();
 
@@ -111,66 +120,19 @@ impl<'a> RoutineStats<'a> {
 
         Ok(())
     }
-
-    // also finds args_as_routines and aux_as_routines
-    // we're missing routines used as default values in an arg, but should be good enough
-    fn find_sub_names(&mut self) -> Result<(), String> {
-        let mut top_sub_names: HashSet<String> = HashSet::new();
-
-        for (k, n) in self.basis.iter() {
-            let info = self.info.get(k).unwrap();
-
-            for c in n.children.iter().skip(3) {
-                let sub_names = recurse_sub_names(c)?;
-
-                for arg in info.args.iter() {
-                    if sub_names.contains(&arg.name) {
-                        self.args_as_routines.insert(arg.name.clone());
-                    }
-                }
-
-                for optional in info.optional.iter() {
-                    if sub_names.contains(&optional.name) {
-                        self.args_as_routines.insert(optional.name.clone());
-                    }
-                }
-
-                for aux in info.aux.iter() {
-                    if sub_names.contains(&aux.name) {
-                        self.aux_as_routines.insert(aux.name.clone());
-                    }
-                }
-
-                top_sub_names.extend(sub_names);
-            }
-        }
-
-        for s in top_sub_names.clone().iter() {
-            if self.basis.contains_key(s) {
-                top_sub_names.remove(s);
-            }
-        }
-
-        self.sub_names = top_sub_names;
-
-        Ok(())
-    }
 }
 
-impl<'a> Populator<'a> for RoutineStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_as_word(1, node);
+impl Populator for RoutineStats {
+    fn add_node(&mut self, node: ZilNode) {
+        let name = get_nth_child_as_word(1, &node);
         match name {
             Some(name) => {
                 if ILLEGAL.is_match(&name) {
                     panic!("Routine node has illegal name {}", &name);
                 }
 
-                if self.basis.insert(name, node).is_some() {
-                    panic!(
-                        "Routine node has duplicate name {}",
-                        get_nth_child_as_word(1, node).unwrap()
-                    );
+                if self.basis.insert(name.clone(), node).is_some() {
+                    panic!("Routine node has duplicate name {}", name);
                 }
             }
             None => panic!("Routine node has no name\n{}", format_file_location(&node)),
@@ -184,7 +146,6 @@ impl<'a> Populator<'a> for RoutineStats<'a> {
                 args: Vec::new(),
                 optional: Vec::new(),
                 aux: Vec::new(),
-                body: Vec::new(),
             };
 
             if n.children.len() <= 3 {
@@ -214,8 +175,6 @@ impl<'a> Populator<'a> for RoutineStats<'a> {
             self.info.insert(info.name.clone(), info);
         }
 
-        // self.find_sub_names()?;
-
         Ok(())
     }
 
@@ -224,9 +183,9 @@ impl<'a> Populator<'a> for RoutineStats<'a> {
     }
 }
 
-impl<'a> Codex for RoutineStats<'a> {
+impl Codex for RoutineStats {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word).map(|n| *n)
+        self.basis.get(word)
     }
 }
 
@@ -236,13 +195,13 @@ enum ArgMode {
     Aux,
 }
 
-struct ParsedArgs<'a> {
-    regular: Vec<RoutineArg<'a>>,
-    optional: Vec<RoutineArg<'a>>,
-    aux: Vec<RoutineArg<'a>>,
+struct ParsedArgs {
+    regular: Vec<RoutineArg>,
+    optional: Vec<RoutineArg>,
+    aux: Vec<RoutineArg>,
 }
 
-fn parse_args<'a>(node: &'a ZilNode) -> Result<ParsedArgs<'a>, String> {
+fn parse_args(node: &ZilNode) -> Result<ParsedArgs, String> {
     let mut mode = ArgMode::Regular;
     let mut out = ParsedArgs {
         regular: Vec::new(),
@@ -250,7 +209,7 @@ fn parse_args<'a>(node: &'a ZilNode) -> Result<ParsedArgs<'a>, String> {
         aux: Vec::new(),
     };
 
-    let mut add_arg_to_out = |mode: &ArgMode, arg: RoutineArg<'a>| match mode {
+    let mut add_arg_to_out = |mode: &ArgMode, arg: RoutineArg| match mode {
         ArgMode::Regular => out.regular.push(arg),
         ArgMode::Optional => out.optional.push(arg),
         ArgMode::Aux => out.aux.push(arg),
@@ -336,7 +295,7 @@ fn parse_args<'a>(node: &'a ZilNode) -> Result<ParsedArgs<'a>, String> {
                             // TODO: parse more?
                             arg = RoutineArg {
                                 name: name,
-                                value: Some(ArgValue::Routine(&c.children[1])),
+                                value: Some(ArgValue::Routine(c.children[1].clone())),
                             };
                         }
 

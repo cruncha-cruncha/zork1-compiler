@@ -15,34 +15,31 @@ use crate::stats::cross_ref::Codex;
 
 use super::syntax::ILLEGAL;
 
-pub struct SynonymStats<'a> {
-    basis: HashMap<String, &'a ZilNode>,
+pub struct SynonymStats {
+    basis: HashMap<String, ZilNode>,
     pub all_synonyms: HashSet<String>,
 }
 
-impl<'a> SynonymStats<'a> {
-    pub fn new() -> SynonymStats<'a> {
+impl SynonymStats {
+    pub fn new() -> SynonymStats {
         SynonymStats {
             basis: HashMap::new(),
             all_synonyms: HashSet::new(),
         }
     }
 
-    pub fn get_basis(&self) -> &HashMap<String, &'a ZilNode> {
+    pub fn get_basis(&self) -> &HashMap<String, ZilNode> {
         return &self.basis;
     }
 }
 
-impl<'a> Populator<'a> for SynonymStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_as_word(1, node);
+impl Populator for SynonymStats {
+    fn add_node(&mut self, node: ZilNode) {
+        let name = get_nth_child_as_word(1, &node);
         match name {
             Some(name) => {
-                if self.basis.insert(name, node).is_some() {
-                    panic!(
-                        "Synonym node has duplicate name {}",
-                        get_nth_child_as_word(1, node).unwrap()
-                    );
+                if self.basis.insert(name.clone(), node).is_some() {
+                    panic!("Synonym node has duplicate name {}", name);
                 }
             }
             None => panic!("Synonym node has no name\n{}", format_file_location(&node)),
@@ -92,8 +89,8 @@ impl<'a> Populator<'a> for SynonymStats<'a> {
     }
 }
 
-impl<'a> Codex for SynonymStats<'a> {
+impl Codex for SynonymStats {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word).map(|n| *n)
+        self.basis.get(word)
     }
 }

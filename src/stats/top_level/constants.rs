@@ -10,13 +10,13 @@ use crate::{
 
 use crate::stats::cross_ref::Codex;
 
-pub struct ConstantStats<'a> {
-    basis: HashMap<String, &'a ZilNode>,
+pub struct ConstantStats {
+    basis: HashMap<String, ZilNode>,
     pub values: HashMap<String, i32>,
 }
 
-impl<'a> ConstantStats<'a> {
-    pub fn new() -> ConstantStats<'a> {
+impl ConstantStats {
+    pub fn new() -> ConstantStats {
         ConstantStats {
             basis: HashMap::new(),
             values: HashMap::new(),
@@ -24,16 +24,13 @@ impl<'a> ConstantStats<'a> {
     }
 }
 
-impl<'a> Populator<'a> for ConstantStats<'a> {
-    fn add_node(&mut self, node: &'a ZilNode) {
-        let name = get_nth_child_as_word(1, node);
+impl Populator for ConstantStats {
+    fn add_node(&mut self, node: ZilNode) {
+        let name = get_nth_child_as_word(1, &node);
         match name {
             Some(name) => {
-                if self.basis.insert(name, node).is_some() {
-                    panic!(
-                        "Constant node has duplicate name {}",
-                        get_nth_child_as_word(1, node).unwrap()
-                    );
+                if self.basis.insert(name.clone(), node).is_some() {
+                    panic!("Constant node has duplicate name {}", name);
                 }
             }
             None => panic!("Constant node has no name\n{}", format_file_location(&node)),
@@ -106,8 +103,8 @@ impl<'a> Populator<'a> for ConstantStats<'a> {
     }
 }
 
-impl<'a> Codex for ConstantStats<'a> {
+impl Codex for ConstantStats {
     fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word).map(|n| *n)
+        self.basis.get(word)
     }
 }

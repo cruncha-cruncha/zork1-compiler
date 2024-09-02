@@ -17,7 +17,7 @@ pub struct DoubleEqualSignQ {}
 
 impl HasZilName for DoubleEqualSignQ {
     fn zil_name(&self) -> &'static str {
-        "<==?"
+        "==?"
     }
 }
 

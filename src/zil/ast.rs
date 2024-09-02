@@ -9,13 +9,7 @@ use super::{
 };
 
 pub struct Tree {
-    root: ZilNode,
-}
-
-impl Tree {
-    pub fn get_root(&self) -> &ZilNode {
-        &self.root
-    }
+    pub root: ZilNode,
 }
 
 #[allow(dead_code)]
@@ -33,10 +27,20 @@ fn print_tree_recursive(root: &ZilNode, offset: u64) {
     for n in root.children.iter() {
         match n.node_type {
             ZilNodeType::Token(_) => {
-                println!("{}{}: {}", spaces, n.node_type, n.token_val());
+                println!(
+                    "{}{}: {}",
+                    spaces,
+                    n.node_type,
+                    n.token_val().unwrap_or_default()
+                );
             }
             ZilNodeType::Cluster | ZilNodeType::Group => {
-                println!("{}{}", spaces, n.node_type);
+                println!(
+                    "{}{}{}",
+                    spaces,
+                    n.token_val().unwrap_or_default(),
+                    n.node_type
+                );
                 print_tree_recursive(n, offset + 1);
             }
             _ => (),
@@ -51,6 +55,8 @@ pub fn build_tree<'a>(tokens: &mut impl TokenGen) -> Result<Tree, ZilErr> {
         (_, Some(e)) => return Err(e),
         (_, None) => (),
     };
+
+    remove_whitespace(&mut root);
 
     match validate_tree(&root) {
         Ok(()) => (),
@@ -78,7 +84,16 @@ fn build_tree_recursively<'a>(
 
         match t.kind {
             TokenType::LeftArrow => {
-                let mut child = ZilNode::new(ZilNodeType::Cluster, t);
+                let mut child = ZilNode::new_no_token(ZilNodeType::Cluster);
+
+                if root.children.len() > 0 {
+                    let last_child = root.children.last_mut().unwrap();
+                    let word = get_token_as_word(last_child).unwrap_or_default();
+                    if word == "%" || word == "'" {
+                        child.token = last_child.token.take();
+                        root.children.pop();
+                    }
+                }
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightArrow) {
@@ -94,7 +109,16 @@ fn build_tree_recursively<'a>(
                 root.push_child(child);
             }
             TokenType::LeftParen => {
-                let mut child = ZilNode::new(ZilNodeType::Group, t);
+                let mut child = ZilNode::new_no_token(ZilNodeType::Group);
+
+                if root.children.len() > 0 {
+                    let last_child = root.children.last_mut().unwrap();
+                    let word = get_token_as_word(last_child).unwrap_or_default();
+                    if word == "'" {
+                        child.token = last_child.token.take();
+                        root.children.pop();
+                    }
+                }
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightParen) {
@@ -116,7 +140,6 @@ fn build_tree_recursively<'a>(
                 root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Text), t));
             }
             TokenType::Word => {
-                // determine if word is an integer
                 if word_is_integer(&t.value) {
                     root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Number), t));
                 } else {
@@ -124,7 +147,9 @@ fn build_tree_recursively<'a>(
                 }
             }
             TokenType::Space => {
-                // discard
+                // need to keep spaces while we're building the tree
+                // remove them immediately after
+                root.push_child(ZilNode::new(ZilNodeType::Space, t));
             }
         }
     }
@@ -152,10 +177,29 @@ fn validate_tree(root: &ZilNode) -> Result<(), ZilErr> {
                 let msg = format!("Unknown node: {}", n);
                 return Err(ZilErr::origin(msg));
             }
+            _ => (),
         }
     }
 
     Ok(())
+}
+
+fn remove_whitespace(root: &mut ZilNode) {
+    let mut whitespace_indices: Vec<usize> = Vec::new();
+
+    for (i, n) in root.children.iter().enumerate() {
+        if n.node_type == ZilNodeType::Space {
+            whitespace_indices.push(i);
+        }
+    }
+
+    for i in whitespace_indices.into_iter().rev() {
+        root.children.remove(i);
+    }
+
+    for n in root.children.iter_mut() {
+        remove_whitespace(n);
+    }
 }
 
 fn swallow_comments(root: &mut ZilNode) {

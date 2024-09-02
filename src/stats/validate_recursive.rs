@@ -25,12 +25,12 @@ pub trait CanValidate: HasZilName {
 }
 
 pub struct Validator<'a> {
-    cross_ref: &'a CrossRef<'a>,
-    router: HashMap<&'static str, Box<dyn CanValidate>>,
+    pub cross_ref: &'a CrossRef,
+    pub router: HashMap<&'static str, Box<dyn CanValidate>>,
 }
 
 impl<'a> Validator<'a> {
-    pub fn new(cross_ref: &'a CrossRef<'a>) -> Validator<'a> {
+    pub fn new(cross_ref: &'a CrossRef) -> Validator<'a> {
         Validator {
             cross_ref,
             router: Self::build_router(),
@@ -197,9 +197,6 @@ impl<'a> Validator<'a> {
     }
 
     pub fn validate_cluster(&self, n: &ZilNode) -> Result<(), String> {
-        // TODO: handle special %< ... > which can appear anywhere
-        // we can have '< ... > inside here, but nowhere else
-
         if n.node_type != ZilNodeType::Cluster {
             return Err(format!(
                 "Node is not a cluster in validate_cluster\n{}",

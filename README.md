@@ -1,6 +1,6 @@
 # zork1-compiler
 
-This is actually a transpiler but I didn't know that word when I started the project. Takes zil (zork implementation language) source code and converts it to js, doing some mild error checking in the process. It uses a recursive-descent parser (maybe).
+This is actually a mix between a compiler and a transpiler but I didn't know that word when I started the project. Takes zil (zork implementation language) source code and converts it to js, doing some mild error checking in the process. It uses a recursive-descent parser (maybe).
 
 There are three steps:
 
