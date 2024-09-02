@@ -1,131 +1,195 @@
-use std::error::Error;
 use std::fmt;
 
-use crate::zil::tokenize::*;
+use super::{
+    file_table::{FileKey, FileTableLocation},
+    token::Token,
+};
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ZilNodeType {
     Unknown,
-    Routine,
-    Grouping,
-    Comment,
-    Text,
-    Word
+    Cluster,
+    Group,
+    Token(TokenType),
+    Space,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum TokenType {
+    Text,
+    Word,
+    Number,
+}
+
+impl fmt::Display for ZilNodeType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_str())
+    }
+}
+
+impl ZilNodeType {
+    pub fn to_str(&self) -> String {
+        match *self {
+            ZilNodeType::Unknown => "UNKNOWN".to_string(),
+            ZilNodeType::Cluster => "CLUSTER".to_string(),
+            ZilNodeType::Group => "GROUP".to_string(),
+            ZilNodeType::Token(t) => match t {
+                TokenType::Text => "TOKEN(TEXT)".to_string(),
+                TokenType::Word => "TOKEN(WORD)".to_string(),
+                TokenType::Number => "TOKEN(NUMBER)".to_string(),
+            },
+            ZilNodeType::Space => "SPACE".to_string(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct ZilNode {
-    pub tokens: Vec<Token>,
+    pub node_type: ZilNodeType,
+    pub token: Option<Token>,
     pub children: Vec<ZilNode>,
 }
 
 impl fmt::Display for ZilNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut out = String::new();
-        for t in &self.tokens {
-            out.push_str(&format!("  Token: kind: {:>10}, value: {:>8}, file_key: {:>3}, line: {:>5}\n", &t.kind, &t.value, &t.line_number, &t.file_key));
+        out.push_str(&format!("kind: {}\n", self.node_type));
+        if self.token.is_none() {
+            out.push_str("no token\n");
+        } else {
+            out.push_str(&format!(
+                "token:\n  value: {}\n",
+                self.token_val().unwrap_or_default()
+            ));
+        }
+        if self.children.len() > 0 {
+            out.push_str("has children\n");
+        } else {
+            out.push_str("no children\n");
         }
         write!(f, "ZilNode\n{}", out)
     }
 }
 
 impl ZilNode {
-    pub fn new() -> ZilNode {
-        return ZilNode {tokens: Vec::new(), children: Vec::new()};
+    pub fn new(node_type: ZilNodeType, token: Token) -> ZilNode {
+        return ZilNode {
+            node_type,
+            token: Some(token),
+            children: Vec::new(),
+        };
     }
 
-    pub fn push_token(&mut self, t: Token) {
-        self.tokens.push(t);
+    pub fn new_no_token(node_type: ZilNodeType) -> ZilNode {
+        return ZilNode {
+            node_type,
+            token: None,
+            children: Vec::new(),
+        };
     }
 
-    pub fn kind(&self) -> ZilNodeType {
-        if self.is_routine() {
-            ZilNodeType::Routine
-        } else if self.is_grouping() {
-            ZilNodeType::Grouping
-        } else if self.is_comment() {
-            ZilNodeType::Comment
-        } else if self.is_text() {
-            ZilNodeType::Text
-        } else if self.is_word() {
-            ZilNodeType::Word
-        } else {
-            ZilNodeType::Unknown
-        }
-    }
-
-    pub fn push_child(&mut self, n: ZilNode) { 
+    pub fn push_child(&mut self, n: ZilNode) {
         self.children.push(n);
     }
 
-    pub fn is_routine(&self) -> bool {
-        self.tokens.len() == 2 &&
-        self.tokens[0].kind == TokenType::LeftArrow &&
-        self.tokens[1].kind == TokenType::RightArrow
-    }
-
-    pub fn is_grouping(&self) -> bool {
-        self.tokens.len() == 2 &&
-        self.tokens[0].kind == TokenType::LeftParen &&
-        self.tokens[1].kind == TokenType::RightParen
-    }
-
-    pub fn is_comment(&self) -> bool {
-        self.tokens.len() == 1 &&
-        self.tokens[0].kind == TokenType::Comment
-    }
-
-    pub fn is_text(&self) -> bool {
-        self.tokens.len() == 1 &&
-        self.tokens[0].kind == TokenType::Text
-    }
-
-    pub fn is_word(&self) -> bool {
-        self.tokens.len() == 1 &&
-        self.tokens[0].kind == TokenType::Word
+    pub fn has_token(&self) -> bool {
+        !self.token.is_none()
     }
 
     pub fn has_children(&self) -> bool {
         self.children.len() > 0
     }
+
+    pub fn token_val(&self) -> Option<String> {
+        match self.token {
+            Some(ref t) => Some(t.value.clone()),
+            None => None,
+        }
+    }
+
+    pub fn get_first_token(&self) -> Option<&Token> {
+        if !self.token.is_none() {
+            return self.token.as_ref();
+        }
+
+        for c in self.children.iter() {
+            match c.get_first_token() {
+                Some(t) => {
+                    return Some(t);
+                }
+                None => (),
+            }
+        }
+
+        None
+    }
 }
 
-#[derive(Debug)]
-pub struct ZilErr {
-  msg: String,
-  from: Option<Box<ZilErr>>
+impl FileTableLocation for &ZilNode {
+    fn get_file_key(&self) -> FileKey {
+        match self.get_first_token() {
+            Some(token) => token.get_file_key(),
+            None => 0,
+        }
+    }
+
+    fn get_line_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_line_number(),
+            None => 0,
+        }
+    }
+
+    fn get_char_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_char_number(),
+            None => 0,
+        }
+    }
 }
 
-impl fmt::Display for ZilErr {
-  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    match &self.from {
-      Some(b) => { write!(f, "{}", *b)?; },
-      None => ()
+impl FileTableLocation for &mut ZilNode {
+    fn get_file_key(&self) -> FileKey {
+        match self.get_first_token() {
+            Some(token) => token.get_file_key(),
+            None => 0,
+        }
     }
-    write!(f, "{}", self.msg)
-  }
+
+    fn get_line_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_line_number(),
+            None => 0,
+        }
+    }
+
+    fn get_char_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_char_number(),
+            None => 0,
+        }
+    }
 }
 
-impl Error for ZilErr {
-  fn source(&self) -> Option<&(dyn Error + 'static)> {
-    match &self.from {
-      Some(b) => Some(b),
-      None => None
+impl FileTableLocation for ZilNode {
+    fn get_file_key(&self) -> FileKey {
+        match self.get_first_token() {
+            Some(token) => token.get_file_key(),
+            None => 0,
+        }
     }
-  }
-}
 
-impl ZilErr {
-  pub fn origin<S: Into<String>>(msg: S) -> ZilErr {
-    ZilErr {
-      msg: msg.into(),
-      from: None
+    fn get_line_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_line_number(),
+            None => 0,
+        }
     }
-  }
 
-  pub fn wrap<S: Into<String>>(from: ZilErr, msg: S) -> ZilErr {
-    ZilErr {
-      msg: msg.into(),
-      from: Some(Box::new(from))
+    fn get_char_number(&self) -> u64 {
+        match self.get_first_token() {
+            Some(token) => token.get_char_number(),
+            None => 0,
+        }
     }
-  }
 }

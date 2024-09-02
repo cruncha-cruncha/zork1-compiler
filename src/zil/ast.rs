@@ -1,161 +1,228 @@
-use std::error::Error;
-use std::io;
+use crate::{stats::helpers::get_token_as_word, zil::node::TokenType as NodeTokenType};
 
-use crate::zil::tokenize::*;
-use crate::zil::node::*;
+use super::{
+    error::ZilErr,
+    file_table::format_file_location,
+    node::{ZilNode, ZilNodeType},
+    token::{word_is_integer, TokenType},
+    token_gen::TokenGen,
+};
 
-pub fn print_tree(root: &ZilNode, depth: u64) {
+pub struct Tree {
+    pub root: ZilNode,
+}
+
+#[allow(dead_code)]
+pub fn print(root: &ZilNode) {
+    print_tree_recursive(root, 0);
+}
+
+fn print_tree_recursive(root: &ZilNode, offset: u64) {
     let spacer = String::from("  ");
-    let mut out = String::new();
-    for _ in 0..depth {
-        out.push_str(&spacer);
+    let mut spaces = String::new();
+    for _ in 0..offset {
+        spaces.push_str(&spacer);
     }
-    for t in root.tokens.iter() {
-        out.push_str(&t.value);
-        out.push_str(", ");
-    }   
-    println!("{}", out);
+
     for n in root.children.iter() {
-        print_tree(n, depth+1);
+        match n.node_type {
+            ZilNodeType::Token(_) => {
+                println!(
+                    "{}{}: {}",
+                    spaces,
+                    n.node_type,
+                    n.token_val().unwrap_or_default()
+                );
+            }
+            ZilNodeType::Cluster | ZilNodeType::Group => {
+                println!(
+                    "{}{}{}",
+                    spaces,
+                    n.token_val().unwrap_or_default(),
+                    n.node_type
+                );
+                print_tree_recursive(n, offset + 1);
+            }
+            _ => (),
+        }
     }
 }
 
-pub fn build_tree(mut tokens: &mut TokenGenerator, mut root: &mut ZilNode) -> Result<(), Box<dyn Error>> {
-    match build_tree_recursively(&mut tokens, &mut root) {
-        Some(e) => return Err(Box::new(e)),
-        None => ()
-    };  
+pub fn build_tree<'a>(tokens: &mut impl TokenGen) -> Result<Tree, ZilErr> {
+    let mut root = ZilNode::new_no_token(ZilNodeType::Unknown);
 
-    match validate_tree(&root, 0) {
-        Ok(()) => (),
-        Err(e) => return Err(Box::new(e))
-    }
-
-    match remove_comments(&mut root) {
-        Some(e) => return Err(Box::new(e)),
-        None => ()
+    match build_tree_recursively(tokens, &mut root) {
+        (_, Some(e)) => return Err(e),
+        (_, None) => (),
     };
 
-    retain_child_routines(&mut root);
+    remove_whitespace(&mut root);
 
-    remove_newlines(&mut root);
+    match validate_tree(&root) {
+        Ok(()) => (),
+        Err(e) => return Err(e),
+    }
 
-    Ok(())
+    swallow_comments(&mut root);
+
+    Ok(Tree { root: root })
 }
 
-fn build_tree_recursively(tokens: &mut TokenGenerator, root: &mut ZilNode) -> Option<io::Error> {
+fn build_tree_recursively<'a>(
+    tokens: &'a mut impl TokenGen,
+    root: &mut ZilNode,
+) -> (Option<TokenType>, Option<ZilErr>) {
     loop {
         let t = match tokens.next() {
             Some(Ok(v)) => v,
-            Some(Err(e)) => return Some(e),
-            None => return None,
+            Some(Err(e)) => {
+                let msg = format!("Unable to get next token: {}", e);
+                return (None, Some(ZilErr::origin(msg)));
+            }
+            None => return (None, None),
         };
 
         match t.kind {
-            TokenType::LeftArrow | TokenType::LeftParen => {
-                let mut child = ZilNode::new();
-                child.push_token(t);
-                build_tree_recursively(tokens, &mut child);
+            TokenType::LeftArrow => {
+                let mut child = ZilNode::new_no_token(ZilNodeType::Cluster);
+
+                if root.children.len() > 0 {
+                    let last_child = root.children.last_mut().unwrap();
+                    let word = get_token_as_word(last_child).unwrap_or_default();
+                    if word == "%" || word == "'" {
+                        child.token = last_child.token.take();
+                        root.children.pop();
+                    }
+                }
+
+                let (token_type, err) = build_tree_recursively(tokens, &mut child);
+                if token_type != Some(TokenType::RightArrow) {
+                    let msg = format!(
+                        "Routine does not end with RightArrow\n{}",
+                        format_file_location(tokens)
+                    );
+                    return (None, Some(ZilErr::origin(msg)));
+                } else if err.is_some() {
+                    return (None, err);
+                }
+
                 root.push_child(child);
-            },
+            }
+            TokenType::LeftParen => {
+                let mut child = ZilNode::new_no_token(ZilNodeType::Group);
+
+                if root.children.len() > 0 {
+                    let last_child = root.children.last_mut().unwrap();
+                    let word = get_token_as_word(last_child).unwrap_or_default();
+                    if word == "'" {
+                        child.token = last_child.token.take();
+                        root.children.pop();
+                    }
+                }
+
+                let (token_type, err) = build_tree_recursively(tokens, &mut child);
+                if token_type != Some(TokenType::RightParen) {
+                    let msg = format!(
+                        "Group does not end with RightParen\n{}",
+                        format_file_location(tokens)
+                    );
+                    return (None, Some(ZilErr::origin(msg)));
+                } else if err.is_some() {
+                    return (None, err);
+                }
+
+                root.push_child(child);
+            }
             TokenType::RightArrow | TokenType::RightParen => {
-                root.push_token(t);
-                return None;
-            },
-            TokenType::Comment => {
-                let mut child = ZilNode::new();
-                child.push_token(t);
-                root.push_child(child);
-            },
-            TokenType::Text | TokenType::Word => {
-                let mut child = ZilNode::new();
-                child.push_token(t);
-                root.push_child(child);
+                return (Some(t.kind), None);
+            }
+            TokenType::Text => {
+                root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Text), t));
+            }
+            TokenType::Word => {
+                if word_is_integer(&t.value) {
+                    root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Number), t));
+                } else {
+                    root.push_child(ZilNode::new(ZilNodeType::Token(NodeTokenType::Word), t));
+                }
+            }
+            TokenType::Space => {
+                // need to keep spaces while we're building the tree
+                // remove them immediately after
+                root.push_child(ZilNode::new(ZilNodeType::Space, t));
             }
         }
     }
 }
 
-fn validate_tree(root: &ZilNode, depth: u64) -> Result<(), ZilErr> {
+fn validate_tree(root: &ZilNode) -> Result<(), ZilErr> {
     for n in root.children.iter() {
-        match validate_tree(n, depth+1) {
-            Ok(()) => (),
-            Err(e) => return Err(ZilErr::wrap(e, format!("from {}", n)))
-        };
-    }
+        match n.node_type {
+            ZilNodeType::Token(_) => {
+                if n.has_children() {
+                    let msg = format!("Token node has children: {}", n);
+                    return Err(ZilErr::origin(msg));
+                }
 
-    match root.tokens.len() {
-        0 => {
-            if depth != 0 {
-                return Err(ZilErr::origin("Root ZilNode has no tokens.\n"));
+                if !n.has_token() {
+                    let msg = format!("Token node has no token: {}", n);
+                    return Err(ZilErr::origin(msg));
+                }
             }
-        },
-        1 => {
-            match root.tokens[0].kind {
-                TokenType::Text | TokenType::Word | TokenType::Comment => {
-                    if root.children.len() > 0 {
-                        return Err(ZilErr::origin(format!("Text, Word, or Comment ZilNode has children.\nAt {}", root)));
-                    }
-                },
-                _ => return Err(ZilErr::origin(format!("Root ZilNode has only one token but it's not Text, Word, or Comment.\nAt {}", root))),
+            ZilNodeType::Cluster | ZilNodeType::Group => match validate_tree(n) {
+                Ok(()) => (),
+                Err(e) => return Err(e),
+            },
+            ZilNodeType::Unknown => {
+                let msg = format!("Unknown node: {}", n);
+                return Err(ZilErr::origin(msg));
             }
-        },
-        2 => {
-            match (root.tokens[0].kind, root.tokens[1].kind) {
-                (TokenType::LeftArrow, TokenType::RightArrow) => {
-                    if root.children.len() != 0 && !root.children[0].is_word() {
-                        return Err(ZilErr::origin(format!("Routine is not empty but does not start with a Word.\nAt {}", root)));
-                    }
-                },
-                (TokenType::LeftParen, TokenType::RightParen) => (),
-                _ => return Err(ZilErr::origin(format!("Root ZilNode has two tokens but is not Routine or Grouping.\nAt {}", root))),
-            }
-        },
-        x => return Err(ZilErr::origin(format!("Root ZilNode has {} tokens; that's too many.\nAt {}", x, root))),
+            _ => (),
+        }
     }
 
     Ok(())
 }
 
-fn remove_comments(root: &mut ZilNode) -> Option<ZilErr> {
-    let mut to_remove = Vec::new();
+fn remove_whitespace(root: &mut ZilNode) {
+    let mut whitespace_indices: Vec<usize> = Vec::new();
+
     for (i, n) in root.children.iter().enumerate() {
-        if n.is_comment() {
-            to_remove.push(i);
-            to_remove.push(i+1);
+        if n.node_type == ZilNodeType::Space {
+            whitespace_indices.push(i);
         }
     }
-    for i in to_remove.iter().rev() {
-        if root.children.len() <= *i {
-            return Some(ZilErr::origin("Unable to remove comments: unexpected tree structure"));
-        }
-        root.children.remove(*i);
+
+    for i in whitespace_indices.into_iter().rev() {
+        root.children.remove(i);
     }
-    for i in 0..root.children.len() {
-        match remove_comments(&mut root.children[i]) {
-            Some(e) => return Some(e),
-            None => ()
-        }
+
+    for n in root.children.iter_mut() {
+        remove_whitespace(n);
     }
-    None
 }
 
-// at the top level, we only care about things inside a <>
-fn retain_child_routines(root: &mut ZilNode) {
-    root.children.retain(|n| n.is_routine());
-}
+fn swallow_comments(root: &mut ZilNode) {
+    let mut comment_indices: Vec<usize> = Vec::new();
 
-fn remove_newlines(root: &mut ZilNode) {
-    let mut to_remove = Vec::new();
+    let marker = String::from(";");
+
     for (i, n) in root.children.iter().enumerate() {
-        if n.is_word() && n.tokens[0].value == String::from('\n') {
-            to_remove.push(i);
+        if n.node_type == ZilNodeType::Token(NodeTokenType::Word)
+            && get_token_as_word(n).unwrap_or_default() == marker
+        {
+            comment_indices.push(i);
         }
     }
-    for i in to_remove.iter().rev() {
-        root.children.remove(*i);
+
+    for i in comment_indices.into_iter().rev() {
+        if root.children.len() >= i + 2 {
+            root.children.remove(i + 1);
+        }
+        root.children.remove(i);
     }
-    for i in 0..root.children.len() {
-        remove_newlines(&mut root.children[i]);
+
+    for n in root.children.iter_mut() {
+        swallow_comments(n);
     }
 }

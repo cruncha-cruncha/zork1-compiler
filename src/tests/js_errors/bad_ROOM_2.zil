@@ -1,2 +1,0 @@
-<ROOM KITCHEN
-      (VALUE X)>
