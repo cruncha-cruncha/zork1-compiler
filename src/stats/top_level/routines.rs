@@ -69,6 +69,8 @@ impl RoutineStats {
     }
 
     pub fn resolve_meta_code(&mut self, meta_handler: &MetaHandler) -> Result<bool, String> {
+        // Meta code is not currently supported, just take the first option available
+
         let mut replaced_something = false;
 
         for (_k, n) in self.basis.iter_mut() {
@@ -84,6 +86,34 @@ impl RoutineStats {
         Ok(replaced_something)
     }
 
+    pub fn remove_decls(&mut self) {
+        // Not supported and never will be, just remove them
+
+        for (_k, n) in self.basis.iter_mut() {
+            let mut i = 0;
+
+            while i < n.children.len() {
+                if n.children[i].node_type == ZilNodeType::Token(TokenType::Word) {
+                    let name = get_token_as_word(&n.children[i]).unwrap();
+
+                    if name == "#DECL" {
+                        n.children.remove(i);
+
+                        if (i + 1) < n.children.len()
+                            && n.children[i].node_type == ZilNodeType::Group
+                        {
+                            n.children.remove(i);
+                        }
+                    } else {
+                        i += 1;
+                    }
+                } else {
+                    i += 1;
+                }
+            }
+        }
+    }
+
     pub fn validate_recursive(&self, v: &Validator) -> Result<(), String> {
         for (_k, n) in self.basis.iter() {
             for (i, c) in n.children.iter().skip(3).enumerate() {
@@ -91,12 +121,6 @@ impl RoutineStats {
                     let name = get_token_as_word(c).unwrap();
 
                     match name.as_str() {
-                        "#DECL" => {
-                            return Err(format!(
-                                "Routine node has #DECL child. This is not currently supported\n{}",
-                                format_file_location(&c)
-                            ));
-                        }
                         "T" => {
                             if i + 1 != n.children.len() {
                                 return Err(format!(

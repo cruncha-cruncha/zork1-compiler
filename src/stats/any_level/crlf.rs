@@ -14,7 +14,7 @@ impl HasZilName for Crlf {
 }
 
 impl CanValidate for Crlf {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
+    fn validate(&self, n: &ZilNode, _v: &Validator) -> Result<(), String> {
         if n.children.len() != 1 {
             return Err(format!(
                 "CRLF node does not have one child\n{}",

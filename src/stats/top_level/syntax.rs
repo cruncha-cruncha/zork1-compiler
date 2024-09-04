@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::{
     stats::{cross_ref::Codex, helpers::get_token_as_word},
@@ -41,7 +41,7 @@ static MAX_CMD_LENGTH: usize = 16;
 
 pub struct SyntaxStats {
     basis: Vec<ZilNode>,
-    pub all_syntax: HashMap<String, Vec<Vec<SyntaxType>>>,
+    pub all_syntax: Vec<Vec<SyntaxType>>,
     pub all_verbs: HashSet<String>,
     pub all_pres: HashSet<String>,
     pub prepositions: HashSet<String>,
@@ -52,7 +52,7 @@ impl SyntaxStats {
     pub fn new() -> SyntaxStats {
         SyntaxStats {
             basis: Vec::new(),
-            all_syntax: HashMap::new(),
+            all_syntax: Vec::new(),
             all_verbs: HashSet::new(),
             all_pres: HashSet::new(),
             prepositions: HashSet::new(),
@@ -195,40 +195,43 @@ impl Populator for SyntaxStats {
     fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
         self.validate_actions(&cross_ref.routines)?;
 
+        // there could be more in here
+
         Ok(())
     }
 }
 
-pub struct WhatWhat<'a> {
+struct WhatWhat<'a> {
     cmd: Vec<&'a ZilNode>,
     action: Vec<&'a ZilNode>,
 }
 
+#[derive(Clone, Debug)]
 pub enum SyntaxType {
-    Action(Action),
     Cmd(Cmd),
     Object(Object),
+    Action(Action),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Cmd {
     pub name: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Object {
     pub find: Option<String>,
     pub restrictions: Vec<String>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Action {
     pub verb: String,
     pub pre: Option<String>,
 }
 
 fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
-    let mut all_syntax: HashMap<String, Vec<Vec<SyntaxType>>> = HashMap::new();
+    let mut all_syntax: Vec<Vec<SyntaxType>> = Vec::new();
     let mut all_verbs: HashSet<String> = HashSet::new();
     let mut all_pres: HashSet<String> = HashSet::new();
     let mut prepositions: HashSet<String> = HashSet::new();
@@ -319,7 +322,7 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
         // build cmd
         let mut find: Option<String> = None;
         let mut restrictions: Vec<String> = Vec::new();
-        for i in (1..what.cmd.len()).rev() {
+        for i in (0..what.cmd.len()).rev() {
             let child = what.cmd[i];
             match child.node_type {
                 ZilNodeType::Group => {
@@ -382,31 +385,8 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
             }
         }
 
-        match what.cmd[0].node_type {
-            ZilNodeType::Token(TokenType::Word) => {
-                let name = get_token_as_word(what.cmd[0]).unwrap();
-                if name == "OBJECT" {
-                    return Err(format!(
-                        "Syntax node has OBJECT as first child\n{}",
-                        format_file_location(&what.cmd[0])
-                    ));
-                }
-
-                commands.insert(0, SyntaxType::Cmd(Cmd { name: name }));
-            }
-            _ => unreachable!(),
-        }
-
-        // save to all_syntax
         match &commands[0] {
-            SyntaxType::Cmd(_) => {
-                let key = get_command_key(&commands);
-                if all_syntax.contains_key(&key) {
-                    all_syntax.get_mut(&key).unwrap().push(commands);
-                } else {
-                    all_syntax.insert(key, vec![commands]);
-                }
-            }
+            SyntaxType::Cmd(_) => (),
             _ => {
                 return Err(format!(
                     "Syntax node doesn't have a command as first child\n{}",
@@ -414,6 +394,8 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
                 ));
             }
         }
+
+        all_syntax.push(commands);
     }
 
     Ok(Built {
@@ -425,27 +407,10 @@ fn build<'a>(whats: &Vec<WhatWhat<'a>>) -> Result<Built, String> {
 }
 
 pub struct Built {
-    all_syntax: HashMap<String, Vec<Vec<SyntaxType>>>,
+    all_syntax: Vec<Vec<SyntaxType>>,
     all_verbs: HashSet<String>,
     all_pres: HashSet<String>,
     prepositions: HashSet<String>,
-}
-
-fn get_command_key(commands: &Vec<SyntaxType>) -> String {
-    let mut out = String::new();
-    for cmd in commands.iter() {
-        match cmd {
-            SyntaxType::Action(_) => (),
-            SyntaxType::Cmd(cmd) => {
-                out.push_str(&format!("_{}", cmd.name));
-            }
-            SyntaxType::Object(_) => {
-                out.push_str("_OBJECT");
-            }
-        }
-    }
-
-    out
 }
 
 impl Action {

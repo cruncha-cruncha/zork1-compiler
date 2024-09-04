@@ -14,7 +14,7 @@ impl HasZilName for Rtrue {
 }
 
 impl CanValidate for Rtrue {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
+    fn validate(&self, n: &ZilNode, _v: &Validator) -> Result<(), String> {
         if n.children.len() > 1 {
             return Err(format!(
                 "RTRUE node has more than one child\n{}",

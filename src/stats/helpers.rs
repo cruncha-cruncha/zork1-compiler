@@ -26,3 +26,14 @@ pub fn get_token_as_number(node: &ZilNode) -> Option<i32> {
         Err(_) => None,
     }
 }
+
+pub fn contain_same_elements<T>(a: &[T], b: &[T]) -> bool
+where
+    T: PartialEq,
+{
+    // if items need to be in the same order:
+    // a.len() == b.len() && a.iter().zip(b.iter()).all(|(a, b)| a == b)
+
+    // this is fine for small vectors, but it's better to use a HashSet for larger ones
+    a.len() == b.len() && a.iter().all(|item| b.contains(item))
+}

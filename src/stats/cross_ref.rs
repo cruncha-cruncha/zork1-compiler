@@ -146,6 +146,8 @@ impl CrossRef {
             replaced_something
         );
 
+        self.routines.remove_decls();
+
         let v = super::validate_recursive::Validator::new(self);
 
         self.routines.validate_recursive(&v)

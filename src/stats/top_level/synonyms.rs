@@ -17,14 +17,14 @@ use super::syntax::ILLEGAL;
 
 pub struct SynonymStats {
     basis: HashMap<String, ZilNode>,
-    pub all_synonyms: HashSet<String>,
+    pub all_synonyms: HashMap<String, Vec<String>>,
 }
 
 impl SynonymStats {
     pub fn new() -> SynonymStats {
         SynonymStats {
             basis: HashMap::new(),
-            all_synonyms: HashSet::new(),
+            all_synonyms: HashMap::new(),
         }
     }
 
@@ -70,14 +70,27 @@ impl Populator for SynonymStats {
                         format_file_location(&c)
                     ));
                 }
+            }
 
-                if !self.all_synonyms.insert(val) {
+            let substitutes: Vec<String> = n
+                .children
+                .iter()
+                .skip(2)
+                .map(|c| get_token_as_word(c).unwrap())
+                .collect();
+
+            match self
+                .all_synonyms
+                .insert(get_token_as_word(&n.children[1]).unwrap(), substitutes)
+            {
+                Some(_) => {
                     return Err(format!(
                         "Synonym node has duplicate synonym {}\n{}",
-                        get_token_as_word(c).unwrap(),
-                        format_file_location(&c)
+                        get_token_as_word(&n.children[1]).unwrap(),
+                        format_file_location(&n)
                     ));
                 }
+                None => (),
             }
         }
 

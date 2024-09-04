@@ -46,7 +46,7 @@ impl GlobalStats {
             }
         };
 
-        if name != "TABLE" && name != "LTABLE" {
+        if name != "TABLE" && name != "LTABLE" && name != "ITABLE" {
             return Err(format!(
                 "Global node has a bad child cluster\n{}",
                 format_file_location(&node)
@@ -104,7 +104,7 @@ impl GlobalStats {
                 }
                 _ => {
                     return Err(format!(
-                        "Global node has a bad child cluster\n{}",
+                        "Global node has a bad child cluster node type\n{}",
                         format_file_location(&node)
                     ));
                 }

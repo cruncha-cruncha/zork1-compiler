@@ -1,41 +1,103 @@
-<ROUTINE SAILOR-FCN ()
-	  <COND (<VERB? TELL>
-		 <SETG P-CONT <>>
-		 <SETG QUOTE-FLAG <>>
-		 <TELL "You can't talk to the sailor that way." CR>)
-		(<VERB? EXAMINE>
-		 %<COND (<==? ,ZORK-NUMBER 3>
-			 '<COND (<NOT <FSET? ,VIKING-SHIP ,INVISIBLE>>
-				 <TELL
-"He looks like a sailor." CR>
-				 <RTRUE>)>)
-			(ELSE T)>
-		 <TELL
-"There is no sailor to be seen." CR>)
-		(<VERB? HELLO>
-		 <SETG HS <+ ,HS 1>>
-		 %<COND (<==? ,ZORK-NUMBER 3>
-			 '<COND (<NOT <FSET? ,VIKING-SHIP ,INVISIBLE>>
-		                 <TELL
-"The seaman looks up and maneuvers the boat toward shore. He cries out \"I
-have waited three ages for someone to say those words and save me from
-sailing this endless ocean. Please accept this gift. You may find it
-useful!\" He throws something which falls near you in the sand, then sails
-off toward the west, singing a lively, but somewhat uncouth, sailor song." CR>
-		                 <FSET ,VIKING-SHIP ,INVISIBLE>
-		                 <MOVE ,VIAL ,HERE>)
-		                (<==? ,HERE ,FLATHEAD-OCEAN>
-		                 <COND (,SHIP-GONE
-			                <TELL "Nothing happens anymore." CR>)
-			               (T
-				        <TELL "Nothing happens yet." CR>)>)
-				(T <TELL "Nothing happens here." CR>)>)
-			(T
-			 '<COND (<0? <MOD ,HS 20>>
-				 <TELL
-"You seem to be repeating yourself." CR>)
-				(<0? <MOD ,HS 10>>
-				 <TELL
-"I think that phrase is getting a bit worn out." CR>)
-				(T
-				 <TELL "Nothing happens here." CR>)>)>)>>
+<DIRECTIONS NORTH EAST WEST SOUTH NE NW SE SW UP DOWN IN OUT LAND>
+
+<ROOM WEST-OF-HOUSE
+      (IN ROOMS)
+      (DESC "West of House")
+      (NORTH TO NORTH-OF-HOUSE)
+      (SOUTH TO SOUTH-OF-HOUSE)
+      (NE TO NORTH-OF-HOUSE)
+      (SE TO SOUTH-OF-HOUSE)
+      (WEST TO FOREST-1)
+      (EAST "The door is boarded and you can't remove the boards.")
+      (SW TO STONE-BARROW IF WON-FLAG)
+      (IN TO STONE-BARROW IF WON-FLAG)
+      (ACTION WEST-HOUSE)
+      (FLAGS RLANDBIT ONBIT SACREDBIT)
+      (GLOBAL WHITE-HOUSE BOARD FOREST)>
+
+<ROOM STONE-BARROW
+      (IN ROOMS)
+      (LDESC
+"You are standing in front of a massive barrow of stone. In the east face
+is a huge stone door which is open. You cannot see into the dark of the tomb.")
+      (DESC "Stone Barrow")
+      (NE TO WEST-OF-HOUSE)
+      (ACTION STONE-BARROW-FCN)
+      (FLAGS RLANDBIT ONBIT SACREDBIT)>
+
+<ROOM NORTH-OF-HOUSE
+      (IN ROOMS)
+      (LDESC
+"You are facing the north side of a white house. There is no door here,
+and all the windows are boarded up. To the north a narrow path winds through
+the trees.")
+      (DESC "North of House")
+      (SW TO WEST-OF-HOUSE)
+      (SE TO EAST-OF-HOUSE)
+      (WEST TO WEST-OF-HOUSE)
+      (EAST TO EAST-OF-HOUSE)
+      (NORTH TO PATH)
+      (SOUTH "The windows are all boarded.")
+      (FLAGS RLANDBIT ONBIT SACREDBIT)
+      (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)>
+
+<ROOM SOUTH-OF-HOUSE
+      (IN ROOMS)
+      (LDESC
+"You are facing the south side of a white house. There is no door here,
+and all the windows are boarded.")
+      (DESC "South of House")
+      (WEST TO WEST-OF-HOUSE)
+      (EAST TO EAST-OF-HOUSE)
+      (NE TO EAST-OF-HOUSE)
+      (NW TO WEST-OF-HOUSE)
+      (SOUTH TO FOREST-3)
+      (NORTH "The windows are all boarded.")
+      (FLAGS RLANDBIT ONBIT SACREDBIT)
+      (GLOBAL BOARDED-WINDOW BOARD WHITE-HOUSE FOREST)>
+
+<OBJECT PEDESTAL
+	(IN TORCH-ROOM)
+	(SYNONYM PEDESTAL)
+	(ADJECTIVE WHITE MARBLE)
+	(DESC "pedestal")
+	(FLAGS NDESCBIT CONTBIT OPENBIT SURFACEBIT)
+	(ACTION DUMB-CONTAINER)
+	(CAPACITY 30)>
+
+<OBJECT TORCH
+	(IN PEDESTAL)
+	(SYNONYM TORCH IVORY TREASURE)
+	(ADJECTIVE FLAMING IVORY)
+	(DESC "torch")
+	(FLAGS TAKEBIT FLAMEBIT ONBIT LIGHTBIT)
+	(ACTION TORCH-OBJECT)
+	(FDESC "Sitting on the pedestal is a flaming torch, made of ivory.")
+	(SIZE 20)
+	(VALUE 14)
+	(TVALUE 6)>
+
+<BUZZ AGAIN G OOPS>
+
+<BUZZ A AN THE IS AND OF THEN ALL ONE BUT EXCEPT \. \, \" YES NO Y HERE>
+
+<SYNTAX BURN OBJECT (FIND BURNBIT) (HELD CARRIED ON-GROUND IN-ROOM)
+	WITH OBJECT (FIND FLAMEBIT) (HELD CARRIED ON-GROUND IN-ROOM HAVE)
+	= V-BURN PRE-BURN>
+<SYNTAX BURN DOWN OBJECT (FIND BURNBIT) (HELD CARRIED ON-GROUND IN-ROOM)
+	WITH OBJECT (FIND FLAMEBIT) (HELD CARRIED ON-GROUND IN-ROOM HAVE)
+	= V-BURN PRE-BURN>
+<SYNONYM BURN INCINERATE IGNITE>
+
+<SYNTAX CHOMP = V-CHOMP>
+<SYNONYM CHOMP LOSE BARF>
+
+<SYNTAX CLIMB UP OBJECT (FIND RMUNGBIT) = V-CLIMB-UP>
+<SYNTAX CLIMB UP OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-UP>
+<SYNTAX CLIMB DOWN OBJECT (FIND RMUNGBIT) = V-CLIMB-DOWN>
+<SYNTAX CLIMB DOWN OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-DOWN>
+<SYNTAX CLIMB OBJECT (FIND CLIMBBIT) (ON-GROUND IN-ROOM) = V-CLIMB-FOO>
+<SYNTAX CLIMB IN OBJECT (FIND VEHBIT) (ON-GROUND IN-ROOM) = V-BOARD PRE-BOARD>
+<SYNTAX CLIMB ON OBJECT (FIND VEHBIT) (ON-GROUND IN-ROOM) = V-CLIMB-ON>
+<SYNTAX CLIMB WITH OBJECT = V-THROUGH>
+<SYNONYM CLIMB SIT>	

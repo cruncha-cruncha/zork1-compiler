@@ -34,7 +34,9 @@ impl Populator for DirectionStats {
 
     fn crunch(&mut self) -> Result<(), String> {
         if self.basis.is_none() {
-            println!("WARNING: DirectionCodex has no basis. Please specify a <DIRECTIONS ... > cluster in one of input files.");
+            println!(
+                "WARNING: DirectionCodex has no basis. Please provide a <DIRECTIONS ... > cluster."
+            );
             return Ok(());
         }
 

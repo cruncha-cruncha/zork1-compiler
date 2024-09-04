@@ -166,7 +166,13 @@ impl<'a> Validator<'a> {
         let v = super::any_level::repeat::Repeat {};
         router.insert(v.zil_name(), Box::new(v));
 
+        let v = super::any_level::rest::Rest {};
+        router.insert(v.zil_name(), Box::new(v));
+
         let v = super::any_level::restart::Restart {};
+        router.insert(v.zil_name(), Box::new(v));
+
+        let v = super::any_level::restore::Restore {};
         router.insert(v.zil_name(), Box::new(v));
 
         let v = super::any_level::return_::Return {};
@@ -222,8 +228,12 @@ impl<'a> Validator<'a> {
         }
 
         if self.cross_ref.routines.lookup(&name).is_some() {
-            // verify the arguments
+            // TODO: verify the arguments
         } else {
+            for d in self.cross_ref.routines.info.keys() {
+                println!("{}", d);
+            }
+
             return Err(format!(
                 "Unknown cluster name {} in validate_cluster\n{}",
                 name,

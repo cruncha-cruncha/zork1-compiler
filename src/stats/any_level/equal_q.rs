@@ -30,11 +30,11 @@ impl CanValidate for EqualQ {
 
         for child in n.children.iter().skip(1) {
             match child.node_type {
-                ZilNodeType::Token(TokenType::Word) => (),
+                ZilNodeType::Token(TokenType::Word) | ZilNodeType::Token(TokenType::Number) => (),
                 ZilNodeType::Cluster => v.validate_cluster(child)?,
                 _ => {
                     return Err(format!(
-                        "Child of EQUAL? node is not a word or cluster\n{}",
+                        "Child of EQUAL? node is not a number, word, or cluster\n{}",
                         format_file_location(&child)
                     ));
                 }

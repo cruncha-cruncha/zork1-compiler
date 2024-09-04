@@ -111,37 +111,14 @@ impl<'a> TokenGenerator<'a> {
         self.word_buffer.clear();
     }
 
-    // fn push_buf(&mut self, kind: TokenType) {
-    //     if self.str_buf.len() > 0 {
-    //         self.out_buf.push_back(Token {
-    //             kind,
-    //             value: self.str_buf.val.clone(),
-    //             file_key: self.str_buf.file_key,
-    //             line_number: self.str_buf.line_number,
-    //             char_number: self.str_buf.char_number,
-    //         });
-    //         self.str_buf.clear();
-    //     }
-    // }
-
-    // fn push_char(&mut self, token_type: TokenType, char_info: &CharInfo) {
-    //     self.out_buf.push_back(Token {
-    //         kind: token_type,
-    //         value: String::from(char_info.val),
-    //         file_key: char_info.file_key,
-    //         line_number: char_info.line_number,
-    //         char_number: char_info.char_number,
-    //     });
-    // }
-
-    // fn buffer(&mut self, char_info: &CharInfo) {
-    //     if self.str_buf.len() <= 0 {
-    //         self.str_buf.file_key = char_info.file_key;
-    //         self.str_buf.line_number = char_info.line_number;
-    //     }
-
-    //     self.str_buf.val.push(char_info.val);
-    // }
+    fn coerce_char_to_space(c: &CharInfo) -> CharInfo {
+        CharInfo {
+            val: ' ',
+            file_key: c.file_key,
+            line_number: c.line_number,
+            char_number: c.char_number,
+        }
+    }
 }
 
 impl<'a> FileTableLocation for TokenGenerator<'a> {
@@ -157,134 +134,6 @@ impl<'a> FileTableLocation for TokenGenerator<'a> {
         self.char_gen.get_char_number()
     }
 }
-
-// impl<'a> Iterator for TokenGenerator<'a> {
-//     type Item = Result<Token, io::Error>;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.out_buf.len() > 0 {
-//             return Some(Ok(self.out_buf.pop_front().unwrap()));
-//         }
-
-//         let mut loop_count = 0;
-//         while self.out_buf.len() <= 0 {
-//             if self.in_quotes && loop_count > 5000 {
-//                 panic!("String is too long\n{}", format_file_location(self));
-//             } else if !self.in_quotes && loop_count > 200 {
-//                 panic!("Too many loops\n{}", format_file_location(self));
-//             }
-
-//             loop_count += 1;
-
-//             let char_info = match self.char_gen.next() {
-//                 Some(Ok(v)) => v,
-//                 Some(Err(e)) => return Some(Err(e)),
-//                 None => {
-//                     if self.in_quotes {
-//                         panic!("Unexpected EOF\n{}", format_file_location(self));
-//                     } else if self.in_word {
-//                         self.push_buf(TokenType::Char);
-//                         self.in_word = false;
-//                         continue;
-//                     } else {
-//                         return None;
-//                     }
-//                 }
-//             };
-
-//             let c = char_info.val;
-
-//             if c == '\\' {
-//                 self.escape = true;
-//                 continue;
-//             }
-
-//             if self.in_quotes {
-//                 match c {
-//                     '"' => {
-//                         if self.escape {
-//                             let mut fake_char_info = char_info.clone();
-//                             fake_char_info.val = '\\';
-//                             self.buffer(&fake_char_info);
-//                             fake_char_info.val = '"';
-//                             self.buffer(&fake_char_info);
-//                             self.escape = false;
-//                         } else {
-//                             self.push_buf(TokenType::Text);
-//                             self.in_quotes = false;
-//                         }
-//                     }
-//                     _ => {
-//                         if c == '|' || c == '\n' {
-//                             // coerce to a space
-//                             let mut fake_char_info = char_info.clone();
-//                             fake_char_info.val = ' ';
-//                             self.buffer(&fake_char_info);
-//                         } else {
-//                             self.buffer(&char_info);
-//                         }
-//                     }
-//                 }
-
-//                 continue;
-//             }
-
-//             if self.escape || c.is_alphanumeric() {
-//                 self.buffer(&char_info);
-//                 self.in_word = true;
-//                 self.escape = false;
-
-//                 if c.is_alphanumeric() && c.is_lowercase() {
-//                     panic!("Can't have lowercase here\n{}", format_file_location(self));
-//                 }
-
-//                 continue;
-//             }
-
-//             if self.in_word {
-//                 self.push_buf(TokenType::Word);
-//                 self.in_word = false;
-//             }
-
-//             if c.is_whitespace() {
-//                 // all whitespace outside of double quotes is coerced to a single space
-//                 self.push_char(
-//                     TokenType::Space,
-//                     &CharInfo {
-//                         val: ' ',
-//                         file_key: char_info.file_key,
-//                         line_number: char_info.line_number,
-//                         char_number: char_info.char_number,
-//                     },
-//                 );
-//                 continue;
-//             }
-
-//             match c {
-//                 '"' => {
-//                     self.in_quotes = true;
-//                 }
-//                 '<' => {
-//                     self.push_char(TokenType::LeftArrow, &char_info);
-//                 }
-//                 '>' => {
-//                     self.push_char(TokenType::RightArrow, &char_info);
-//                 }
-//                 '(' => {
-//                     self.push_char(TokenType::LeftParen, &char_info);
-//                 }
-//                 ')' => {
-//                     self.push_char(TokenType::RightParen, &char_info);
-//                 }
-//                 _ => {
-//                     self.push_char(TokenType::Symbol, &char_info);
-//                 }
-//             }
-//         }
-
-//         Some(Ok(self.out_buf.pop_front().unwrap()))
-//     }
-// }
 
 impl<'a> Iterator for TokenGenerator<'a> {
     type Item = Result<Token, io::Error>;
@@ -339,8 +188,8 @@ impl<'a> Iterator for TokenGenerator<'a> {
                         }
                     }
                     _ => {
-                        if c == '|' {
-                            self.text_buffer.push('\n');
+                        if c == '\n' {
+                            self.text_buffer.push(' ');
                         } else {
                             self.text_buffer.push(c);
                         }
@@ -350,26 +199,15 @@ impl<'a> Iterator for TokenGenerator<'a> {
                 continue;
             }
 
-            // if self.in_escape || c.is_alphanumeric() {
-            //     self.buffer(&char_info);
-            //     self.in_word = true;
-            //     self.escape = false;
-
-            //     if c.is_alphanumeric() && c.is_lowercase() {
-            //         panic!("Can't have lowercase here\n{}", format_file_location(self));
-            //     }
-
-            //     continue;
-            // }
-
-            // if self.in_word {
-            //     self.push_buf(TokenType::Word);
-            //     self.in_word = false;
-            // }
+            if self.in_escape {
+                self.word_buffer.push(c);
+                self.in_escape = false;
+                continue;
+            }
 
             if c.is_whitespace() {
                 self.add_token_from_word_buffer();
-                self.add_token_from_char(TokenType::Space, &char_info);
+                self.add_token_from_char(TokenType::Space, &Self::coerce_char_to_space(&char_info));
                 continue;
             }
 
@@ -378,6 +216,9 @@ impl<'a> Iterator for TokenGenerator<'a> {
                     self.add_token_from_word_buffer();
                     self.text_buffer.set_info(&char_info);
                     self.in_quotes = true;
+                }
+                '\\' => {
+                    self.in_escape = true;
                 }
                 '<' => {
                     self.add_token_from_word_buffer();

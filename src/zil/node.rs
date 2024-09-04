@@ -43,7 +43,7 @@ impl ZilNodeType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ZilNode {
     pub node_type: ZilNodeType,
     pub token: Option<Token>,

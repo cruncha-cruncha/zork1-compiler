@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
+    js::{formatter::Formatter, write_output::CanWriteOutput},
     stats::{
         cross_ref::Populator,
         helpers::{get_nth_child_as_word, get_token_as_number, get_token_as_word},
@@ -34,6 +35,7 @@ pub struct GroupCruncher {
 
 pub struct RoomInfo {
     pub name: String,
+    pub _in: Option<String>,
     pub action: Option<String>,
     pub desc: Option<String>,
     pub ldesc: Option<String>,
@@ -246,6 +248,32 @@ impl GroupCruncher {
                     ))
                 }
             };
+
+            if name == "IN"
+                && c.children.len() == 2
+                && c.children[1].node_type == ZilNodeType::Token(TokenType::Word)
+            {
+                if out._in.is_some() {
+                    return Err(format!(
+                        "Room has multiple IN groups\n{}",
+                        format_file_location(&node)
+                    ));
+                }
+
+                match get_nth_child_as_word(1, c) {
+                    Some(name) => {
+                        out._in = Some(name.clone());
+                    }
+                    None => {
+                        return Err(format!(
+                            "IN group in room doesn't have a named object\n{}",
+                            format_file_location(&node)
+                        ));
+                    }
+                }
+
+                continue;
+            }
 
             match name.as_str() {
                 "ACTION" => {
@@ -614,6 +642,7 @@ impl RoomInfo {
     pub fn new() -> RoomInfo {
         RoomInfo {
             name: String::new(),
+            _in: None,
             action: None,
             desc: None,
             ldesc: None,
@@ -623,5 +652,82 @@ impl RoomInfo {
             value: None,
             directions: HashMap::new(),
         }
+    }
+}
+
+impl CanWriteOutput for RoomStats {
+    fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
+        formatter.writeln("export const rooms = {")?;
+        formatter.indent();
+
+        for key in self.basis.keys() {
+            let name = Formatter::safe_case(key);
+            formatter.writeln(&format!("{}: {{", name))?;
+            formatter.indent();
+
+            let info = self.info.get(key).unwrap();
+
+            if info._in.is_some() {
+                formatter.writeln(&format!(
+                    "in: \"{}\",",
+                    Formatter::safe_case_option(&info._in)
+                ))?;
+            }
+
+            if info.action.is_some() {
+                formatter.writeln(&format!(
+                    "action: \"{}\",",
+                    Formatter::safe_case_option(&info.action)
+                ))?;
+            }
+
+            if info.desc.is_some() {
+                formatter.writeln(&format!("desc: \"{}\",", info.desc.as_ref().unwrap()))?;
+            }
+
+            if info.ldesc.is_some() {
+                formatter.writeln(&format!("ldesc: \"{}\",", info.ldesc.as_ref().unwrap()))?;
+            }
+
+            if info.flags.len() > 0 {
+                formatter.write("flags: [", true)?;
+                for (i, flag) in info.flags.iter().enumerate() {
+                    formatter.write(&format!("\"{}\"", Formatter::safe_case(flag)), false)?;
+
+                    if i < info.flags.len() - 1 {
+                        formatter.write(", ", false)?;
+                    }
+                }
+                formatter.write("],\n", false)?;
+            }
+
+            // info.pseudo
+
+            if info.globals.len() > 0 {
+                formatter.write("globals: [", true)?;
+                for (i, global) in info.globals.iter().enumerate() {
+                    formatter.write(&format!("\"{}\"", Formatter::safe_case(global)), false)?;
+
+                    if i < info.globals.len() - 1 {
+                        formatter.write(", ", false)?;
+                    }
+                }
+                formatter.write("],\n", false)?;
+            }
+
+            // info.value
+
+            // info.directions
+            // how to print directions?
+
+            formatter.outdent();
+            formatter.writeln("},")?;
+        }
+
+        formatter.outdent();
+        formatter.writeln("};")?;
+        formatter.flush()?;
+
+        Ok(())
     }
 }

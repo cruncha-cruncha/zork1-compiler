@@ -3,21 +3,21 @@ use crate::{
     zil::{file_table::format_file_location, node::ZilNode},
 };
 
-// <RFALSE>
+// <RFATAL>
 
-pub struct Rfalse {}
+pub struct Rfatal {}
 
-impl HasZilName for Rfalse {
+impl HasZilName for Rfatal {
     fn zil_name(&self) -> &'static str {
-        "RFALSE"
+        "RFATAL"
     }
 }
 
-impl CanValidate for Rfalse {
+impl CanValidate for Rfatal {
     fn validate(&self, n: &ZilNode, _v: &Validator) -> Result<(), String> {
         if n.children.len() > 1 {
             return Err(format!(
-                "RFALSE node has more than one child\n{}",
+                "RFATAL node has more than one child\n{}",
                 format_file_location(&n)
             ));
         }

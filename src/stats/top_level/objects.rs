@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
+    js::{formatter::Formatter, write_output::CanWriteOutput},
     stats::{
         cross_ref::Populator,
         helpers::{get_nth_child_as_word, get_token_as_number, get_token_as_word},
@@ -537,5 +538,50 @@ impl<'a> ObjectInfo {
             action: None,
             vtype: None,
         }
+    }
+}
+
+impl CanWriteOutput for ObjectStats {
+    fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
+        formatter.writeln("export const objects = {")?;
+        formatter.indent();
+
+        for key in self.basis.keys() {
+            formatter.writeln(&format!("{}: {{}},", Formatter::safe_case(key)))?;
+        }
+
+        formatter.outdent();
+        formatter.writeln("};")?;
+        formatter.writeln("")?;
+
+        formatter.writeln("export const lookupBySynonym = (word) => {")?;
+        formatter.indent();
+
+        formatter.writeln("switch (word) {")?;
+
+        for (name, info) in self.info.iter() {
+            for syn in info.synonyms.iter() {
+                formatter.writeln(&format!("case '{}':", syn))?;
+            }
+
+            formatter.indent();
+            formatter.writeln(&format!(
+                "return objects['{}'];",
+                Formatter::safe_case(name)
+            ))?;
+            formatter.outdent();
+        }
+
+        formatter.writeln("default:")?;
+        formatter.indent();
+        formatter.writeln("return null;")?;
+        formatter.outdent();
+
+        formatter.writeln("}")?;
+
+        formatter.outdent();
+        formatter.writeln("}")?;
+
+        Ok(())
     }
 }

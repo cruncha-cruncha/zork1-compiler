@@ -3,6 +3,8 @@ use std::{fs, path::Path};
 extern crate once_cell;
 extern crate regex;
 
+use js::write_output::write_output;
+
 use crate::zil::ast;
 
 mod js;
@@ -16,7 +18,7 @@ fn main() {
     println!("{}", files_lookup);
 
     let tree = build_tree(&mut files_lookup);
-    // ast::print(tree.get_root());
+    // ast::print(&tree.root);
 
     let mut lookup = stats::cross_ref::CrossRef::new(tree);
     lookup.add_nodes();
@@ -26,82 +28,11 @@ fn main() {
     }
 
     match lookup.validate_routines() {
-        Ok(_) => println!("lookups validated"),
-        Err(e) => panic!("ERROR while validating lookups\n{}", e),
+        Ok(_) => println!("routines validated"),
+        Err(e) => panic!("ERROR while validating routines\n{}", e),
     }
 
-    // write_rooms("./out/rooms.js", &lookup.rooms);
-    // write_objects("./out/objects.js", &lookup.objects);
-    // write_globals_and_constants(
-    //     "./out/globals_and_constants.js",
-    //     &lookup.constants,
-    //     &lookup.globals,
-    // );
-    // write_syntax("./out/syntax.js", &lookup.syntax);
-    // write_other_syntax(
-    //     "./out/other_syntax.js",
-    //     &lookup.syntax,
-    //     &lookup.synonyms,
-    //     &lookup.directions,
-    //     &lookup.buzzi,
-    // );
-
-    // for n in lookup.leftovers.iter() {
-    //     match n.node_type {
-    //         zil::node::ZilNodeType::Cluster => {
-    //             if n.children.len() >= 1 {
-    //                 match stats::helpers::get_nth_child_name(0, n) {
-    //                     Some(name) => println!("Cluster {}", name),
-    //                     None => panic!("Cluster has no name"),
-    //                 }
-    //             } else {
-    //                 println!("Empty cluster");
-    //             }
-    //         },
-    //         zil::node::ZilNodeType::Token(x) => {
-    //             match x {
-    //                 zil::node::TokenType::Word => {
-    //                     println!("Token bunch {}", stats::helpers::get_bunch_name(n).unwrap());
-    //                 },
-    //                 _ => println!("Token bunch type {:?}", x),
-    //             }
-
-    //         },
-    //         _ => println!("Unkown leftover type {}", n.node_type),
-    //     }
-    // }
-
-    // for v in rooms.subgroup_names.iter() {
-    //     println!("{}", v);
-    // }
-
-    // //inter::ast_stats::run_all(&root);
-
-    // let root = match inter::ast::clone_zil_tree(&root) {
-    //   Ok(v) => {
-    //     println!("built inter tree");
-    //     v
-    //   },
-    //   Err(e) => {
-    //     println!("\nERROR\n{}", e);
-    //     zil::ast::print_tree(&root, 0);
-    //     return;
-    //   }
-    // };
-
-    // //inter::ast::print_tree(&root, 0);
-
-    // let root = js::node::JSNode::clone_internode(&root);
-
-    // let output_file_path = Path::new(".").join("out").join("testing.js");
-    // let writer = get_CustomBufWriter(&output_file_path).unwrap();
-    // match js::parse::parse(&root, writer) {
-    //   Ok(_) => println!("output ok"),
-    //   Err(_) => {
-    //     println!("\nBAD OUTPUT\n");
-    //     return;
-    //   }
-    // };
+    write_output(&lookup);
 }
 
 fn get_files_lookup() -> zil::file_table::FileTable {
