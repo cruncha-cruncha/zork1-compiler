@@ -32,7 +32,10 @@ fn main() {
         Err(e) => panic!("ERROR while validating routines\n{}", e),
     }
 
-    write_output(&lookup);
+    match write_output(&lookup) {
+        Ok(_) => println!("output written"),
+        Err(e) => panic!("ERROR while writing output\n{}", e),
+    }
 }
 
 fn get_files_lookup() -> zil::file_table::FileTable {

@@ -233,7 +233,7 @@ impl ParseTree {
 
 impl CanWriteOutput for ParseTree {
     fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.writeln("import { findObjectMatchingParsedWord } from \"./boilerplate.js\";")?;
+        formatter.writeln("import { findObjectMatchingParsedWord } from \"./main.js\";")?;
         formatter.writeln("")?;
 
         formatter.writeln(&format!(

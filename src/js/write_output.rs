@@ -13,6 +13,20 @@ pub trait CanWriteOutput {
 }
 
 pub fn write_output(cross_ref: &cross_ref::CrossRef) -> Result<(), std::io::Error> {
+    {
+        let boilerplate = Path::new(".").join("js-boilerplate");
+        let output_files = Path::new(".").join("output-files");
+        std::fs::create_dir_all(&output_files)?;
+
+        let paths = std::fs::read_dir(&boilerplate)?;
+        for path in paths {
+            let path = path?.path();
+            let file_name = path.file_name().unwrap();
+            let dest = output_files.join(file_name);
+            std::fs::copy(&path, &dest)?;
+        }
+    }
+
     let mut formatter = Formatter::new(&Path::new(".").join("output-files").join("rooms.js"));
     cross_ref.rooms.write_output(&mut formatter)?;
 

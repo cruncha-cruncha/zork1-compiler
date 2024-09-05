@@ -1,8 +1,8 @@
-import { findObjectMatchingParsedWord } from "./boilerplate.js";
+import { findObjectMatchingParsedWord } from "./main.js";
 
 export const buzz = [];
 
-export const directions = ["SOUTH", "WEST", "NORTH", "EAST"];
+export const directions = ["WEST", "NORTH", "SOUTH", "EAST"];
 
 export const parseInput = (rawString) => {
   const words = rawString.split(" ").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));
