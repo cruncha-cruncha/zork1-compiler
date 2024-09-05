@@ -6,19 +6,19 @@ use crate::{
     },
 };
 
-pub struct Or {}
+pub struct UnsetVar {}
 
-impl HasZilName for Or {
+impl HasZilName for UnsetVar {
     fn zil_name(&self) -> &'static str {
-        "OR"
+        "UNSET-VAR"
     }
 }
 
-impl CanValidate for Or {
+impl CanValidate for UnsetVar {
     fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
-        if n.children.len() < 3 {
+        if n.children.len() != 2 && n.children.len() != 3 {
             return Err(format!(
-                "Expected at least 3 children, found {}\n{}",
+                "Expected 2 or 3 children, found {}\n{}",
                 n.children.len(),
                 format_file_location(&n)
             ));
@@ -30,7 +30,7 @@ impl CanValidate for Or {
                 ZilNodeType::Cluster => v.validate_cluster(child)?,
                 _ => {
                     return Err(format!(
-                        "Expected word or cluster, found {}\n{}",
+                        "Expected word or cluster, found {:?}\n{}",
                         child.node_type,
                         format_file_location(&n)
                     ));

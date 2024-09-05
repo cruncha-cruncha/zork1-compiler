@@ -6,15 +6,15 @@ use crate::{
     },
 };
 
-pub struct Not {}
+pub struct Pop {}
 
-impl HasZilName for Not {
+impl HasZilName for Pop {
     fn zil_name(&self) -> &'static str {
-        "NOT"
+        "POP"
     }
 }
 
-impl CanValidate for Not {
+impl CanValidate for Pop {
     fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
         if n.children.len() != 2 {
             return Err(format!(

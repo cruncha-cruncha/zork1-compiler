@@ -1,97 +1,88 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::{
     stats::{
-        cross_ref::Populator,
-        helpers::{get_nth_child_as_word, get_token_as_word},
+        cross_ref::{Codex, Populator},
+        helpers::get_token_as_word,
     },
-    zil::{
-        file_table::format_file_location,
-        node::{TokenType, ZilNode, ZilNodeType},
-    },
+    zil::{file_table::format_file_location, node::ZilNode},
 };
 
-use crate::stats::cross_ref::Codex;
-
-use super::syntax::ILLEGAL;
-
 pub struct SynonymStats {
-    basis: HashMap<String, ZilNode>,
-    pub all_synonyms: HashMap<String, Vec<String>>,
+    basis: Vec<ZilNode>,
+    all_synonyms: HashMap<String, Vec<String>>,
 }
 
 impl SynonymStats {
     pub fn new() -> SynonymStats {
         SynonymStats {
-            basis: HashMap::new(),
+            basis: Vec::new(),
             all_synonyms: HashMap::new(),
         }
     }
+}
 
-    pub fn get_basis(&self) -> &HashMap<String, ZilNode> {
-        return &self.basis;
+impl Codex<Vec<String>> for SynonymStats {
+    fn lookup(&self, word: &str) -> Option<Vec<String>> {
+        match self.all_synonyms.get(word) {
+            Some(line) => Some(line.iter().map(|s| String::from(s)).collect()),
+            None => None,
+        }
     }
 }
 
 impl Populator for SynonymStats {
     fn add_node(&mut self, node: ZilNode) {
-        let name = get_nth_child_as_word(1, &node);
-        match name {
-            Some(name) => {
-                if self.basis.insert(name.clone(), node).is_some() {
-                    panic!("Synonym node has duplicate name {}", name);
-                }
-            }
-            None => panic!("Synonym node has no name\n{}", format_file_location(&node)),
-        }
+        self.basis.push(node);
     }
 
     fn crunch(&mut self) -> Result<(), String> {
-        for (_, n) in self.basis.iter() {
-            if n.children.len() < 3 {
+        for line in self.basis.iter() {
+            let mut words: Vec<String> = Vec::new();
+
+            if line.children.len() < 3 {
                 return Err(format!(
-                    "Synonym node has less than three children\n{}",
-                    format_file_location(n)
+                    "Possible synonym node has less than three children\n{}",
+                    format_file_location(line)
                 ));
             }
 
-            for c in n.children.iter().skip(1) {
-                if c.node_type != ZilNodeType::Token(TokenType::Word) {
+            let first_word = get_token_as_word(&line.children[0]).unwrap_or_default();
+            if first_word != "SYNONYM" {
+                unreachable!();
+            }
+
+            let second_word = get_token_as_word(&line.children[1]);
+            if second_word.is_none() {
+                return Err(format!(
+                    "Synonym node has non-word second child\n{}",
+                    format_file_location(&line)
+                ));
+            }
+
+            let second_word = second_word.unwrap();
+            if self.all_synonyms.contains_key(&second_word) {
+                return Err(format!(
+                    "Synonym node is not unique: already have synonyms for {}\n{}",
+                    second_word,
+                    format_file_location(&line)
+                ));
+            }
+
+            for c in line.children.iter().skip(2) {
+                let word = get_token_as_word(c);
+
+                if word.is_none() {
                     return Err(format!(
                         "Synonym node has non-word child\n{}",
                         format_file_location(&c)
                     ));
                 }
 
-                let val = get_token_as_word(c).unwrap();
-                if ILLEGAL.is_match(&val) {
-                    return Err(format!(
-                        "Synonym has illegal char\n{}",
-                        format_file_location(&c)
-                    ));
-                }
+                words.push(word.unwrap());
             }
 
-            let substitutes: Vec<String> = n
-                .children
-                .iter()
-                .skip(2)
-                .map(|c| get_token_as_word(c).unwrap())
-                .collect();
-
-            match self
-                .all_synonyms
-                .insert(get_token_as_word(&n.children[1]).unwrap(), substitutes)
-            {
-                Some(_) => {
-                    return Err(format!(
-                        "Synonym node has duplicate synonym {}\n{}",
-                        get_token_as_word(&n.children[1]).unwrap(),
-                        format_file_location(&n)
-                    ));
-                }
-                None => (),
-            }
+            self.all_synonyms.insert(first_word, words);
         }
 
         Ok(())
@@ -99,11 +90,5 @@ impl Populator for SynonymStats {
 
     fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
         Ok(())
-    }
-}
-
-impl Codex for SynonymStats {
-    fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word)
     }
 }

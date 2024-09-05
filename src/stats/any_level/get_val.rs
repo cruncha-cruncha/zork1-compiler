@@ -6,19 +6,19 @@ use crate::{
     },
 };
 
-pub struct Or {}
+pub struct GetVal {}
 
-impl HasZilName for Or {
+impl HasZilName for GetVal {
     fn zil_name(&self) -> &'static str {
-        "OR"
+        "GET-VAL"
     }
 }
 
-impl CanValidate for Or {
+impl CanValidate for GetVal {
     fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
-        if n.children.len() < 3 {
+        if n.children.len() != 2 && n.children.len() != 3 {
             return Err(format!(
-                "Expected at least 3 children, found {}\n{}",
+                "Expected 2 or 3 children, found {}\n{}",
                 n.children.len(),
                 format_file_location(&n)
             ));

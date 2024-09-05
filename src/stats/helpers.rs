@@ -1,15 +1,15 @@
 use crate::zil::node::{TokenType, ZilNode, ZilNodeType};
 
-pub fn get_nth_child_as_word(n: usize, node: &ZilNode) -> Option<String> {
-    if node.children.len() <= n {
+pub fn get_token_as_word(node: &ZilNode) -> Option<String> {
+    if node.node_type != ZilNodeType::Token(TokenType::Word) || node.token.is_none() {
         return None;
     }
 
-    get_token_as_word(&node.children[n])
+    Some(node.token.as_ref().unwrap().value.clone())
 }
 
-pub fn get_token_as_word(node: &ZilNode) -> Option<String> {
-    if node.node_type != ZilNodeType::Token(TokenType::Word) || node.token.is_none() {
+pub fn get_token_as_text(node: &ZilNode) -> Option<String> {
+    if node.node_type != ZilNodeType::Token(TokenType::Text) || node.token.is_none() {
         return None;
     }
 

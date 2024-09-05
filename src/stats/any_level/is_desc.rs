@@ -6,15 +6,15 @@ use crate::{
     },
 };
 
-pub struct Or {}
+pub struct IsDesc {}
 
-impl HasZilName for Or {
+impl HasZilName for IsDesc {
     fn zil_name(&self) -> &'static str {
-        "OR"
+        "IS-DESC"
     }
 }
 
-impl CanValidate for Or {
+impl CanValidate for IsDesc {
     fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
         if n.children.len() < 3 {
             return Err(format!(
@@ -26,11 +26,11 @@ impl CanValidate for Or {
 
         for child in n.children.iter().skip(1) {
             match child.node_type {
-                ZilNodeType::Token(TokenType::Word) => (),
+                ZilNodeType::Token(TokenType::Word) | ZilNodeType::Token(TokenType::Number) => (),
                 ZilNodeType::Cluster => v.validate_cluster(child)?,
                 _ => {
                     return Err(format!(
-                        "Expected word or cluster, found {}\n{}",
+                        "Expected word, number, or cluster, found {}\n{}",
                         child.node_type,
                         format_file_location(&n)
                     ));

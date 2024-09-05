@@ -3,8 +3,8 @@ use std::collections::{HashMap, HashSet};
 use crate::{
     js::{formatter::Formatter, write_output::CanWriteOutput},
     stats::{
-        cross_ref::Populator,
-        helpers::{get_nth_child_as_word, get_token_as_number, get_token_as_word},
+        cross_ref::{CrossRef, Populator},
+        helpers::{get_token_as_text, get_token_as_word},
     },
     zil::{
         file_table::format_file_location,
@@ -14,720 +14,392 @@ use crate::{
 
 use crate::stats::cross_ref::Codex;
 
-use super::syntax::ILLEGAL;
+use super::globals::{Var, VarVal};
 
 pub struct RoomStats {
-    basis: HashMap<String, ZilNode>,
-    pub info: HashMap<String, RoomInfo>,
-    pub groups: GroupCruncher,
-}
-
-pub struct GroupCruncher {
-    pub direction_names: HashSet<String>, // all directions referenced by any room
-    pub routines: HashSet<String>,        // all routines referenced by any room
-    pub local_globals: HashSet<String>,   // all local-global objects referenced by any room
-    pub objects: HashSet<String>,         // all objects referenced by any room
-    pub rooms: HashSet<String>,           // all rooms referenced by any room
-    pub globals: HashSet<String>,         // all globals referenced by any room
-    pub flag_words: HashSet<String>,      // these don't need to correspond to anything
-    pub pseudo_text: HashSet<String>, // not sure what these mean. Possibly fake objects? (like they take the place of objects in a SYNTAX)
+    basis: Vec<ZilNode>,
+    all_rooms: HashMap<String, RoomInfo>,
 }
 
 pub struct RoomInfo {
-    pub name: String,
-    pub _in: Option<String>,
-    pub action: Option<String>,
-    pub desc: Option<String>,
-    pub ldesc: Option<String>,
-    pub flags: HashSet<String>,
-    pub pseudo: Vec<Pseudo>,
-    pub globals: HashSet<String>,
-    pub value: Option<i32>,
-    pub directions: HashMap<String, Direction>,
-}
-
-pub struct Pseudo {
-    pub name: String,
-    pub routine: String,
-}
-
-pub struct Direction {
-    pub name: String,
-    pub kind: DirectionType,
-    pub basis: ZilNode,
-}
-
-#[derive(Clone, Copy)]
-pub enum DirectionType {
-    ZERO,  // SW <TEXT>
-    ONE,   // SW PER <ROUTINE>
-    TWO,   // SW TO <ROOM>
-    THREE, // SW TO <ROOM> IF <GLOBAL>
-    FOUR,  // SW TO <ROOM> IF <GLOBAL> ELSE <TEXT>
-    FIVE,  // SW TO <ROOM> IF <OBJECT> IS OPEN
-    SIX,   // SW TO <ROOM> IF <OBJECT> IS OPEN ELSE <TEXT>
-}
-
-impl RoomStats {
-    pub fn new() -> RoomStats {
-        RoomStats {
-            basis: HashMap::new(),
-            groups: GroupCruncher::new(),
-            info: HashMap::new(),
-        }
-    }
-
-    pub fn validate_direction_names(&self, directions: &impl Codex) -> Result<(), String> {
-        for d in self.groups.direction_names.iter() {
-            if directions.lookup(d).is_none() {
-                return Err(format!("Direction {} not found", d));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn validate_routines(&self, routines: &impl Codex) -> Result<(), String> {
-        for r in self.groups.routines.iter() {
-            if routines.lookup(r).is_none() {
-                return Err(format!("ROUTINE {} not found", r));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn validate_local_globals(&self, objects: &impl Codex) -> Result<(), String> {
-        for o in self.groups.local_globals.iter() {
-            match objects.lookup(o) {
-                None => return Err(format!("local-global OBJECT {} not found", o)),
-                Some(_) => {
-                    // good enough
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    // TODO: there can be zero overlap between object names and room names?
-
-    pub fn validate_objects(&self, objects: &impl Codex) -> Result<(), String> {
-        for o in self.groups.objects.iter() {
-            if objects.lookup(o).is_none() {
-                return Err(format!("OBJECT {} not found", o));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn validate_rooms(&self) -> Result<(), String> {
-        for r in self.groups.rooms.iter() {
-            if self.lookup(r).is_none() {
-                return Err(format!("ROOM {} not found", r));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn validate_globals(&self, globals: &impl Codex) -> Result<(), String> {
-        for g in self.groups.globals.iter() {
-            if globals.lookup(g).is_none() {
-                return Err(format!("GLOBAL {} not found", g));
-            }
-        }
-
-        Ok(())
-    }
-}
-
-impl Populator for RoomStats {
-    fn add_node(&mut self, node: ZilNode) {
-        let name = get_nth_child_as_word(1, &node);
-        match name {
-            Some(name) => {
-                if ILLEGAL.is_match(&name) {
-                    panic!("Room node has illegal name {}", &name);
-                }
-
-                if self.basis.insert(name.clone(), node).is_some() {
-                    panic!("Room node has duplicate name {}", name);
-                }
-            }
-            None => panic!("Room node has no name\n{}", format_file_location(&node)),
-        }
-    }
-
-    fn crunch(&mut self) -> Result<(), String> {
-        let mut group_cruncher = GroupCruncher::new();
-
-        for n in self.basis.values() {
-            match group_cruncher.munch(n) {
-                Ok(info) => {
-                    self.info.insert(info.name.clone(), info);
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-
-        self.groups = group_cruncher;
-
-        Ok(())
-    }
-
-    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
-        self.validate_direction_names(&cross_ref.directions)?;
-        self.validate_objects(&cross_ref.objects)?;
-        self.validate_local_globals(&cross_ref.objects)?;
-        self.validate_globals(&cross_ref.globals)?;
-        self.validate_routines(&cross_ref.routines)?;
-        self.validate_rooms()?;
-
-        Ok(())
-    }
-}
-
-impl Codex for RoomStats {
-    fn lookup(&self, word: &str) -> Option<&ZilNode> {
-        self.basis.get(word)
-    }
-}
-
-impl GroupCruncher {
-    pub fn new() -> GroupCruncher {
-        GroupCruncher {
-            direction_names: HashSet::new(),
-            routines: HashSet::new(),
-            local_globals: HashSet::new(),
-            rooms: HashSet::new(),
-            globals: HashSet::new(),
-            flag_words: HashSet::new(),
-            pseudo_text: HashSet::new(),
-            objects: HashSet::new(),
-        }
-    }
-
-    pub fn munch(&mut self, node: &ZilNode) -> Result<RoomInfo, String> {
-        let mut out = RoomInfo::new();
-
-        if node.children.len() < 2 {
-            return Err(format!(
-                "Room node has less than two children\n{}",
-                format_file_location(&node)
-            ));
-        }
-
-        match get_nth_child_as_word(1, node) {
-            Some(name) => out.name = name,
-            None => {
-                return Err(format!(
-                    "Room node has no name\n{}",
-                    format_file_location(&node)
-                ))
-            }
-        }
-
-        for c in node.children.iter().skip(2) {
-            if c.node_type != ZilNodeType::Group {
-                return Err(format!(
-                    "Room node has non-group child\n{}",
-                    format_file_location(&node)
-                ));
-            }
-
-            let name = match get_nth_child_as_word(0, c) {
-                Some(name) => name,
-                None => {
-                    return Err(format!(
-                        "Group in room has no name\n{}",
-                        format_file_location(&node)
-                    ))
-                }
-            };
-
-            if name == "IN"
-                && c.children.len() == 2
-                && c.children[1].node_type == ZilNodeType::Token(TokenType::Word)
-            {
-                if out._in.is_some() {
-                    return Err(format!(
-                        "Room has multiple IN groups\n{}",
-                        format_file_location(&node)
-                    ));
-                }
-
-                match get_nth_child_as_word(1, c) {
-                    Some(name) => {
-                        out._in = Some(name.clone());
-                    }
-                    None => {
-                        return Err(format!(
-                            "IN group in room doesn't have a named object\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-                }
-
-                continue;
-            }
-
-            match name.as_str() {
-                "ACTION" => {
-                    if c.children.len() != 2 {
-                        return Err(format!(
-                            "ACTION group in room doesn't have two children\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    match get_nth_child_as_word(1, c) {
-                        Some(name) => {
-                            if out.action.is_some() {
-                                return Err(format!(
-                                    "Room has multiple ACTION groups\n{}",
-                                    format_file_location(&node)
-                                ));
-                            }
-
-                            out.action = Some(name.clone());
-                            self.routines.insert(name);
-                        }
-                        None => {
-                            return Err(format!(
-                                "ACTION group in room doesn't have a named routine\n{}",
-                                format_file_location(&node)
-                            ));
-                        }
-                    }
-                }
-                "DESC" | "LDESC" => {
-                    if c.children.len() != 2 {
-                        return Err(format!(
-                            "{} group in room doesn't have two children\n{}",
-                            name,
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if c.children[1].node_type != ZilNodeType::Token(TokenType::Text) {
-                        return Err(format!(
-                            "{} group in room doesn't have a text type second child\n{}",
-                            name,
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if name == "DESC" {
-                        if out.desc.is_some() {
-                            return Err(format!(
-                                "Room has multiple DESC groups\n{}",
-                                format_file_location(&node)
-                            ));
-                        }
-                        out.desc = Some(c.children[1].get_first_token().unwrap().value.clone());
-                    } else {
-                        if out.ldesc.is_some() {
-                            return Err(format!(
-                                "Room has multiple FDESC groups\n{}",
-                                format_file_location(&node)
-                            ));
-                        }
-                        out.ldesc = Some(c.children[1].get_first_token().unwrap().value.clone());
-                    }
-                }
-                "FLAGS" => {
-                    if c.children.len() < 2 {
-                        return Err(format!(
-                            "FLAGS group in room doesn't have enough children\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if out.flags.len() > 0 {
-                        return Err(format!(
-                            "Room has multiple FLAGS groups\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    for c in c.children.iter().skip(1) {
-                        match get_token_as_word(c) {
-                            Some(name) => {
-                                out.flags.insert(name.clone());
-                                self.flag_words.insert(name);
-                            }
-                            None => {
-                                return Err(format!(
-                                    "FLAGS group in room has a child that isn't a word\n{}",
-                                    format_file_location(&node)
-                                ));
-                            }
-                        }
-                    }
-                }
-                "GLOBAL" => {
-                    if c.children.len() < 2 {
-                        return Err(format!(
-                            "GLOBAL group in room doesn't have enough children\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if out.globals.len() > 0 {
-                        return Err(format!(
-                            "Room has multiple GLOBAL groups\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    for c in c.children.iter().skip(1) {
-                        match get_token_as_word(c) {
-                            Some(name) => {
-                                out.globals.insert(name.clone());
-                                self.local_globals.insert(name);
-                            }
-                            None => {
-                                return Err(format!(
-                                    "GLOBAL group in room has a child that isn't a word\n{}",
-                                    format_file_location(&node)
-                                ));
-                            }
-                        }
-                    }
-                }
-                "PSEUDO" => {
-                    if c.children.len() < 2 || c.children.len() % 2 == 0 {
-                        return Err(format!(
-                            "PSEUDO group in room has too few or even number of children\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if out.pseudo.len() > 0 {
-                        return Err(format!(
-                            "Room has multiple PSEUDO groups\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    let mut pseudo_name = String::new();
-                    for (i, c) in c.children.iter().skip(1).enumerate() {
-                        if i % 2 == 0 {
-                            if c.node_type != ZilNodeType::Token(TokenType::Text) {
-                                return Err(format!(
-                                    "PSEUDO group in room has an even child that isn't text\n{}",
-                                    format_file_location(&node)
-                                ));
-                            }
-
-                            let val = c.get_first_token().unwrap().value.clone();
-                            self.pseudo_text.insert(val.clone());
-                            pseudo_name = val;
-                        } else {
-                            match get_token_as_word(c) {
-                                Some(name) => {
-                                    self.routines.insert(name.clone());
-                                    out.pseudo.push(Pseudo {
-                                        name: pseudo_name.clone(),
-                                        routine: name,
-                                    })
-                                }
-                                None => {
-                                    return Err(format!(
-                                    "PSEUDO group in room has an odd child that isn't a word\n{}",
-                                    format_file_location(&node)
-                                ));
-                                }
-                            }
-                        }
-                    }
-                }
-                "VALUE" => {
-                    if c.children.len() != 2 {
-                        return Err(format!(
-                            "VALUE group in room doesn't have two children\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if c.children[1].node_type != ZilNodeType::Token(TokenType::Number) {
-                        return Err(format!(
-                            "VALUE group in room doesn't have a number type second child\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    if out.value.is_some() {
-                        return Err(format!(
-                            "Room has multiple VALUE groups\n{}",
-                            format_file_location(&node)
-                        ));
-                    }
-
-                    let val = get_token_as_number(&c.children[1]).unwrap();
-                    out.value = Some(val);
-                }
-                _ => match self.parse_direction(c) {
-                    Some(dir) => {
-                        if out.directions.contains_key(&dir.name) {
-                            return Err(format!(
-                                "Room has duplicate directions\n{}",
-                                format_file_location(&node)
-                            ));
-                        }
-
-                        self.direction_names.insert(dir.name.clone());
-                        out.directions.insert(dir.name.clone(), dir);
-                    }
-                    None => {
-                        return Err(format!(
-                            "Room has bad group {}\n{}",
-                            name,
-                            format_file_location(&node)
-                        ));
-                    }
-                },
-            }
-        }
-
-        Ok(out)
-    }
-
-    pub fn parse_direction(&mut self, node: &ZilNode) -> Option<Direction> {
-        if node.children.len() < 2 {
-            return None;
-        }
-
-        let name = match get_nth_child_as_word(0, node) {
-            Some(name) => name,
-            None => {
-                return None;
-            }
-        };
-
-        let mut out = Direction {
-            basis: node.clone(),
-            name: name,
-            kind: DirectionType::ZERO,
-        };
-
-        if node.children.len() == 2 {
-            if node.children[1].node_type != ZilNodeType::Token(TokenType::Text) {
-                return None;
-            }
-
-            out.kind = DirectionType::ZERO;
-            return Some(out);
-        }
-
-        if node.children.len() < 3 {
-            return None;
-        }
-
-        match get_nth_child_as_word(1, node) {
-            Some(name) => {
-                if name == "PER" {
-                    if node.children.len() == 3
-                        && node.children[2].node_type == ZilNodeType::Token(TokenType::Word)
-                    {
-                        self.routines
-                            .insert(get_nth_child_as_word(2, node).unwrap());
-                        out.kind = DirectionType::ONE;
-                        return Some(out);
-                    }
-                    return None;
-                } else if name != "TO" {
-                    return None;
-                }
-            }
-            None => {
-                return None;
-            }
-        }
-
-        if node.children[2].node_type != ZilNodeType::Token(TokenType::Word) {
-            return None;
-        }
-
-        self.rooms.insert(get_nth_child_as_word(2, node).unwrap());
-
-        if node.children.len() == 3 {
-            out.kind = DirectionType::TWO;
-            return Some(out);
-        }
-
-        if node.children.len() < 5 {
-            return None;
-        }
-
-        if node.children[4].node_type != ZilNodeType::Token(TokenType::Word) {
-            return None;
-        }
-
-        if node.children.len() == 5 {
-            self.globals.insert(get_nth_child_as_word(4, node).unwrap());
-            out.kind = DirectionType::THREE;
-            return Some(out);
-        }
-
-        if node.children.len() < 7 {
-            return None;
-        }
-
-        match get_nth_child_as_word(5, node) {
-            Some(name) => {
-                if name == "ELSE" {
-                    if node.children.len() == 7
-                        && node.children[6].node_type == ZilNodeType::Token(TokenType::Text)
-                    {
-                        self.globals.insert(get_nth_child_as_word(4, node).unwrap());
-                        out.kind = DirectionType::FOUR;
-                        return Some(out);
-                    }
-                    return None;
-                } else if name != "IS" {
-                    return None;
-                }
-            }
-            None => {
-                return None;
-            }
-        }
-
-        match get_nth_child_as_word(6, node) {
-            Some(name) => {
-                if name != "OPEN" {
-                    return None;
-                }
-            }
-            None => {
-                return None;
-            }
-        }
-
-        self.objects.insert(get_nth_child_as_word(4, node).unwrap());
-
-        if node.children.len() == 7 {
-            out.kind = DirectionType::FIVE;
-            return Some(out);
-        }
-
-        if node.children.len() < 9 {
-            return None;
-        }
-
-        match get_nth_child_as_word(7, node) {
-            Some(name) => {
-                if name == "ELSE" {
-                    if node.children.len() == 9
-                        && node.children[8].node_type == ZilNodeType::Token(TokenType::Text)
-                    {
-                        out.kind = DirectionType::SIX;
-                        return Some(out);
-                    }
-                }
-            }
-            None => (),
-        }
-
-        None
-    }
+    index: usize,
+    name: String,
+    desc: Option<String>,
+    vars: HashMap<String, VarVal>,
+    action: Option<String>, // runs all the time you're in the room
+    directions: HashMap<String, Direction>,
 }
 
 impl RoomInfo {
     pub fn new() -> RoomInfo {
         RoomInfo {
+            index: 0,
             name: String::new(),
-            _in: None,
-            action: None,
             desc: None,
-            ldesc: None,
-            flags: HashSet::new(),
-            pseudo: Vec::new(),
-            globals: HashSet::new(),
-            value: None,
+            vars: HashMap::new(),
+            action: None,
             directions: HashMap::new(),
+        }
+    }
+
+    fn crunch_desc(node: &ZilNode) -> Result<String, String> {
+        if node.children.len() != 2 {
+            return Err(format!(
+                "Desc node doesn't have 2 children\n{}",
+                format_file_location(&node)
+            ));
+        }
+
+        let val = match node.children[1].node_type {
+            ZilNodeType::Token(TokenType::Word) => get_token_as_word(&node.children[1]),
+            ZilNodeType::Token(TokenType::Text) => get_token_as_text(&node.children[1]),
+            _ => {
+                return Err(format!(
+                    "Desc node has invalid second child\n{}",
+                    format_file_location(&node.children[1])
+                ));
+            }
+        };
+
+        Ok(val.unwrap())
+    }
+
+    fn crunch_vars(node: &ZilNode) -> Result<HashMap<String, VarVal>, String> {
+        if node.children.len() < 3 {
+            return Err(format!(
+                "Vars node doesn't have enough children\n{}",
+                format_file_location(&node)
+            ));
+        } else if node.children.len() % 2 == 0 {
+            return Err(format!(
+                "Vars node doesn't have an odd number of children\n{}",
+                format_file_location(&node)
+            ));
+        }
+
+        let mut out: HashMap<String, VarVal> = HashMap::new();
+
+        for i in 0..(node.children.len() - 1) / 2 {
+            let name = get_token_as_word(&node.children[i * 2 + 1]);
+            if name.is_none() {
+                return Err(format!(
+                    "Vars node has non-word name child\n{}",
+                    format_file_location(&node.children[i * 2 + 1])
+                ));
+            }
+
+            let name = name.unwrap();
+            if out.contains_key(&name) {
+                return Err(format!(
+                    "Vars node has duplicate variable name:{}\n{}",
+                    name,
+                    format_file_location(&node.children[i * 2 + 1])
+                ));
+            }
+
+            let val = VarVal::parse(&node.children[i * 2 + 2]);
+            if val.is_err() {
+                return Err(format!(
+                    "Vars node has invalid value child\n{}",
+                    format_file_location(&node.children[i * 2 + 2])
+                ));
+            }
+
+            out.insert(name, val.unwrap());
+        }
+
+        Ok(out)
+    }
+
+    fn crunch_action(node: &ZilNode) -> Result<String, String> {
+        if node.children.len() != 2 {
+            return Err(format!(
+                "Action node doesn't have 2 children\n{}",
+                format_file_location(&node)
+            ));
+        }
+
+        let word = get_token_as_word(&node.children[1]);
+        if word.is_none() {
+            return Err(format!(
+                "Action node has non-word second child\n{}",
+                format_file_location(&node.children[1])
+            ));
+        }
+
+        Ok(word.unwrap())
+    }
+
+    fn crunch_direction(node: &ZilNode) -> Result<Direction, String> {
+        if node.children.len() < 2 {
+            return Err(format!(
+                "Direction node doesn't have enough children\n{}",
+                format_file_location(&node)
+            ));
+        } else if node.children.len() > 3 {
+            return Err(format!(
+                "Direction node has too many children\n{}",
+                format_file_location(&node)
+            ));
+        }
+
+        let first_word = get_token_as_word(&node.children[0]).unwrap_or_default();
+
+        if node.children.len() == 2 {
+            let text = get_token_as_text(&node.children[1]);
+            if text.is_none() {
+                return Err(format!(
+                    "Text-type direction node has non-text second child\n{}",
+                    format_file_location(&node.children[1])
+                ));
+            }
+
+            return Ok(Direction {
+                name: first_word,
+                kind: DirectionType::TEXT,
+                thing: text.unwrap(),
+            });
+        }
+
+        let second_word = get_token_as_word(&node.children[1]);
+        if second_word.is_none() {
+            return Err(format!(
+                "Room or routine type direction node has non-word second child\n{}",
+                format_file_location(&node.children[1])
+            ));
+        }
+
+        let second_word = second_word.unwrap();
+        if second_word == "PER" {
+            let routine = get_token_as_word(&node.children[2]);
+            if routine.is_none() {
+                return Err(format!(
+                    "Routine-type direction node has non-word third child\n{}",
+                    format_file_location(&node.children[2])
+                ));
+            }
+
+            return Ok(Direction {
+                name: first_word,
+                kind: DirectionType::ROUTINE,
+                thing: routine.unwrap(),
+            });
+        } else if second_word == "TO" {
+            let room = get_token_as_word(&node.children[2]);
+            if room.is_none() {
+                return Err(format!(
+                    "Room-type direction node has non-word third child\n{}",
+                    format_file_location(&node.children[2])
+                ));
+            }
+
+            return Ok(Direction {
+                name: first_word,
+                kind: DirectionType::ROOM,
+                thing: room.unwrap(),
+            });
+        }
+
+        return Err(format!(
+            "Direction node has invalid second word:{}\n{}",
+            second_word,
+            format_file_location(&node.children[1])
+        ));
+    }
+}
+
+pub struct Direction {
+    pub name: String,
+    pub kind: DirectionType,
+    pub thing: String, // TEXT, name of ROUTINE, or name of ROOM
+}
+
+#[derive(Clone, Copy)]
+pub enum DirectionType {
+    TEXT,    // SW <TEXT>
+    ROUTINE, // SW PER <ROUTINE>
+    ROOM,    // SW TO <ROOM>
+}
+
+impl RoomStats {
+    pub fn new() -> RoomStats {
+        RoomStats {
+            basis: Vec::new(),
+            all_rooms: HashMap::new(),
+        }
+    }
+
+    pub fn as_codex(&self) -> RoomCodex {
+        RoomCodex {
+            index: 0,
+            basis: &self.basis,
+            all_rooms: &self.all_rooms,
         }
     }
 }
 
-impl CanWriteOutput for RoomStats {
-    fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.writeln("export const rooms = {")?;
-        formatter.indent();
+impl Populator for RoomStats {
+    fn add_node(&mut self, node: ZilNode) {
+        self.basis.push(node);
+    }
 
-        for key in self.basis.keys() {
-            let name = Formatter::safe_case(key);
-            formatter.writeln(&format!("{}: {{", name))?;
-            formatter.indent();
+    fn crunch(&mut self) -> Result<(), String> {
+        for (i, node) in self.basis.iter().enumerate() {
+            let mut info = RoomInfo::new();
 
-            let info = self.info.get(key).unwrap();
-
-            if info._in.is_some() {
-                formatter.writeln(&format!(
-                    "in: \"{}\",",
-                    Formatter::safe_case_option(&info._in)
-                ))?;
+            if node.children.len() < 2 {
+                return Err(format!(
+                    "Possible room node doesn't have enough children\n{}",
+                    format_file_location(&node)
+                ));
             }
 
-            if info.action.is_some() {
-                formatter.writeln(&format!(
-                    "action: \"{}\",",
-                    Formatter::safe_case_option(&info.action)
-                ))?;
+            let first_word = get_token_as_word(&node.children[0]).unwrap_or_default();
+            if first_word != "ROOM" {
+                unreachable!();
             }
 
-            if info.desc.is_some() {
-                formatter.writeln(&format!("desc: \"{}\",", info.desc.as_ref().unwrap()))?;
+            let second_word = get_token_as_word(&node.children[1]);
+            if second_word.is_none() {
+                return Err(format!(
+                    "Room node has non-word second child\n{}",
+                    format_file_location(&node)
+                ));
             }
 
-            if info.ldesc.is_some() {
-                formatter.writeln(&format!("ldesc: \"{}\",", info.ldesc.as_ref().unwrap()))?;
-            }
-
-            if info.flags.len() > 0 {
-                formatter.write("flags: [", true)?;
-                for (i, flag) in info.flags.iter().enumerate() {
-                    formatter.write(&format!("\"{}\"", Formatter::safe_case(flag)), false)?;
-
-                    if i < info.flags.len() - 1 {
-                        formatter.write(", ", false)?;
-                    }
+            for c in node.children.iter().skip(2) {
+                if c.node_type != ZilNodeType::Group {
+                    return Err(format!(
+                        "Room node has non-group child in body\n{}",
+                        format_file_location(&c)
+                    ));
                 }
-                formatter.write("],\n", false)?;
-            }
 
-            // info.pseudo
-
-            if info.globals.len() > 0 {
-                formatter.write("globals: [", true)?;
-                for (i, global) in info.globals.iter().enumerate() {
-                    formatter.write(&format!("\"{}\"", Formatter::safe_case(global)), false)?;
-
-                    if i < info.globals.len() - 1 {
-                        formatter.write(", ", false)?;
-                    }
+                if c.children.len() < 1 {
+                    return Err(format!(
+                        "Room node has unnamed group\n{}",
+                        format_file_location(&c)
+                    ));
                 }
-                formatter.write("],\n", false)?;
+
+                let child_word = get_token_as_word(&c.children[0]);
+                if child_word.is_none() {
+                    return Err(format!(
+                        "Room node has group with non-word first child\n{}",
+                        format_file_location(&c)
+                    ));
+                }
+
+                let child_word = child_word.unwrap();
+                match child_word.as_str() {
+                    "DESC" => match RoomInfo::crunch_desc(&c) {
+                        Ok(v) => info.desc = Some(v),
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                    "VARS" => match RoomInfo::crunch_vars(&c) {
+                        Ok(v) => info.vars = v,
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                    "ACTION" => match RoomInfo::crunch_action(&c) {
+                        Ok(v) => info.action = Some(v),
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                    _ => match RoomInfo::crunch_direction(&c) {
+                        Ok(val) => match info.directions.insert(val.name.clone(), val) {
+                            Some(old_val) => {
+                                return Err(format!(
+                                    "Room node has duplicate direction:{}\n{}",
+                                    old_val.name,
+                                    format_file_location(&c)
+                                ));
+                            }
+                            None => (),
+                        },
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                }
             }
 
-            // info.value
+            let second_word = second_word.unwrap();
 
-            // info.directions
-            // how to print directions?
-
-            formatter.outdent();
-            formatter.writeln("},")?;
+            info.index = i;
+            info.name = second_word.clone();
+            self.all_rooms.insert(second_word, info);
         }
 
-        formatter.outdent();
-        formatter.writeln("};")?;
-        formatter.flush()?;
+        Ok(())
+    }
+
+    fn validate(&self, cross_ref: &CrossRef) -> Result<(), String> {
+        // TODO
+        // check that action routines exists
+        // check that direction routines exist
+        // check that direction rooms exist
+        // check that variable values exist??
 
         Ok(())
+    }
+}
+
+pub struct RoomCodex<'a> {
+    index: usize,
+    basis: &'a Vec<ZilNode>,
+    all_rooms: &'a HashMap<String, RoomInfo>,
+}
+pub struct RoomCodexValue<'a> {
+    pub name: &'a String,
+    pub desc: &'a Option<String>,
+    pub vars: &'a HashMap<String, VarVal>,
+    pub action: &'a Option<String>,
+    pub directions: &'a HashMap<String, Direction>,
+}
+
+impl<'a> Iterator for RoomCodex<'a> {
+    type Item = RoomCodexValue<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.basis.len() {
+            None
+        } else {
+            self.index += 1;
+            let node = &self.basis[self.index - 1];
+            let key = get_token_as_word(&node.children[1]).unwrap();
+            let info = self.all_rooms.get(&key).unwrap();
+
+            Some(RoomCodexValue {
+                name: &info.name,
+                desc: &info.desc,
+                vars: &info.vars,
+                action: &info.action,
+                directions: &info.directions,
+            })
+        }
+    }
+}
+
+impl<'a> Codex<RoomCodexValue<'a>> for RoomCodex<'a> {
+    fn lookup(&self, word: &str) -> Option<RoomCodexValue<'a>> {
+        let info = self.all_rooms.get(word);
+
+        if info.is_none() {
+            return None;
+        }
+
+        let info = info.unwrap();
+
+        return Some(RoomCodexValue {
+            name: &info.name,
+            desc: &info.desc,
+            vars: &info.vars,
+            action: &info.action,
+            directions: &info.directions,
+        });
     }
 }

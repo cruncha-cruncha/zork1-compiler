@@ -6,15 +6,15 @@ use crate::{
     },
 };
 
-pub struct Not {}
+pub struct Typeof {}
 
-impl HasZilName for Not {
+impl HasZilName for Typeof {
     fn zil_name(&self) -> &'static str {
-        "NOT"
+        "TYPEOF"
     }
 }
 
-impl CanValidate for Not {
+impl CanValidate for Typeof {
     fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
         if n.children.len() != 2 {
             return Err(format!(
@@ -29,7 +29,7 @@ impl CanValidate for Not {
             ZilNodeType::Cluster => v.validate_cluster(&n.children[1])?,
             _ => {
                 return Err(format!(
-                    "Expected word or cluster, found {}\n{}",
+                    "Expected word, found {}\n{}",
                     n.children[1].node_type,
                     format_file_location(&n)
                 ));

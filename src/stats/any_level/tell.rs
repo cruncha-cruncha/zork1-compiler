@@ -6,11 +6,6 @@ use crate::{
     },
 };
 
-// <TELL "open.">
-// <TELL <PICK-ONE ,DUMMY>>
-// <TELL "The boards are securely fastened." CR>
-// <TELL "It is hardly likely that the " D ,PRSO " is interested." CR>
-
 pub struct Tell {}
 
 impl HasZilName for Tell {
@@ -20,22 +15,24 @@ impl HasZilName for Tell {
 }
 
 impl CanValidate for Tell {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
+    fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
         if n.children.len() < 2 {
             return Err(format!(
-                "TELL node does not have enough children\n{}",
+                "Expected at least 2 children, found {}\n{}",
+                n.children.len(),
                 format_file_location(&n)
             ));
         }
 
-        for child in &n.children[1..] {
+        for child in n.children.iter().skip(1) {
             match child.node_type {
                 ZilNodeType::Token(TokenType::Word) | ZilNodeType::Token(TokenType::Text) => (),
-                ZilNodeType::Cluster => v.validate_cluster(&child)?,
+                ZilNodeType::Cluster => v.validate_cluster(child)?,
                 _ => {
                     return Err(format!(
-                        "Child of TELL node is not a word or cluster\n{}",
-                        format_file_location(&child)
+                        "Expected word, text, or cluster, found {}\n{}",
+                        child.node_type,
+                        format_file_location(&n)
                     ));
                 }
             }

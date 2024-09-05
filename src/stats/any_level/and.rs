@@ -6,11 +6,6 @@ use crate::{
     },
 };
 
-// <AND <VERB? BRUSH> <EQUAL? ,PRSO ,TEETH>>
-// <AND <EQUAL? ,HERE ,LLD-ROOM> <NOT ,LLD-FLAG>>
-// <AND ,XB <IN? ,CANDLES ,WINNER> <FSET? ,CANDLES ,ONBIT> <NOT ,XC>>
-// <AND .HERE? <FSET? ,THIEF ,FIGHTBIT> <NOT <WINNING? ,THIEF>>>
-
 pub struct And {}
 
 impl HasZilName for And {
@@ -20,7 +15,7 @@ impl HasZilName for And {
 }
 
 impl CanValidate for And {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
+    fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
         if n.children.len() < 3 {
             return Err(format!(
                 "Expected at least 3 children, found {}\n{}",
@@ -35,7 +30,7 @@ impl CanValidate for And {
                 ZilNodeType::Cluster => v.validate_cluster(child)?,
                 _ => {
                     return Err(format!(
-                        "Expected word, found {}\n{}",
+                        "Expected word or cluster, found {}\n{}",
                         child.node_type,
                         format_file_location(&n)
                     ));

@@ -6,10 +6,6 @@ use crate::{
     },
 };
 
-// <RETURN>
-// <RETURN ,KITCHEN>
-// <RETURN <GOTO ,ROUND-ROOM>>
-
 pub struct Return {}
 
 impl HasZilName for Return {
@@ -19,26 +15,17 @@ impl HasZilName for Return {
 }
 
 impl CanValidate for Return {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
-        if n.children.len() > 2 {
-            return Err(format!(
-                "RETURN node has more than two children\n{}",
-                format_file_location(&n)
-            ));
-        }
-
-        if n.children.len() == 2 {
-            match n.children[1].node_type {
-                ZilNodeType::Token(TokenType::Word) => (),
-                ZilNodeType::Cluster => v.validate_cluster(&n.children[1])?,
-                _ => {
-                    return Err(format!(
-                        "Second child of RETURN node is not a word or cluster\n{}",
-                        format_file_location(&n)
-                    ));
+    fn validate(&self, v: &mut Validator, n: &ZilNode) -> Result<(), String> {
+        for child in n.children.iter().skip(1) {
+            match child.node_type {
+                ZilNodeType::Cluster => v.validate_cluster(child)?,
+                ZilNodeType::Group => {
+                    // TODO
                 }
+                _ => (),
             }
         }
+
         Ok(())
     }
 }
