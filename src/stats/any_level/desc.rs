@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::set_var::{Scope, VarWordType};
+use super::set_var::Scope;
 
 pub struct Description {
     pub scope: Scope,
@@ -45,11 +45,8 @@ impl CanValidate for Description {
 
                 if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
-                        ReturnValType::ObjectName => {
-                            self.scope = Scope::Object(VarWordType::Literal(word));
-                        }
-                        ReturnValType::Location => {
-                            self.scope = Scope::Location(word);
+                        ReturnValType::ObjectName | ReturnValType::Location => {
+                            self.scope = Scope::Local(word);
                         }
                         _ => {
                             return Err(format!(
@@ -62,7 +59,7 @@ impl CanValidate for Description {
                 } else if v.is_room(&word) {
                     self.scope = Scope::Room(word);
                 } else if v.is_object(&word) {
-                    self.scope = Scope::Object(VarWordType::Literal(word));
+                    self.scope = Scope::Object(word);
                 } else {
                     return Err(format!(
                         "Variable {} not found in room or object table\n{}",

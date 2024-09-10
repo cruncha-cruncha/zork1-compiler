@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::set_var::{Scope, VarWordType};
+use super::set_var::Scope;
 
 // move PLAYER to a ROOM
 // move an OBJECT to PLAYER, a ROOM, or another OBJECT
@@ -50,7 +50,7 @@ impl CanValidate for Move {
         let third_child = &n.children[2];
 
         if second_word.is_some() && second_word.as_ref().unwrap() == "PLAYER" {
-            self.thing = Scope::Player;
+            self.thing = Scope::Local("player".to_string());
             match third_child.node_type {
                 ZilNodeType::Token(TokenType::Word) => {
                     let word = get_token_as_word(&third_child).unwrap();
@@ -89,11 +89,8 @@ impl CanValidate for Move {
                 let second_word = second_word.unwrap();
                 if let Some(var_type) = v.has_local_var(&second_word) {
                     match var_type {
-                        ReturnValType::ObjectName => {
-                            self.thing = Scope::Object(VarWordType::Literal(second_word.clone()))
-                        }
-                        ReturnValType::Location => {
-                            self.thing = Scope::Location(second_word.clone())
+                        ReturnValType::ObjectName | ReturnValType::Location => {
+                            self.thing = Scope::Local(second_word.clone())
                         }
                         _ => {
                             return Err(format!(
@@ -104,7 +101,7 @@ impl CanValidate for Move {
                         }
                     }
                 } else if let Some(_object) = v.get_object(&second_word) {
-                    self.thing = Scope::Object(VarWordType::Literal(second_word.clone()));
+                    self.thing = Scope::Object(second_word.clone());
                 } else {
                     return Err(format!(
                         "Variable {} is not player, a room, or an object\n{}",
@@ -137,9 +134,8 @@ impl CanValidate for Move {
                 let word = get_token_as_word(&third_child).unwrap();
                 if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
-                        ReturnValType::Location => self.to = Scope::Location(word.clone()),
-                        ReturnValType::ObjectName => {
-                            self.to = Scope::Object(VarWordType::Literal(word.clone()))
+                        ReturnValType::Location | ReturnValType::ObjectName => {
+                            self.to = Scope::Local(word.clone())
                         }
                         _ => {
                             return Err(format!(
@@ -152,7 +148,7 @@ impl CanValidate for Move {
                 } else if v.is_room(&word) {
                     self.to = Scope::Room(word);
                 } else if v.is_object(&word) {
-                    self.to = Scope::Object(VarWordType::Literal(word));
+                    self.to = Scope::Object(word);
                 } else {
                     return Err(format!(
                         "Expected player, room, or object, found {}\n{}",

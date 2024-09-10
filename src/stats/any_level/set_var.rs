@@ -1,5 +1,5 @@
 use crate::{
-    js::write_output::{CanWriteOutput, OutputNode, OutputVariable},
+    js::write_output::{CanWriteOutput, OutputNode},
     stats::{
         helpers::{get_token_as_number, get_token_as_word},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
@@ -14,46 +14,35 @@ use crate::{
 // if len 4: set object / room / player variable to a number
 
 pub struct SetVar {
-    pub var: OutputVariable,
+    pub scope: Option<Scope>,
+    pub var: Scope,
     pub value: OutputNode,
 }
 
 pub enum Scope {
     // illegal
     TBD,
-    // locals['var_name'] = value
-    Local,
-    // globals['var_name'] = value
-    Global,
-    // player ...
-    Player,
+    // 'bare' ...
+    Bare(String),
+    // locals['local_name'] ...
+    Local(String),
+    // globals['global_name'] ...
+    Global(String),
     // rooms['room_name'] ...
     Room(String),
     // objects['object_name'] ...
-    Object(VarWordType),
-    // any word with ReturnValType::ObjectName is an actual object in js
-    // setVar(location, ... )
-    Location(String), // TODO: is this one necessary? Can it just be Local?
+    Object(String),
     // any cluster with ReturnValType::Location corresponds to a zil LOC call
     // the result is an actual object in js
     // setVar(<writer>, ... )
     LOC(Box<dyn CanWriteOutput>), // setValue(<writer>, ...)
 }
 
-// TODO: is this at all necessary?
-pub enum VarWordType {
-    TBD,              // illegal
-    Literal(String),  // the name of the variable
-    Indirect(String), // for use with EACH-OBJ or EACH-VAR (value is the name of a variable)
-}
-
 impl SetVar {
     pub fn new() -> Self {
         Self {
-            var: OutputVariable {
-                scope: Scope::TBD,
-                name: VarWordType::TBD,
-            },
+            scope: None,
+            var: Scope::TBD,
             value: OutputNode::TBD,
         }
     }
@@ -88,11 +77,8 @@ impl CanValidate for SetVar {
             let second_word: String = second_word.unwrap();
 
             if let Some(var_type) = v.has_local_var(&second_word) {
-                self.var.scope = Scope::Local;
-                if var_type == ReturnValType::Number {
-                    self.var.name = VarWordType::Literal(second_word.clone());
-                } else if var_type == ReturnValType::VarName {
-                    self.var.name = VarWordType::Literal(second_word.clone());
+                if var_type == ReturnValType::Number || var_type == ReturnValType::VarName {
+                    self.var = Scope::Local(second_word.clone());
                 } else {
                     return Err(format!(
                         "Variable {} is not a number of local variable\n{}",
@@ -101,8 +87,7 @@ impl CanValidate for SetVar {
                     ));
                 }
             } else if v.is_global(&second_word) {
-                self.var.scope = Scope::Global;
-                self.var.name = VarWordType::Literal(second_word.clone());
+                self.var = Scope::Global(second_word.clone());
             } else {
                 return Err(format!(
                     "Variable {} not found in local or global symbol table\n{}",
@@ -120,7 +105,7 @@ impl CanValidate for SetVar {
                 v.expect_val(ReturnValType::Location);
                 match v.validate_cluster(&second_child) {
                     Ok(_) => match v.take_last_writer() {
-                        Some(w) => self.var.scope = Scope::LOC(w),
+                        Some(w) => self.scope = Some(Scope::LOC(w)),
                         None => unreachable!(),
                     },
                     Err(e) => return Err(e),
@@ -132,12 +117,8 @@ impl CanValidate for SetVar {
                 let second_word = get_token_as_word(&second_child).unwrap();
                 if let Some(var_type) = v.has_local_var(&second_word) {
                     match var_type {
-                        ReturnValType::ObjectName => {
-                            self.var.scope =
-                                Scope::Object(VarWordType::Literal(second_word.clone()))
-                        }
-                        ReturnValType::Location => {
-                            self.var.scope = Scope::Location(second_word.clone())
+                        ReturnValType::ObjectName | ReturnValType::Location => {
+                            self.scope = Some(Scope::Local(second_word.clone()));
                         }
                         _ => {
                             return Err(format!(
@@ -151,12 +132,12 @@ impl CanValidate for SetVar {
                 }
 
                 if let Some(_object) = v.get_object(&second_word) {
-                    self.var.scope = Scope::Object(VarWordType::Literal(second_word.clone()));
+                    self.scope = Some(Scope::Object(second_word.clone()));
                     found_scope = true;
                 }
 
                 if let Some(_room) = v.get_room(&second_word) {
-                    self.var.scope = Scope::Room(second_word.clone());
+                    self.scope = Some(Scope::Room(second_word.clone()));
                     found_scope = true;
                 }
             }
@@ -181,11 +162,8 @@ impl CanValidate for SetVar {
 
             match v.has_local_var(&third_word) {
                 Some(rt) => match rt {
-                    ReturnValType::VarName => {
-                        self.var.name = VarWordType::Literal(third_word.clone());
-                    }
-                    ReturnValType::Number => {
-                        self.var.name = VarWordType::Literal(third_word.clone());
+                    ReturnValType::VarName | ReturnValType::Number => {
+                        self.var = Scope::Local(third_word.clone());
                     }
                     _ => {
                         return Err(format!(
@@ -196,7 +174,7 @@ impl CanValidate for SetVar {
                     }
                 },
                 _ => {
-                    self.var.name = VarWordType::Literal(third_word.clone());
+                    self.var = Scope::Bare(third_word.clone());
                 }
             }
         }
@@ -213,17 +191,8 @@ impl CanValidate for SetVar {
                 let word = get_token_as_word(&last_child).unwrap();
                 if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
-                        ReturnValType::Number => {
-                            self.value = OutputNode::Variable(OutputVariable {
-                                scope: Scope::Local,
-                                name: VarWordType::Literal(word.clone()),
-                            });
-                        }
-                        ReturnValType::VarName => {
-                            self.value = OutputNode::Variable(OutputVariable {
-                                scope: Scope::Local,
-                                name: VarWordType::Literal(word.clone()),
-                            });
+                        ReturnValType::Number | ReturnValType::VarName => {
+                            self.value = OutputNode::Variable(Scope::Local(word.clone()));
                         }
                         _ => {
                             return Err(format!(
@@ -234,10 +203,7 @@ impl CanValidate for SetVar {
                         }
                     }
                 } else if v.is_global(&word) {
-                    self.value = OutputNode::Variable(OutputVariable {
-                        scope: Scope::Global,
-                        name: VarWordType::Literal(word.clone()),
-                    });
+                    self.value = OutputNode::Variable(Scope::Global(word.clone()));
                 } else {
                     return Err(format!(
                         "Variable {} not found in local or global symbol table\n{}",

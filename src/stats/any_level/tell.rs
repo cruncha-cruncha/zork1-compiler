@@ -1,5 +1,5 @@
 use crate::{
-    js::write_output::{OutputNode, OutputVariable},
+    js::write_output::OutputNode,
     stats::{
         helpers::{get_token_as_number, get_token_as_text, get_token_as_word},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::{Scope, VarWordType};
+use super::set_var::Scope;
 
 pub struct Tell {
     pub text: Vec<OutputNode>,
@@ -59,17 +59,8 @@ impl CanValidate for Tell {
 
                     if let Some(var_type) = v.has_local_var(&word) {
                         match var_type {
-                            ReturnValType::Number => {
-                                self.text.push(OutputNode::Variable(OutputVariable {
-                                    scope: Scope::Local,
-                                    name: VarWordType::Literal(word),
-                                }));
-                            }
-                            ReturnValType::VarName => {
-                                self.text.push(OutputNode::Variable(OutputVariable {
-                                    scope: Scope::Local,
-                                    name: VarWordType::Literal(word),
-                                }));
+                            ReturnValType::Number | ReturnValType::VarName => {
+                                self.text.push(OutputNode::Variable(Scope::Local(word)));
                             }
                             _ => {
                                 return Err(format!(
@@ -80,10 +71,7 @@ impl CanValidate for Tell {
                             }
                         }
                     } else if v.is_global(&word) {
-                        self.text.push(OutputNode::Variable(OutputVariable {
-                            scope: Scope::Global,
-                            name: VarWordType::Literal(word),
-                        }));
+                        self.text.push(OutputNode::Variable(Scope::Global(word)));
                     } else {
                         return Err(format!(
                             "Variable {} not found in local or global symbol table\n{}",

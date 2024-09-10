@@ -30,8 +30,8 @@ export const objects = {
     ],
     loc: 'forest2',
     vars: {
-      canBeAttacked: 1,
       canAttack: 1,
+      canBeAttacked: 1,
       health: 5,
     },
     hooks: {

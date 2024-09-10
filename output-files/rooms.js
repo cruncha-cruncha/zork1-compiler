@@ -7,8 +7,8 @@ export const rooms = {
     vars: {
     },
     move: {
-      EAST: { room: 'forest2' },
       UP: { text: "There is no side-to-side" },
+      EAST: { room: 'forest2' },
     },
     hooks: {
     },
@@ -23,8 +23,8 @@ export const rooms = {
     vars: {
     },
     move: {
-      UP: { text: "There is no up there is no down" },
       WEST: { room: 'forest1' },
+      UP: { text: "There is no up there is no down" },
     },
     hooks: {
     },

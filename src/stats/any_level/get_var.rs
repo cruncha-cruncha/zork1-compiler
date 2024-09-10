@@ -1,5 +1,4 @@
 use crate::{
-    js::write_output::OutputVariable,
     stats::{
         helpers::get_token_as_word,
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
@@ -10,22 +9,21 @@ use crate::{
     },
 };
 
-use super::set_var::{Scope, VarWordType};
+use super::set_var::Scope;
 
 // if length 3: get val of variable in room, object, or player
 // if length 2: get val of local variable or global variable
 
 pub struct GetVar {
-    pub var: OutputVariable,
+    pub scope: Option<Scope>,
+    pub var: Scope,
 }
 
 impl GetVar {
     pub fn new() -> Self {
         Self {
-            var: OutputVariable {
-                scope: Scope::TBD,
-                name: VarWordType::TBD,
-            },
+            scope: None,
+            var: Scope::TBD,
         }
     }
 }
@@ -61,13 +59,9 @@ impl CanValidate for GetVar {
             let second_word = second_word.unwrap();
 
             if let Some(var_type) = v.has_local_var(&second_word) {
-                self.var.scope = Scope::Local;
                 match var_type {
-                    ReturnValType::Number => {
-                        self.var.name = VarWordType::Literal(second_word.clone())
-                    }
-                    ReturnValType::VarName => {
-                        self.var.name = VarWordType::Literal(second_word.clone())
+                    ReturnValType::Number | ReturnValType::VarName => {
+                        self.var = Scope::Local(second_word.clone())
                     }
                     _ => {
                         return Err(format!(
@@ -78,8 +72,7 @@ impl CanValidate for GetVar {
                     }
                 }
             } else if v.is_global(&second_word) {
-                self.var.scope = Scope::Global;
-                self.var.name = VarWordType::Literal(second_word.clone());
+                self.var = Scope::Global(second_word.clone());
             } else {
                 return Err(format!(
                     "Variable {} not found in local or global symbol table\n{}",
@@ -98,7 +91,7 @@ impl CanValidate for GetVar {
                 v.expect_val(ReturnValType::Location);
                 match v.validate_cluster(&second_child) {
                     Ok(_) => match v.take_last_writer() {
-                        Some(w) => self.var.scope = Scope::LOC(w),
+                        Some(w) => self.scope = Some(Scope::LOC(w)),
                         None => unreachable!(),
                     },
                     Err(e) => return Err(e),
@@ -110,12 +103,8 @@ impl CanValidate for GetVar {
                 let second_word = get_token_as_word(&second_child).unwrap();
                 if let Some(var_type) = v.has_local_var(&second_word) {
                     match var_type {
-                        ReturnValType::ObjectName => {
-                            self.var.scope =
-                                Scope::Object(VarWordType::Literal(second_word.clone()))
-                        }
-                        ReturnValType::Location => {
-                            self.var.scope = Scope::Location(second_word.clone())
+                        ReturnValType::ObjectName | ReturnValType::Location => {
+                            self.scope = Some(Scope::Local(second_word.clone()))
                         }
                         _ => {
                             return Err(format!(
@@ -129,12 +118,12 @@ impl CanValidate for GetVar {
                 }
 
                 if let Some(_object) = v.get_object(&second_word) {
-                    self.var.scope = Scope::Object(VarWordType::Literal(second_word.clone()));
+                    self.scope = Some(Scope::Object(second_word.clone()));
                     found_scope = true;
                 }
 
                 if let Some(_room) = v.get_room(&second_word) {
-                    self.var.scope = Scope::Room(second_word.clone());
+                    self.scope = Some(Scope::Room(second_word.clone()));
                     found_scope = true;
                 }
             }
@@ -159,11 +148,8 @@ impl CanValidate for GetVar {
 
             match v.has_local_var(&third_word) {
                 Some(rt) => match rt {
-                    ReturnValType::VarName => {
-                        self.var.name = VarWordType::Literal(third_word.clone());
-                    }
-                    ReturnValType::Number => {
-                        self.var.name = VarWordType::Literal(third_word.clone());
+                    ReturnValType::VarName | ReturnValType::Number => {
+                        self.var = Scope::Local(third_word.clone());
                     }
                     _ => {
                         return Err(format!(
@@ -174,7 +160,7 @@ impl CanValidate for GetVar {
                     }
                 },
                 _ => {
-                    self.var.name = VarWordType::Literal(third_word.clone());
+                    self.var = Scope::Bare(third_word.clone());
                 }
             }
 

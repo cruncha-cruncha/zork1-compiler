@@ -1,100 +1,91 @@
 use crate::{
     js::{
         formatter::Formatter,
-        write_output::{CanWriteOutput, OutputNode, OutputVariable},
+        write_output::{CanWriteOutput, OutputNode},
     },
-    stats::any_level::set_var::{Scope, SetVar, VarWordType},
+    stats::any_level::set_var::{Scope, SetVar},
 };
 
 impl CanWriteOutput for SetVar {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.newline()?;
 
-        match self.var.scope {
-            Scope::Local => {
-                formatter.write("locals[", true)?;
+        if self.scope.is_some() {
+            match self.scope.as_ref().unwrap() {
+                Scope::Local(ref name) => {
+                    formatter.write(
+                        &format!("locals['{}'].vars[", Formatter::safe_case(name)),
+                        true,
+                    )?;
+                }
+                Scope::Room(ref name) => {
+                    formatter.write(
+                        &format!("rooms['{}'].vars[", Formatter::safe_case(name)),
+                        true,
+                    )?;
+                }
+                Scope::Object(ref name) => {
+                    formatter.write(
+                        &format!("objects['{}'].vars[", Formatter::safe_case(name)),
+                        true,
+                    )?;
+                }
+                Scope::LOC(ref w) => {
+                    formatter.write("setVar(", true)?;
+                    w.write_output(formatter)?;
+                    formatter.write(", ", false)?;
+                }
+                _ => panic!("IDK"),
             }
-            Scope::Global => {
-                formatter.write("globals[", true)?;
-            }
-            Scope::Room(ref room) => {
+        }
+
+        match self.var {
+            Scope::Bare(ref name) => {
                 formatter.write(
-                    &format!("rooms['{}'].vars[", Formatter::safe_case(room)),
-                    true,
+                    &format!("'{}'", Formatter::safe_case(name)),
+                    self.scope.is_none(),
                 )?;
             }
-            Scope::Object(VarWordType::Literal(ref object)) => {
+            Scope::Local(ref name) => {
                 formatter.write(
-                    &format!("objects['{}'].vars[", Formatter::safe_case(object)),
-                    true,
+                    &format!("locals['{}']", Formatter::safe_case(name)),
+                    self.scope.is_none(),
                 )?;
             }
-            Scope::Object(VarWordType::Indirect(ref object)) => {
+            Scope::Global(ref name) => {
                 formatter.write(
-                    &format!("objects[{}].vars[", Formatter::safe_case(object)),
-                    true,
+                    &format!("globals['{}']", Formatter::safe_case(name)),
+                    self.scope.is_none(),
                 )?;
-            }
-            Scope::Location(ref location) => {
-                formatter.write(&format!("setVar({}, ", location), true)?;
             }
             Scope::LOC(ref w) => {
-                formatter.write("setVar(", true)?;
                 w.write_output(formatter)?;
-                formatter.write(", ", false)?;
             }
             _ => panic!("IDK"),
         }
 
-        match self.var {
-            OutputVariable {
-                scope: Scope::Location(_) | Scope::LOC(_),
-                name: VarWordType::Literal(ref word),
-            } => {
-                formatter.write(&format!("'{}', ", word), false)?;
+        if self.scope.is_some() {
+            match self.scope.as_ref().unwrap() {
+                Scope::LOC(_) => {
+                    formatter.write(", ", false)?;
+                }
+                _ => {
+                    formatter.write("] = ", false)?;
+                }
             }
-            OutputVariable {
-                scope: Scope::Location(_) | Scope::LOC(_),
-                name: VarWordType::Indirect(ref word),
-            } => {
-                formatter.write(&format!("{}, ", word), false)?;
-            }
-            OutputVariable {
-                scope: _,
-                name: VarWordType::Literal(ref word),
-            } => {
-                formatter.write(&format!("'{}'] = ", Formatter::safe_case(word)), false)?;
-            }
-            OutputVariable {
-                scope: _,
-                name: VarWordType::Indirect(ref word),
-            } => {
-                formatter.write(&format!("{}] = ", Formatter::safe_case(word)), false)?;
-            }
-            _ => panic!("IDK"),
+        } else {
+            formatter.write(" = ", false)?;
         }
 
         match self.value {
             OutputNode::Number(n) => {
                 formatter.write(&format!("{}", n), false)?;
             }
-            OutputNode::Variable(OutputVariable {
-                scope: Scope::Local,
-                name: VarWordType::Literal(ref name),
-            }) => {
+            OutputNode::Variable(Scope::Local(ref name)) => {
                 formatter.write(&format!("locals['{}']", Formatter::safe_case(name)), false)?;
             }
-            OutputNode::Variable(OutputVariable {
-                scope: Scope::Local,
-                name: VarWordType::Indirect(ref name),
-            }) => {
-                formatter.write(&format!("locals[{}]", Formatter::safe_case(name)), false)?;
-            }
-            OutputNode::Variable(OutputVariable {
-                scope: Scope::Global,
-                name: VarWordType::Literal(ref name),
-            }) => {
-                formatter.write(&format!("globals['{}']", Formatter::safe_case(name)), false)?;
+            OutputNode::Variable(Scope::Global(ref name)) => {
+                formatter.write(&format!("globals[{}]", Formatter::safe_case(name)), false)?;
             }
             OutputNode::Writer(ref w) => {
                 w.write_output(formatter)?;
@@ -102,15 +93,15 @@ impl CanWriteOutput for SetVar {
             _ => panic!("IDK"),
         }
 
-        match self.var.scope {
-            Scope::Local | Scope::Global | Scope::Room(_) | Scope::Object(_) => {
-                formatter.write(";", false)?;
+        if self.scope.is_some() {
+            match self.scope.as_ref().unwrap() {
+                Scope::LOC(_) => {
+                    formatter.write(");", false)?;
+                }
+                _ => (),
             }
-            Scope::Location(_) | Scope::LOC(_) => {
-                formatter.write(");", false)?;
-            }
-            _ => panic!("IDK"),
         }
+        formatter.write(";", false)?;
 
         Ok(())
     }

@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::{Scope, VarWordType};
+use super::set_var::Scope;
 
 // starts a loop
 // the third child is a group of exactly one variable name
@@ -71,10 +71,9 @@ impl CanValidate for EachObj {
             let second_word = get_token_as_word(&second_child).unwrap();
             if let Some(var_type) = v.has_local_var(&second_word) {
                 match var_type {
-                    ReturnValType::ObjectName => {
-                        self.scope = Scope::Object(VarWordType::Literal(second_word.clone()));
+                    ReturnValType::ObjectName | ReturnValType::Location => {
+                        self.scope = Scope::Local(second_word.clone());
                     }
-                    ReturnValType::Location => self.scope = Scope::Location(second_word.clone()),
                     _ => {
                         return Err(format!(
                             "Variable {} is local but not a Location\n{}",
@@ -92,7 +91,7 @@ impl CanValidate for EachObj {
             }
 
             if v.is_object(&second_word) {
-                self.scope = Scope::Object(VarWordType::Literal(second_word.clone()));
+                self.scope = Scope::Object(second_word.clone());
                 found_scope = true;
             }
         }

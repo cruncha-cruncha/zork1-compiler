@@ -2,7 +2,7 @@ import { findObjectMatchingParsedWord } from "./main.js";
 
 export const buzz = [];
 
-export const directions = ["UP", "EAST", "WEST"];
+export const directions = ["UP", "WEST", "EAST"];
 
 export const parseInput = (rawString) => {
   const words = rawString.split(" ").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));

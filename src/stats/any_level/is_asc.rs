@@ -1,5 +1,5 @@
 use crate::{
-    js::write_output::{OutputNode, OutputVariable},
+    js::write_output::OutputNode,
     stats::{
         helpers::{get_token_as_number, get_token_as_word},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::{Scope, VarWordType};
+use super::set_var::Scope;
 
 // returns a boolean
 
@@ -53,17 +53,8 @@ impl CanValidate for IsAsc {
                     let word = get_token_as_word(&child).unwrap();
                     if let Some(var_type) = v.has_local_var(&word) {
                         match var_type {
-                            ReturnValType::Number => {
-                                self.values.push(OutputNode::Variable(OutputVariable {
-                                    scope: Scope::Local,
-                                    name: VarWordType::Literal(word),
-                                }));
-                            }
-                            ReturnValType::VarName => {
-                                self.values.push(OutputNode::Variable(OutputVariable {
-                                    scope: Scope::Local,
-                                    name: VarWordType::Literal(word),
-                                }));
+                            ReturnValType::Number | ReturnValType::VarName => {
+                                self.values.push(OutputNode::Variable(Scope::Local(word)));
                             }
                             _ => {
                                 return Err(format!(
@@ -74,10 +65,7 @@ impl CanValidate for IsAsc {
                             }
                         }
                     } else if v.is_global(&word) {
-                        self.values.push(OutputNode::Variable(OutputVariable {
-                            scope: Scope::Global,
-                            name: VarWordType::Literal(word),
-                        }));
+                        self.values.push(OutputNode::Variable(Scope::Global(word)));
                     } else {
                         return Err(format!(
                             "Variable {} not found in local or global symbol table\n{}",

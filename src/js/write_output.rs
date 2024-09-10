@@ -1,10 +1,6 @@
 use std::path::Path;
 
-use crate::stats::{
-    any_level::set_var::{Scope, VarWordType},
-    cross_ref::CrossRef,
-    routine_tracker::Validator,
-};
+use crate::stats::{any_level::set_var::Scope, cross_ref::CrossRef, routine_tracker::Validator};
 
 use super::{build_parser::ParseTree, formatter::Formatter, top_level::routine::RoutineToots};
 
@@ -20,13 +16,8 @@ pub enum OutputNode {
     TBD,
     Number(i32),
     Text(String),
-    Variable(OutputVariable),
+    Variable(Scope),
     Writer(Box<dyn CanWriteOutput>),
-}
-
-pub struct OutputVariable {
-    pub scope: Scope,
-    pub name: VarWordType,
 }
 
 pub fn write_output(cross_ref: &CrossRef, validator: &mut Validator) -> Result<(), std::io::Error> {
@@ -75,19 +66,13 @@ impl CanWriteOutput for OutputNode {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         match self {
             OutputNode::TBD => panic!("TBD"),
-            OutputNode::Variable(output_var) => match output_var {
-                OutputVariable {
-                    scope: Scope::Local,
-                    name: VarWordType::Literal(word),
-                } => formatter.write(&format!("locals['{}']", Formatter::safe_case(word)), false),
-                OutputVariable {
-                    scope: Scope::Local,
-                    name: VarWordType::Indirect(word),
-                } => formatter.write(&format!("locals[{}]", Formatter::safe_case(word)), false),
-                OutputVariable {
-                    scope: Scope::Global,
-                    name: VarWordType::Literal(word),
-                } => formatter.write(&format!("global['{}']", Formatter::safe_case(word)), false),
+            OutputNode::Variable(scope) => match scope {
+                Scope::Local(name) => {
+                    formatter.write(&format!("locals['{}']", Formatter::safe_case(name)), false)
+                }
+                Scope::Global(name) => {
+                    formatter.write(&format!("globals['{}']", Formatter::safe_case(name)), false)
+                }
                 _ => panic!("IDK"),
             },
             OutputNode::Text(s) => formatter.write(&format!("\"{}\"", s), false),

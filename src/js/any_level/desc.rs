@@ -1,9 +1,6 @@
 use crate::{
     js::{formatter::Formatter, write_output::CanWriteOutput},
-    stats::any_level::{
-        desc::Description,
-        set_var::{Scope, VarWordType},
-    },
+    stats::any_level::{desc::Description, set_var::Scope},
 };
 
 impl CanWriteOutput for Description {
@@ -11,27 +8,21 @@ impl CanWriteOutput for Description {
         formatter.newline()?;
 
         match self.scope {
-            Scope::Object(VarWordType::Literal(ref object)) => {
+            Scope::Local(ref name) => {
                 formatter.write(
-                    &format!("describe(objects['{}']);", Formatter::safe_case(object)),
+                    &format!("describe(locals['{}']);", Formatter::safe_case(name)),
                     true,
                 )?;
             }
-            Scope::Object(VarWordType::Indirect(ref object)) => {
+            Scope::Object(ref name) => {
                 formatter.write(
-                    &format!("describe(objects[{}]);", Formatter::safe_case(object)),
+                    &format!("describe(objects['{}']);", Formatter::safe_case(name)),
                     true,
                 )?;
             }
-            Scope::Room(ref room) => {
+            Scope::Room(ref name) => {
                 formatter.write(
-                    &format!("describe(rooms['{}']);", Formatter::safe_case(room)),
-                    true,
-                )?;
-            }
-            Scope::Location(ref location) => {
-                formatter.write(
-                    &format!("describe(locals['{}']);", Formatter::safe_case(location)),
+                    &format!("describe(rooms['{}']);", Formatter::safe_case(name)),
                     true,
                 )?;
             }
