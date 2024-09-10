@@ -8,6 +8,7 @@ use crate::zil::{
 
 use super::{
     helpers::get_token_as_word,
+    routine_tracker::Validator,
     top_level::{
         buzzi::BuzzStats, directions::DirectionStats, globals::GlobalStats, objects::ObjectStats,
         player::PlayerStats, rooms::RoomStats, routines::RoutineStats, synonyms::SynonymStats,
@@ -57,6 +58,13 @@ impl CrossRef {
         }
     }
 
+    pub fn name_is_illegal(name: &str) -> bool {
+        match name {
+            "CURRENT-ROOM" | "CMD-ACTION" | "CMD-PRSO" | "CMD-PRSI" | "PLAYER" => true,
+            _ => false,
+        }
+    }
+
     pub fn add_nodes(&mut self) {
         if self.tree.is_none() {
             panic!("CrossRef has no tree");
@@ -91,57 +99,94 @@ impl CrossRef {
     }
 
     pub fn crunch_top_level(&mut self, thread_pool: &mut Sigourney) -> Result<(), String> {
-        // crunch all sub info
         let mut receivers: Vec<mpsc::Receiver<Result<(), String>>> = Vec::with_capacity(10);
-        receivers.push(thread_pool.run_fn(|| self.player.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.globals.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.directions.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.rooms.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.objects.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.buzzi.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.routines.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.synonyms.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.syntax.crunch()));
 
-        // wait for all threads to finish
-        for receiver in receivers.iter_mut() {
-            match receiver.recv().unwrap() {
-                Ok(_) => {}
-                Err(e) => return Err(e),
+        {
+            // crunch all sub info
+            receivers.push(thread_pool.run_fn(|| self.player.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.globals.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.directions.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.rooms.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.objects.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.buzzi.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.routines.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.synonyms.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.syntax.crunch()));
+
+            // wait for all threads to finish
+            for receiver in receivers.iter_mut() {
+                match receiver.recv().unwrap() {
+                    Ok(_) => {}
+                    Err(e) => return Err(e),
+                }
             }
+
+            receivers.clear();
         }
 
-        receivers.clear();
+        {
+            // validate cross references
+            receivers.push(thread_pool.run_fn(|| self.player.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.globals.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.directions.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.rooms.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.objects.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.buzzi.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.routines.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.synonyms.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.syntax.validate(&self)));
 
-        // validate cross references
-        receivers.push(thread_pool.run_fn(|| self.player.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.globals.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.directions.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.rooms.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.objects.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.buzzi.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.routines.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.synonyms.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.syntax.validate(&self)));
-
-        // wait for all threads to finish
-        for receiver in receivers.iter_mut() {
-            match receiver.recv().unwrap() {
-                Ok(_) => {}
-                Err(e) => return Err(e),
+            // wait for all threads to finish
+            for receiver in receivers.iter_mut() {
+                match receiver.recv().unwrap() {
+                    Ok(_) => {}
+                    Err(e) => return Err(e),
+                }
             }
+
+            receivers.clear();
         }
+
+        self.player.nest_objects(self.objects.as_codex());
+        self.rooms.nest_objects(self.objects.as_codex());
+        self.objects.nest_objects();
 
         Ok(())
     }
 
-    pub fn validate_routines(&mut self) -> Result<(), String> {
-        let v = super::validate_recursive::Validator::new(self);
+    pub fn validate_routines_recursive(&self) -> Result<Validator, String> {
+        let mut validator = Validator::new(self);
 
-        // TODO
+        for routine in self.routines.as_codex() {
+            validator.validate_cluster(routine.node)?;
+        }
 
-        // also validate that directions, globals, rooms, and objects all have unique names
-        // PLAYER is a reserved name
+        Ok(validator)
+    }
+
+    pub fn validate_unique_names(&self) -> Result<(), String> {
+        let global_codex = self.globals.as_codex();
+        let room_codex = self.rooms.as_codex();
+        let object_codex = self.objects.as_codex();
+
+        for global in global_codex {
+            if room_codex.lookup(global.name).is_some() {
+                return Err(format!("Global name is same as room name: {}", global.name));
+            }
+
+            if object_codex.lookup(global.name).is_some() {
+                return Err(format!(
+                    "Global name is same as object name: {}",
+                    global.name
+                ));
+            }
+        }
+
+        for room in room_codex {
+            if object_codex.lookup(room.name).is_some() {
+                return Err(format!("Room name is same as object name: {}", room.name));
+            }
+        }
 
         Ok(())
     }

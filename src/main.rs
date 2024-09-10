@@ -27,12 +27,20 @@ fn main() {
         Err(e) => panic!("ERROR while crunching lookups\n{}", e),
     }
 
-    match lookup.validate_routines() {
-        Ok(_) => println!("routines validated"),
-        Err(e) => panic!("ERROR while validating routines\n{}", e),
+    match lookup.validate_unique_names() {
+        Ok(_) => println!("names are unique"),
+        Err(e) => panic!("ERROR while validating names\n{}", e),
     }
 
-    match write_output(&lookup) {
+    let mut validator = match lookup.validate_routines_recursive() {
+        Ok(v) => {
+            println!("routines are valid");
+            v
+        }
+        Err(e) => panic!("ERROR while validating routines\n{}", e),
+    };
+
+    match write_output(&lookup, &mut validator) {
         Ok(_) => println!("output written"),
         Err(e) => panic!("ERROR while writing output\n{}", e),
     }

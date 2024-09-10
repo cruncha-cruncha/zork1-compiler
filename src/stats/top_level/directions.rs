@@ -60,7 +60,15 @@ impl Populator for DirectionStats {
                     ));
                 }
 
-                self.all.insert(word.unwrap());
+                let word = word.unwrap();
+                if !word.chars().all(char::is_alphabetic) {
+                    return Err(format!(
+                        "Directions node has non-alphabetic child\n{}",
+                        format_file_location(&c)
+                    ));
+                }
+
+                self.all.insert(word);
             }
         }
 

@@ -13,6 +13,7 @@ use crate::stats::cross_ref::Populator;
 // PRSA = action
 // PRSO = direct object
 // PRSI = indirect object
+// so named because of hysterical raisins
 
 // first word is always the action
 // first OBJECT is always PRSO
@@ -201,11 +202,13 @@ impl Populator for SyntaxStats {
                 ));
             }
 
+            let last_word = last_word.unwrap();
             steps.push(SyntaxItem::Action(Action {
-                routine: last_word.unwrap(),
+                routine: last_word.clone(),
             }));
 
             self.all_syntax.push(steps);
+            self.all_routine_names.insert(last_word);
         }
 
         Ok(())

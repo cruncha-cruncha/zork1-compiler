@@ -1,10 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::{
-    js::{formatter::Formatter, write_output::CanWriteOutput},
     stats::{
         cross_ref::{CrossRef, Populator},
-        helpers::{get_token_as_text, get_token_as_word},
+        helpers::{get_token_as_number, get_token_as_text, get_token_as_word},
     },
     zil::{
         file_table::format_file_location,
@@ -14,7 +13,7 @@ use crate::{
 
 use crate::stats::cross_ref::Codex;
 
-use super::globals::{Var, VarVal};
+use super::objects::{DescType, ObjectCodex};
 
 pub struct RoomStats {
     basis: Vec<ZilNode>,
@@ -24,10 +23,29 @@ pub struct RoomStats {
 pub struct RoomInfo {
     index: usize,
     name: String,
-    desc: Option<String>,
-    vars: HashMap<String, VarVal>,
-    action: Option<String>, // runs all the time you're in the room
+    desc: Option<DescType>,
+    vars: HashMap<String, i32>,
+    actions: RoomActions,
     directions: HashMap<String, Direction>,
+    objects: Vec<String>,
+}
+
+pub struct RoomActions {
+    pub first_enter: Option<String>, // when player enters this room for the first time
+    pub enter: Option<String>,       // when player enters this room
+    pub exit: Option<String>,        // when player exits this room (pass as currentRoom)
+    pub always: Option<String>,      // after every command while in this room
+}
+
+impl RoomActions {
+    pub fn new() -> RoomActions {
+        RoomActions {
+            first_enter: None,
+            enter: None,
+            exit: None,
+            always: None,
+        }
+    }
 }
 
 impl RoomInfo {
@@ -37,12 +55,13 @@ impl RoomInfo {
             name: String::new(),
             desc: None,
             vars: HashMap::new(),
-            action: None,
+            actions: RoomActions::new(),
             directions: HashMap::new(),
+            objects: Vec::new(),
         }
     }
 
-    fn crunch_desc(node: &ZilNode) -> Result<String, String> {
+    fn crunch_desc(node: &ZilNode) -> Result<DescType, String> {
         if node.children.len() != 2 {
             return Err(format!(
                 "Desc node doesn't have 2 children\n{}",
@@ -50,21 +69,23 @@ impl RoomInfo {
             ));
         }
 
-        let val = match node.children[1].node_type {
-            ZilNodeType::Token(TokenType::Word) => get_token_as_word(&node.children[1]),
-            ZilNodeType::Token(TokenType::Text) => get_token_as_text(&node.children[1]),
+        match node.children[1].node_type {
+            ZilNodeType::Token(TokenType::Word) => Ok(DescType::Routine(
+                get_token_as_word(&node.children[1]).unwrap(),
+            )),
+            ZilNodeType::Token(TokenType::Text) => Ok(DescType::Text(
+                get_token_as_text(&node.children[1]).unwrap(),
+            )),
             _ => {
                 return Err(format!(
                     "Desc node has invalid second child\n{}",
                     format_file_location(&node.children[1])
                 ));
             }
-        };
-
-        Ok(val.unwrap())
+        }
     }
 
-    fn crunch_vars(node: &ZilNode) -> Result<HashMap<String, VarVal>, String> {
+    fn crunch_vars(node: &ZilNode) -> Result<HashMap<String, i32>, String> {
         if node.children.len() < 3 {
             return Err(format!(
                 "Vars node doesn't have enough children\n{}",
@@ -77,7 +98,7 @@ impl RoomInfo {
             ));
         }
 
-        let mut out: HashMap<String, VarVal> = HashMap::new();
+        let mut out: HashMap<String, i32> = HashMap::new();
 
         for i in 0..(node.children.len() - 1) / 2 {
             let name = get_token_as_word(&node.children[i * 2 + 1]);
@@ -97,8 +118,8 @@ impl RoomInfo {
                 ));
             }
 
-            let val = VarVal::parse(&node.children[i * 2 + 2]);
-            if val.is_err() {
+            let val = get_token_as_number(&node.children[i * 2 + 2]);
+            if val.is_none() {
                 return Err(format!(
                     "Vars node has invalid value child\n{}",
                     format_file_location(&node.children[i * 2 + 2])
@@ -236,6 +257,19 @@ impl RoomStats {
             all_rooms: &self.all_rooms,
         }
     }
+
+    pub fn nest_objects(&mut self, object_codex: ObjectCodex) {
+        for object in object_codex {
+            if object.loc.is_some() {
+                let key = object.loc.as_ref().unwrap();
+                let room = self.all_rooms.get_mut(key);
+
+                if room.is_some() {
+                    room.unwrap().objects.push(object.name.clone());
+                }
+            }
+        }
+    }
 }
 
 impl Populator for RoomStats {
@@ -304,8 +338,26 @@ impl Populator for RoomStats {
                             return Err(e);
                         }
                     },
-                    "ACTION" => match RoomInfo::crunch_action(&c) {
-                        Ok(v) => info.action = Some(v),
+                    "ACT-FIRST" => match RoomInfo::crunch_action(&c) {
+                        Ok(v) => info.actions.first_enter = Some(v),
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                    "ACT-ENTER" => match RoomInfo::crunch_action(&c) {
+                        Ok(v) => info.actions.enter = Some(v),
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                    "ACT-EXIT" => match RoomInfo::crunch_action(&c) {
+                        Ok(v) => info.actions.exit = Some(v),
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    },
+                    "ACT-ALWAYS" => match RoomInfo::crunch_action(&c) {
+                        Ok(v) => info.actions.always = Some(v),
                         Err(e) => {
                             return Err(e);
                         }
@@ -332,18 +384,108 @@ impl Populator for RoomStats {
 
             info.index = i;
             info.name = second_word.clone();
-            self.all_rooms.insert(second_word, info);
+            match self.all_rooms.insert(second_word, info) {
+                Some(old_val) => {
+                    return Err(format!(
+                        "Room node has duplicate name:{}\n{}",
+                        old_val.name,
+                        format_file_location(&node)
+                    ));
+                }
+                None => (),
+            }
         }
 
         Ok(())
     }
 
     fn validate(&self, cross_ref: &CrossRef) -> Result<(), String> {
-        // TODO
-        // check that action routines exists
-        // check that direction routines exist
-        // check that direction rooms exist
-        // check that variable values exist??
+        for key in self.all_rooms.keys() {
+            if CrossRef::name_is_illegal(key) {
+                return Err(format!("Illegal room name: {}", key));
+            }
+        }
+
+        let routine_codex = cross_ref.routines.as_codex();
+        let room_codex = self.as_codex();
+
+        for (key, info) in self.all_rooms.iter() {
+            if info.actions.first_enter.is_some() {
+                let action = info.actions.first_enter.as_ref().unwrap();
+                if routine_codex.lookup(action).is_none() {
+                    return Err(format!(
+                        "Object {} has invalid first-enter action routine: {}",
+                        key, action
+                    ));
+                }
+            }
+
+            if info.actions.enter.is_some() {
+                let action = info.actions.enter.as_ref().unwrap();
+                if routine_codex.lookup(action).is_none() {
+                    return Err(format!(
+                        "Object {} has invalid enter action routine: {}",
+                        key, action
+                    ));
+                }
+            }
+
+            if info.actions.exit.is_some() {
+                let action = info.actions.exit.as_ref().unwrap();
+                if routine_codex.lookup(action).is_none() {
+                    return Err(format!(
+                        "Object {} has invalid exit action routine: {}",
+                        key, action
+                    ));
+                }
+            }
+
+            if info.actions.always.is_some() {
+                let action = info.actions.always.as_ref().unwrap();
+                if routine_codex.lookup(action).is_none() {
+                    return Err(format!(
+                        "Object {} has invalid always action routine: {}",
+                        key, action
+                    ));
+                }
+            }
+
+            for direction in info.directions.values() {
+                match direction.kind {
+                    DirectionType::TEXT => (),
+                    DirectionType::ROUTINE => {
+                        if routine_codex.lookup(&direction.thing).is_none() {
+                            return Err(format!(
+                                "Room {} has invalid routine direction: {}",
+                                key, direction.thing
+                            ));
+                        }
+                    }
+                    DirectionType::ROOM => {
+                        if room_codex.lookup(&direction.thing).is_none() {
+                            return Err(format!(
+                                "Room {} has invalid room direction: {}",
+                                key, direction.thing
+                            ));
+                        }
+                    }
+                }
+            }
+
+            if info.desc.is_some() {
+                match info.desc.as_ref().unwrap() {
+                    DescType::Routine(routine) => {
+                        if routine_codex.lookup(routine).is_none() {
+                            return Err(format!(
+                                "Room {} has invalid desc routine: {}",
+                                key, routine
+                            ));
+                        }
+                    }
+                    DescType::Text(_) => (),
+                }
+            }
+        }
 
         Ok(())
     }
@@ -356,10 +498,11 @@ pub struct RoomCodex<'a> {
 }
 pub struct RoomCodexValue<'a> {
     pub name: &'a String,
-    pub desc: &'a Option<String>,
-    pub vars: &'a HashMap<String, VarVal>,
-    pub action: &'a Option<String>,
+    pub desc: &'a Option<DescType>,
+    pub vars: &'a HashMap<String, i32>,
+    pub actions: &'a RoomActions,
     pub directions: &'a HashMap<String, Direction>,
+    pub objects: &'a Vec<String>,
 }
 
 impl<'a> Iterator for RoomCodex<'a> {
@@ -377,8 +520,9 @@ impl<'a> Iterator for RoomCodex<'a> {
                 name: &info.name,
                 desc: &info.desc,
                 vars: &info.vars,
-                action: &info.action,
+                actions: &info.actions,
                 directions: &info.directions,
+                objects: &info.objects,
             })
         }
     }
@@ -398,8 +542,9 @@ impl<'a> Codex<RoomCodexValue<'a>> for RoomCodex<'a> {
             name: &info.name,
             desc: &info.desc,
             vars: &info.vars,
-            action: &info.action,
+            actions: &info.actions,
             directions: &info.directions,
+            objects: &info.objects,
         });
     }
 }

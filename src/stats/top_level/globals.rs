@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::{
-    stats::helpers::{get_token_as_number, get_token_as_text, get_token_as_word},
-    zil::{
-        file_table::format_file_location,
-        node::{TokenType, ZilNode, ZilNodeType},
+    stats::{
+        cross_ref::CrossRef,
+        helpers::{get_token_as_number, get_token_as_word},
     },
+    zil::{file_table::format_file_location, node::ZilNode},
 };
 
 use crate::stats::{cross_ref::Codex, cross_ref::Populator};
@@ -16,85 +16,10 @@ pub struct GlobalStats {
 }
 
 pub struct GlobalInfo {
+    #[allow(dead_code)]
     index: usize,
-    var: Var,
-}
-
-impl GlobalInfo {
-    pub fn new() -> GlobalInfo {
-        GlobalInfo {
-            index: 0,
-            var: Var::new(),
-        }
-    }
-}
-
-pub struct Var {
-    pub name: String,
-    pub val: Option<VarVal>,
-}
-
-impl Var {
-    pub fn new() -> Var {
-        Var {
-            name: String::new(),
-            val: None,
-        }
-    }
-}
-
-pub enum VarVal {
-    List(Vec<VarVal>),
-    Single(VarValSingle),
-}
-
-impl VarVal {
-    pub fn parse(node: &ZilNode) -> Result<VarVal, ()> {
-        match node.node_type {
-            ZilNodeType::Token(_) => match VarValSingle::parse(node) {
-                Ok(single) => Ok(VarVal::Single(single)),
-                Err(e) => Err(e),
-            },
-            ZilNodeType::Cluster => {
-                let mut contents: Vec<VarVal> = Vec::new();
-                for c in node.children.iter() {
-                    match VarVal::parse(c) {
-                        Ok(val) => contents.push(val),
-                        Err(e) => return Err(e),
-                    }
-                }
-
-                Ok(VarVal::List(contents))
-            }
-            _ => Err(()),
-        }
-    }
-}
-
-pub enum VarValSingle {
-    Text(String),
-    Word(String),
-    Number(i32),
-}
-
-impl VarValSingle {
-    pub fn parse(node: &ZilNode) -> Result<VarValSingle, ()> {
-        match node.node_type {
-            ZilNodeType::Token(TokenType::Word) => {
-                let word = get_token_as_word(&node.children[2]).unwrap();
-                Ok(VarValSingle::Word(word))
-            }
-            ZilNodeType::Token(TokenType::Text) => {
-                let text = get_token_as_text(&node.children[2]).unwrap();
-                Ok(VarValSingle::Text(text))
-            }
-            ZilNodeType::Token(TokenType::Number) => {
-                let number = get_token_as_number(&node.children[2]).unwrap();
-                Ok(VarValSingle::Number(number))
-            }
-            _ => Err(()),
-        }
-    }
+    name: String,
+    val: i32,
 }
 
 impl GlobalStats {
@@ -102,6 +27,14 @@ impl GlobalStats {
         GlobalStats {
             basis: Vec::new(),
             all_globals: HashMap::new(),
+        }
+    }
+
+    pub fn as_codex(&self) -> GlobalCodex {
+        GlobalCodex {
+            index: 0,
+            basis: &self.basis,
+            all_objects: &self.all_globals,
         }
     }
 }
@@ -113,8 +46,6 @@ impl Populator for GlobalStats {
 
     fn crunch(&mut self) -> Result<(), String> {
         for (i, node) in self.basis.iter().enumerate() {
-            let mut info = GlobalInfo::new();
-
             if node.children.len() != 3 {
                 return Err(format!(
                     "Possible global node doesn't have three children\n{}",
@@ -144,29 +75,33 @@ impl Populator for GlobalStats {
                 ));
             }
 
-            info.index = i;
+            let number = get_token_as_number(&node.children[2]);
+            if number.is_none() {
+                return Err(format!(
+                    "Global node has non-number third child\n{}",
+                    format_file_location(&node)
+                ));
+            }
 
-            info.var.name = second_word.clone();
-
-            info.var.val = match VarVal::parse(&node.children[1]) {
-                Ok(val) => Some(val),
-                Err(_) => {
-                    return Err(format!(
-                        "Global node has bad value\n{}",
-                        format_file_location(&node.children[i])
-                    ))
-                }
-            };
-
-            self.all_globals.insert(second_word, info);
+            self.all_globals.insert(
+                second_word.clone(),
+                GlobalInfo {
+                    index: i,
+                    name: second_word,
+                    val: number.unwrap(),
+                },
+            );
         }
 
         Ok(())
     }
 
-    fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
-        // TODO
-        // ???
+    fn validate(&self, _cross_ref: &CrossRef) -> Result<(), String> {
+        for key in self.all_globals.keys() {
+            if CrossRef::name_is_illegal(key) {
+                return Err(format!("Illegal global name: {}", key));
+            }
+        }
 
         Ok(())
     }
@@ -178,8 +113,13 @@ pub struct GlobalCodex<'a> {
     all_objects: &'a HashMap<String, GlobalInfo>,
 }
 
+pub struct GlobalCodexValue<'a> {
+    pub name: &'a String,
+    pub val: i32,
+}
+
 impl<'a> Iterator for GlobalCodex<'a> {
-    type Item = &'a Var;
+    type Item = GlobalCodexValue<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.basis.len() {
             None
@@ -189,13 +129,16 @@ impl<'a> Iterator for GlobalCodex<'a> {
             let key = get_token_as_word(&node.children[1]).unwrap();
             let info = self.all_objects.get(&key).unwrap();
 
-            Some(&info.var)
+            Some(GlobalCodexValue {
+                name: &info.name,
+                val: info.val,
+            })
         }
     }
 }
 
-impl<'a> Codex<&'a Var> for GlobalCodex<'a> {
-    fn lookup(&self, word: &str) -> Option<&'a Var> {
+impl<'a> Codex<GlobalCodexValue<'a>> for GlobalCodex<'a> {
+    fn lookup(&self, word: &str) -> Option<GlobalCodexValue<'a>> {
         let info = self.all_objects.get(word);
 
         if info.is_none() {
@@ -204,6 +147,9 @@ impl<'a> Codex<&'a Var> for GlobalCodex<'a> {
 
         let info = info.unwrap();
 
-        return Some(&info.var);
+        return Some(GlobalCodexValue {
+            name: &info.name,
+            val: info.val,
+        });
     }
 }

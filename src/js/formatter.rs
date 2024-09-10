@@ -49,6 +49,10 @@ impl Formatter {
         self.file.write_all(s.as_bytes())
     }
 
+    pub fn newline(&mut self) -> Result<(), std::io::Error> {
+        self.write("\n", false)
+    }
+
     pub fn writeln(&mut self, s: &str) -> Result<(), std::io::Error> {
         self.write(s, true)?;
         self.write("\n", false)

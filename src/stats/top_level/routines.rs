@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::stats::cross_ref::Populator;
+use crate::stats::cross_ref::{CrossRef, Populator};
 use crate::stats::helpers::get_token_as_word;
 use crate::zil::node::{TokenType, ZilNodeType};
 use crate::zil::{file_table::format_file_location, node::ZilNode};
@@ -14,7 +14,6 @@ pub struct RoutineStats {
 
 // routines don't get any arguments
 // they must define all their variable names at the top
-// global-level variables: current room, current action (first word of command), current PRSO, current PRSI, player
 
 pub struct RoutineInfo {
     index: usize,
@@ -70,7 +69,7 @@ impl Populator for RoutineStats {
 
     fn crunch(&mut self) -> Result<(), String> {
         for (i, node) in self.basis.iter().enumerate() {
-            if node.children.len() < 4 {
+            if node.children.len() < 3 {
                 return Err(format!(
                     "Possible routine node doesn't have enough children\n{}",
                     format_file_location(&node)
@@ -114,22 +113,42 @@ impl Populator for RoutineStats {
             }
 
             let name = second_word.unwrap();
-            self.all_routines.insert(
+            match self.all_routines.insert(
                 name.clone(),
                 RoutineInfo {
                     index: i,
                     name,
                     var_names,
                 },
-            );
+            ) {
+                Some(old_val) => {
+                    return Err(format!(
+                        "Duplicate routine name: {}\n{}",
+                        old_val.name,
+                        format_file_location(&node)
+                    ));
+                }
+                None => {}
+            }
         }
 
         Ok(())
     }
 
-    fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
-        // TODO
-        // ???
+    fn validate(&self, _cross_ref: &CrossRef) -> Result<(), String> {
+        for (key, val) in self.all_routines.iter() {
+            if CrossRef::name_is_illegal(key) {
+                return Err(format!("Illegal routine name: {}", key));
+            }
+
+            for var in val.var_names.iter() {
+                if CrossRef::name_is_illegal(var) {
+                    return Err(format!("Illegal variable name: {}", var));
+                }
+            }
+        }
+
+        // deeper recursive validation is performed later (see CanValidate)
 
         Ok(())
     }
@@ -160,7 +179,7 @@ impl<'a> Iterator for RoutineCodex<'a> {
             Some(RoutineCodexValue {
                 name: &info.name,
                 var_names: &info.var_names,
-                node: &self.basis[info.index - 1],
+                node: &node,
             })
         }
     }

@@ -56,7 +56,7 @@ pub fn build_tree<'a>(tokens: &mut impl TokenGen) -> Result<Tree, ZilErr> {
         (_, None) => (),
     };
 
-    remove_whitespace(&mut root);
+    // remove_whitespace(&mut root);
 
     match validate_tree(&root) {
         Ok(()) => (),
@@ -86,15 +86,6 @@ fn build_tree_recursively<'a>(
             TokenType::LeftArrow => {
                 let mut child = ZilNode::new_no_token(ZilNodeType::Cluster);
 
-                if root.children.len() > 0 {
-                    let last_child = root.children.last_mut().unwrap();
-                    let word = get_token_as_word(last_child).unwrap_or_default();
-                    if word == "%" || word == "'" {
-                        child.token = last_child.token.take();
-                        root.children.pop();
-                    }
-                }
-
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightArrow) {
                     let msg = format!(
@@ -110,15 +101,6 @@ fn build_tree_recursively<'a>(
             }
             TokenType::LeftParen => {
                 let mut child = ZilNode::new_no_token(ZilNodeType::Group);
-
-                if root.children.len() > 0 {
-                    let last_child = root.children.last_mut().unwrap();
-                    let word = get_token_as_word(last_child).unwrap_or_default();
-                    if word == "'" {
-                        child.token = last_child.token.take();
-                        root.children.pop();
-                    }
-                }
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightParen) {
@@ -147,9 +129,7 @@ fn build_tree_recursively<'a>(
                 }
             }
             TokenType::Space => {
-                // need to keep spaces while we're building the tree
-                // remove them immediately after
-                root.push_child(ZilNode::new(ZilNodeType::Space, t));
+                // immediately discard whitespace
             }
         }
     }
@@ -184,6 +164,7 @@ fn validate_tree(root: &ZilNode) -> Result<(), ZilErr> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn remove_whitespace(root: &mut ZilNode) {
     let mut whitespace_indices: Vec<usize> = Vec::new();
 

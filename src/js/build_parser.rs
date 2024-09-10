@@ -189,8 +189,8 @@ impl ParseTree {
         formatter.indent();
 
         formatter.writeln(&format!(
-            "return {{action: {}, prsa: words[0], prso, prsi }};",
-            action.unwrap().to_js()
+            "return {{routine: '{}', prsa: words[0], prso, prsi }};",
+            Formatter::safe_case(&action.unwrap().routine)
         ))?;
 
         formatter.outdent();
@@ -234,7 +234,7 @@ impl ParseTree {
 impl CanWriteOutput for ParseTree {
     fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.writeln("import { findObjectMatchingParsedWord } from \"./main.js\";")?;
-        formatter.writeln("")?;
+        formatter.newline()?;
 
         formatter.writeln(&format!(
             "export const buzz = [{}];",
@@ -244,7 +244,7 @@ impl CanWriteOutput for ParseTree {
                 .collect::<Vec<String>>()
                 .join(", ")
         ))?;
-        formatter.writeln("")?;
+        formatter.newline()?;
 
         formatter.writeln(&format!(
             "export const directions = [{}];",
@@ -254,7 +254,7 @@ impl CanWriteOutput for ParseTree {
                 .collect::<Vec<String>>()
                 .join(", ")
         ))?;
-        formatter.writeln("")?;
+        formatter.newline()?;
 
         formatter.writeln("export const parseInput = (rawString) => {")?;
         formatter.indent();
@@ -266,11 +266,11 @@ impl CanWriteOutput for ParseTree {
         formatter.writeln("return { move: words[1] };")?;
         formatter.outdent();
         formatter.writeln("}")?;
-        formatter.writeln("")?;
+        formatter.newline()?;
 
         formatter.writeln("let prso = null;")?;
         formatter.writeln("let prsi = null;")?;
-        formatter.writeln("")?;
+        formatter.newline()?;
 
         formatter.outdent();
         self.write_output_recursive(formatter, &self.branches, 0)?;
@@ -402,21 +402,6 @@ impl ToJs for Object {
         }
 
         out.push_str("]");
-
-        out.push_str("}");
-
-        out
-    }
-}
-
-impl ToJs for Action {
-    fn to_js(&self) -> String {
-        let mut out = String::from("{");
-
-        out.push_str(&format!(
-            "routine: \"{}\"",
-            Formatter::safe_case(&self.routine)
-        ));
 
         out.push_str("}");
 

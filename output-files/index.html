@@ -6,11 +6,7 @@
 <head>
     <meta charset=utf-8>
     <title>Zork-Like</title>
-    <script src="./rooms.js" type="module"></script>
-    <script src="./objects.js" type="module"></script>
-    <script src="./player.js" type="module"></script>
     <script src="./main.js" type="module"></script>
-    <script src="./parser.js" type="module"></script>
 </head>
 
 <body>
@@ -18,22 +14,11 @@
     <input id="test-button" type="button" value="test" onclick="doFunction();" />
 
     <script type="module">
-        import { parseInput } from './parser.js';
-        import { handleMove } from './main.js';
+        import { handleRawInput } from './main.js';
 
         window.doFunction = function doFunction() {
             let input = document.getElementById("input").value;
-            let result = parseInput(input);
-
-            if (result) {
-                if ("move" in result) {
-                    handleMove(result.move);
-                } else if ("action" in result) {
-                    console.log(result);
-                }
-            } else {
-                console.log("I don't understand that command.");
-            }
+            handleRawInput(input);
         }
     </script>
 </body>
