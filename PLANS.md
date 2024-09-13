@@ -96,6 +96,6 @@ Whispering stories permanently grants you buffs:
 Combat
 Sharpening a weapon or tool increases it's damage up to it's MAX-DAMAGE. Hitting anything or using the weapon or tool will decrease it's health. If health reaches zero, the tool/weapon is broken, cannot be used, and must be repaired (with nails, wire, and fire).
 
-Actual damage is DAMAGE +/- (MAX-DAMAGE / 3); it's always a high roll or a low roll, never a medium roll. You can do more damage than MAX-DAMAGE; this value is more like max base damage. Minimum dama is 1 (hit is guaranteed). Damage affects your HEALTH.
+Actual damage is DAMAGE +/- (MAX-DAMAGE / 3); it's always a high roll or a low roll, never a medium roll. You can do more damage than MAX-DAMAGE; this value is more like "max base damage". Minimum dama is 1 (hit is guaranteed). Damage affects your HEALTH.
 
 I don't want the monster to one-encounter-KO, so the first encounter it should be surprised, and run away after one hit. Second encounter it should attack but let you run away. Third+ encounters it should be hard to run away.
