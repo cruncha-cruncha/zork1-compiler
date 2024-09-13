@@ -6,9 +6,9 @@ export const objects = {
     ],
     loc: 'player',
     vars: {
+      damage: 3,
       health: 10,
-      maxSharp: 5,
-      sharp: 3,
+      maxDamage: 5,
     },
     hooks: {
     },

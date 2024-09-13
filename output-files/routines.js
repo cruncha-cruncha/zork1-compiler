@@ -145,7 +145,7 @@ export const routines = {
 function canEnterCabin(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
   if ((((objects['cabinDoor'].vars['isLocked'] || 0) === 1) && ((objects['cabinWindow'].vars['isSmashed'] || 0) === 0))) {
-    game.log("There's no way into the cabin, need to break something or find a key.", '\n');
+    game.log("There's no way into the cabin, you need to break something or find a key.", '\n');
   } else if ((1 === 1)) {
     game.move(locals, player, rooms['cabin'])
   }
@@ -200,7 +200,7 @@ function vDetritus1Prso(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
         game.move(locals, locals['obj'], locals['currentRoom'])
       }
     }
-    game.log("Removable items are now on the ground.", '\n');
+    game.log("Unpackable items are now on the ground.", '\n');
   }
   return 0;
 }
@@ -400,7 +400,7 @@ function vExamine(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   game.log('\n');
   if ((globals['firstExamine'] === 1)) {
     globals['firstExamine'] = 0;
-    game.log("If there's anything of interest in this object, you can UNPACK it to remove the nested items. After that, just TAKE an item off the ground.", '\n');
+    game.log("If there's any interesting item in this object, you can UNPACK it to remove the nested items. After that, can TAKE the item off the ground.", '\n');
   }
   game.log("...contains:", '\n');
   for (let object of game.getObjectsIn(locals['cmdPrso'])) {
@@ -411,14 +411,14 @@ function vExamine(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   }
   if ((locals['count'] === 0)) {
     locals['r'] = Math.floor(Math.random() * 100);
-    if ((25 > locals['r'])) {
-      game.log("nada", '\n');
-    } else if ((50 > locals['r'])) {
-      game.log("nothing", '\n');
-    } else if ((75 > locals['r'])) {
+    if ((10 > locals['r'])) {
       game.log("a whole lotta nuthin", '\n');
-    } else if ((100 > locals['r'])) {
+    } else if ((30 > locals['r'])) {
       game.log("zilch", '\n');
+    } else if ((50 > locals['r'])) {
+      game.log("nada", '\n');
+    } else if ((100 > locals['r'])) {
+      game.log("nothing", '\n');
     }
   }
   return 0;
