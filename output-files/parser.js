@@ -1,6 +1,6 @@
 import { game } from './game.js';
 
-export const buzz = ["THE", "OF", "ALL", "A", "AGAIN", "SOME"];
+export const buzz = ["OF", "THE", "AGAIN", "ALL", "A", "SOME"];
 
 export const directions = ["DOWN", "EAST", "IN", "NORTH", "OUT", "SOUTH", "UP", "WEST"];
 
