@@ -5,7 +5,7 @@ use crate::{
 
 impl CanWriteOutput for Rand {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.write("Math.floor(Math.random() * 101)", false)?;
+        formatter.write("Math.floor(Math.random() * 100)", false)?;
 
         Ok(())
     }

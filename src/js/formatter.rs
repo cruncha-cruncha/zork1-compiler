@@ -88,6 +88,7 @@ impl Formatter {
         result
     }
 
+    #[allow(dead_code)]
     pub fn safe_case_option(input_option: &Option<String>) -> String {
         match input_option {
             Some(input) => Formatter::safe_case(input),

@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 pub struct Description {
     pub scope: Scope,
@@ -45,8 +45,11 @@ impl CanValidate for Description {
 
                 if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
-                        ReturnValType::ObjectName | ReturnValType::Location => {
-                            self.scope = Scope::Local(word);
+                        ReturnValType::Location => {
+                            self.scope = Scope::Local(LocalVar {
+                                name: word.to_string(),
+                                return_type: var_type,
+                            });
                         }
                         _ => {
                             return Err(format!(
@@ -56,6 +59,8 @@ impl CanValidate for Description {
                             ));
                         }
                     }
+                } else if word == "PLAYER" {
+                    self.scope = Scope::Player;
                 } else if v.is_room(&word) {
                     self.scope = Scope::Room(word);
                 } else if v.is_object(&word) {

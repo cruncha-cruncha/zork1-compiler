@@ -8,7 +8,7 @@ impl CanWriteOutput for Cond {
         formatter.newline()?;
 
         for (i, branch) in self.branches.iter().enumerate() {
-            formatter.write("if (", true)?;
+            formatter.write("if (", i == 0)?;
             branch.condition.write_output(formatter)?;
             formatter.write(") {", false)?;
 

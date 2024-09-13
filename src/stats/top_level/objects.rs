@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     stats::{
@@ -13,16 +13,16 @@ use crate::{
 
 pub struct ObjectStats {
     basis: Vec<ZilNode>,
-    all_objects: HashMap<String, ObjectInfo>,
+    all_objects: BTreeMap<String, ObjectInfo>,
 }
 
 pub struct ObjectInfo {
     index: usize,
     name: String,
-    synonyms: HashSet<String>,
+    synonyms: BTreeSet<String>,
     loc: Option<String>, // can be room or object
     desc: Option<DescType>,
-    vars: HashMap<String, i32>,
+    vars: BTreeMap<String, i32>,
     actions: ObjectActions,
     objects: Vec<String>,
 }
@@ -59,16 +59,16 @@ impl ObjectInfo {
         ObjectInfo {
             index: 0,
             name: String::new(),
-            synonyms: HashSet::new(),
+            synonyms: BTreeSet::new(),
             loc: None,
             desc: None,
-            vars: HashMap::new(),
+            vars: BTreeMap::new(),
             actions: ObjectActions::new(),
             objects: Vec::new(),
         }
     }
 
-    fn crunch_synonyms(node: &ZilNode) -> Result<HashSet<String>, String> {
+    fn crunch_synonyms(node: &ZilNode) -> Result<BTreeSet<String>, String> {
         if node.children.len() < 2 {
             return Err(format!(
                 "Synonyms group has too few children\n{}",
@@ -76,7 +76,7 @@ impl ObjectInfo {
             ));
         }
 
-        let mut out: HashSet<String> = HashSet::new();
+        let mut out: BTreeSet<String> = BTreeSet::new();
         for c in node.children.iter().skip(1) {
             let word = get_token_as_word(c);
             if word.is_none() {
@@ -119,12 +119,34 @@ impl ObjectInfo {
             ));
         }
 
+        let mut cr = String::new();
+        if node.children.len() == 3 {
+            let word = get_token_as_word(&node.children[2]);
+            if word.is_none() {
+                return Err(format!(
+                    "Desc node has non-word third child\n{}",
+                    format_file_location(&node.children[2])
+                ));
+            }
+            let word = word.unwrap();
+
+            if word != "CR" {
+                return Err(format!(
+                    "Desc node has invalid third word:{}\n{}",
+                    word,
+                    format_file_location(&node.children[2])
+                ));
+            } else {
+                cr = "\\n".to_string();
+            }
+        }
+
         match node.children[1].node_type {
             ZilNodeType::Token(TokenType::Word) => Ok(DescType::Routine(
                 get_token_as_word(&node.children[1]).unwrap(),
             )),
             ZilNodeType::Token(TokenType::Text) => Ok(DescType::Text(
-                get_token_as_text(&node.children[1]).unwrap(),
+                get_token_as_text(&node.children[1]).unwrap() + &cr,
             )),
             _ => {
                 return Err(format!(
@@ -135,7 +157,7 @@ impl ObjectInfo {
         }
     }
 
-    fn crunch_vars(node: &ZilNode) -> Result<HashMap<String, i32>, String> {
+    fn crunch_vars(node: &ZilNode) -> Result<BTreeMap<String, i32>, String> {
         if node.children.len() < 3 {
             return Err(format!(
                 "Vars node doesn't have enough children\n{}",
@@ -148,7 +170,7 @@ impl ObjectInfo {
             ));
         }
 
-        let mut out: HashMap<String, i32> = HashMap::new();
+        let mut out: BTreeMap<String, i32> = BTreeMap::new();
 
         for i in 0..(node.children.len() - 1) / 2 {
             let name = get_token_as_word(&node.children[i * 2 + 1]);
@@ -206,7 +228,7 @@ impl ObjectStats {
     pub fn new() -> ObjectStats {
         ObjectStats {
             basis: Vec::new(),
-            all_objects: HashMap::new(),
+            all_objects: BTreeMap::new(),
         }
     }
 
@@ -219,7 +241,7 @@ impl ObjectStats {
     }
 
     pub fn nest_objects(&mut self) {
-        let mut objects_in_objects: HashMap<String, Vec<String>> = HashMap::new();
+        let mut objects_in_objects: BTreeMap<String, Vec<String>> = BTreeMap::new();
         for (key, info) in self.all_objects.iter() {
             if info.loc.is_some() {
                 let loc = info.loc.as_ref().unwrap();
@@ -489,14 +511,14 @@ impl Populator for ObjectStats {
 pub struct ObjectCodex<'a> {
     index: usize,
     basis: &'a Vec<ZilNode>,
-    all_objects: &'a HashMap<String, ObjectInfo>,
+    all_objects: &'a BTreeMap<String, ObjectInfo>,
 }
 pub struct ObjectCodexValue<'a> {
     pub name: &'a String,
-    pub synonyms: &'a HashSet<String>,
+    pub synonyms: &'a BTreeSet<String>,
     pub loc: &'a Option<String>,
     pub desc: &'a Option<DescType>,
-    pub vars: &'a HashMap<String, i32>,
+    pub vars: &'a BTreeMap<String, i32>,
     pub actions: &'a ObjectActions,
     pub objects: &'a Vec<String>,
 }

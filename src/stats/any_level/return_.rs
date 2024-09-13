@@ -10,9 +10,10 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 pub struct Return {
+    // always have to return a number, even if it has no meaning
     pub value: OutputNode,
 }
 
@@ -26,7 +27,6 @@ impl Return {
 
 impl HasReturnType for Return {
     fn return_type(&self) -> ReturnValType {
-        // always have to return a number, even if it has no meaning
         ReturnValType::Number
     }
 }
@@ -53,7 +53,10 @@ impl CanValidate for Return {
                 if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
                         ReturnValType::Number | ReturnValType::VarName => {
-                            self.value = OutputNode::Variable(Scope::Local(word));
+                            self.value = OutputNode::Variable(Scope::Local(LocalVar {
+                                name: word.clone(),
+                                return_type: var_type,
+                            }));
                         }
                         _ => {
                             return Err(format!(

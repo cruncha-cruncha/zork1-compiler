@@ -9,6 +9,7 @@ pub mod get_var;
 pub mod is_asc;
 pub mod is_des;
 pub mod is_equal;
+pub mod is_in;
 pub mod loc;
 pub mod move_;
 pub mod multiply;

@@ -7,9 +7,10 @@ use crate::{
 
 impl CanWriteOutput for RoutineStats {
     fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.writeln(
-            "import { log, describe, getRoom, getObject, getLocation, getVariablesOf, getObjectsIn } from './main.js';",
-        )?;
+        formatter.writeln("import { game } from './game.js';")?;
+        formatter.writeln("import { player, globals } from './globals.js';")?;
+        formatter.writeln("import { objects } from './objects.js';")?;
+        formatter.writeln("import { rooms } from './rooms.js';")?;
         formatter.newline()?;
 
         formatter.writeln("export const routines = {")?;
@@ -63,13 +64,13 @@ impl CanWriteOutput for RoutineToots {
 impl CanWriteOutput for RoutineRoot {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.writeln(&format!(
-            "function {}(player, currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {{",
+            "function {}(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {{",
             Formatter::safe_case(&self.name)
         ))?;
         formatter.indent();
 
         formatter.write(
-            "const locals = { player, currentRoom, cmdPrsa, cmdPrso, cmdPrsi, ",
+            "const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, ",
             true,
         )?;
         let locals = self
@@ -77,7 +78,7 @@ impl CanWriteOutput for RoutineRoot {
             .iter()
             .map(|x| format!("{}: 0", Formatter::safe_case(x)))
             .collect::<Vec<String>>()
-            .join(", ");
+            .join(",");
         formatter.write(&locals, false)?;
         formatter.write("};", false)?;
 
@@ -86,6 +87,7 @@ impl CanWriteOutput for RoutineRoot {
         }
 
         formatter.newline()?;
+        formatter.writeln("return 0;")?;
         formatter.outdent();
         formatter.writeln("}")?;
         formatter.newline()?;

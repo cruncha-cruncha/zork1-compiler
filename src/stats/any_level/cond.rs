@@ -31,9 +31,7 @@ impl Cond {
 
 impl HasReturnType for Cond {
     fn return_type(&self) -> ReturnValType {
-        // true: a branch was executed
-        // false: no branch was executed
-        ReturnValType::Boolean
+        ReturnValType::None
     }
 }
 

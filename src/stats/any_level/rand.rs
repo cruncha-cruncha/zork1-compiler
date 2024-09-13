@@ -13,7 +13,7 @@ impl Rand {
 
 impl HasReturnType for Rand {
     fn return_type(&self) -> ReturnValType {
-        // returns an integer from 0 to 100 (inclusive)
+        // returns an integer from 0 to 99 (inclusive)
         ReturnValType::Number
     }
 }

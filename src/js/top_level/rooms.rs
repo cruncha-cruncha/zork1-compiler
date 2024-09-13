@@ -48,12 +48,6 @@ impl CanWriteOutput for RoomStats {
 
             formatter.writeln("hooks: {")?;
             formatter.indent();
-            if info.actions.first_enter.is_some() {
-                formatter.writeln(&format!(
-                    "firstEnter: '{}',",
-                    Formatter::safe_case(info.actions.first_enter.as_ref().unwrap())
-                ))?;
-            }
             if info.actions.enter.is_some() {
                 formatter.writeln(&format!(
                     "enter: '{}',",

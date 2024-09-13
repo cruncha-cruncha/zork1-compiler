@@ -69,16 +69,14 @@ Routines
 ## Hooks
 
 A routine can be assigned to any of the following hooks, which will be fired when certain conditions are met.
-Player has four hooks:
+Player has three hooks:
 
-- ACT-FIRST: fires when the player enters any room for the first time (it's the player's first time in that room).
 - ACT-ENTER: fires when the player enters any room
 - ACT-EXIT: fires when the player exits any room
 - ACT-ALWAYS: fires on every command
 
-Every room has a similar set of four hooks:
+Every room has a similar set of three hooks:
 
-- ACT-FIRST: fires when the player enters this room for the first time (it's the player's first time in this room)
 - ACT-ENTER: fires when the player enters this room
 - ACT-EXIT: fires when the player leaves this room
 - ACT-ALWAYS: fires on every command while the player is in this room
@@ -97,16 +95,14 @@ Every object has six hooks:
 - object ACT-PRSI
 - object ACT-PRSO
 - syntax action
-- object ACT-REMOVE
 - object ACT-ADD
-- object ACT-IN-PLAYER
+- object ACT-REMOVE
 - room ACT-EXIT
 - player ACT-EXIT
-- room ACT-FIRST
-- player ACT-FIRST
-- object ACT-IN-ROOM
 - room ACT-ENTER
 - player ACT-ENTER
+- object ACT-IN-PLAYER
+- object ACT-IN-ROOM
 - room ACT-ALWAYS
 - player ACT-ALWAYS
 

@@ -46,6 +46,9 @@ pub struct Action {
     pub children: Vec<SyntaxStep>,
 }
 
+// TODO: if player tries a command that starts with a known action but doesn't quite match the rest of the syntax,
+// suggest the syntax. Like if player tries 'SPREAD OVER BOARDS', suggest 'SPREAD OBJECT ON OBJECT'.
+
 impl ParseTree {
     pub fn new() -> ParseTree {
         ParseTree {
@@ -152,13 +155,13 @@ impl ParseTree {
             .join(", ");
 
         formatter.writeln(&format!(
-            "const {{ objectNum, objectVal }} = findObjectMatchingParsedWord(words[{}], [{}]);",
+            "const {{ objectNum, objectVal }} = game.findObjectMatchingParsedWord(words[{}], [{}]);",
             depth - 1,
             objects_str
         ))?;
 
         formatter.writeln(&format!(
-            "if (objectVal) {{ if (prso && !prsi) {{ prsi = {{ word: words[{}], val: objectVal }}; }} else if (!prso) {{ prso = {{ word: words[{}], val: objectVal }}; }} }}",
+            "if (prso.val && !prsi.val) {{ prsi = {{ word: words[{}], val: objectVal }}; }} else if (!prso.val) {{ prso = {{ word: words[{}], val: objectVal }}; }}",
             depth - 1,
             depth - 1,
         ))?;
@@ -189,7 +192,7 @@ impl ParseTree {
         formatter.indent();
 
         formatter.writeln(&format!(
-            "return {{routine: '{}', prsa: words[0], prso, prsi }};",
+            "return {{routine: '{}', prsa, prso, prsi }};",
             Formatter::safe_case(&action.unwrap().routine)
         ))?;
 
@@ -221,7 +224,7 @@ impl ParseTree {
         let object_children = SyntaxStep::get_object_children(children);
         self.write_output_objects(formatter, object_children, depth + 1)?;
 
-        formatter.writeln("return null;")?;
+        formatter.writeln("return { prsa, prso, prsi };")?;
         formatter.outdent();
 
         formatter.writeln("}")?;
@@ -233,7 +236,7 @@ impl ParseTree {
 
 impl CanWriteOutput for ParseTree {
     fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.writeln("import { findObjectMatchingParsedWord } from \"./main.js\";")?;
+        formatter.writeln("import { game } from './game.js';")?;
         formatter.newline()?;
 
         formatter.writeln(&format!(
@@ -263,18 +266,48 @@ impl CanWriteOutput for ParseTree {
             .writeln("const words = rawString.split(\" \").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));")?;
         formatter.writeln("if ((words.length == 2) && (words[0] == \"GO\")) {")?;
         formatter.indent();
-        formatter.writeln("return { move: words[1] };")?;
+        formatter.writeln("return { move: words[1], prsa: translateAction(words[0]) };")?;
         formatter.outdent();
         formatter.writeln("}")?;
         formatter.newline()?;
 
-        formatter.writeln("let prso = null;")?;
-        formatter.writeln("let prsi = null;")?;
+        formatter.writeln("const prsa = translateAction(words[0]);")?;
+        formatter.writeln("let prso = {};")?;
+        formatter.writeln("let prsi = {};")?;
         formatter.newline()?;
 
         formatter.outdent();
         self.write_output_recursive(formatter, &self.branches, 0)?;
 
+        formatter.writeln("}")?;
+
+        formatter.newline()?;
+        formatter.writeln("export const translateAction = (actionWord) => {")?;
+        formatter.indent();
+        formatter.writeln("switch (actionWord) {")?;
+        formatter.indent();
+
+        for branch in &self.branches {
+            match branch {
+                SyntaxStep::Cmd(cmd) => {
+                    for name in cmd.get_names() {
+                        formatter.writeln(&format!("case \"{}\":", name))?;
+                    }
+
+                    formatter.indent();
+                    formatter.writeln(&format!("return \"{}\";", cmd.name))?;
+                    formatter.outdent();
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        formatter.writeln("default:")?;
+        formatter.indent();
+        formatter.writeln("return actionWord;")?;
+        formatter.outdent();
+        formatter.writeln("}")?;
+        formatter.outdent();
         formatter.writeln("}")?;
 
         Ok(())
@@ -391,10 +424,10 @@ impl ToJs for Object {
     fn to_js(&self) -> String {
         let mut out = String::from("{");
 
-        out.push_str("restrictions: [");
+        out.push_str("withVars: [");
 
         for (i, restriction) in self.restrictions.iter().enumerate() {
-            out.push_str(&format!("\"{}\"", restriction));
+            out.push_str(&format!("\"{}\"", Formatter::safe_case(restriction)));
 
             if i < self.restrictions.len() - 1 {
                 out.push_str(", ");

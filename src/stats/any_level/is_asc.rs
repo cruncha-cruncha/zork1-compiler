@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 // returns a boolean
 
@@ -54,7 +54,11 @@ impl CanValidate for IsAsc {
                     if let Some(var_type) = v.has_local_var(&word) {
                         match var_type {
                             ReturnValType::Number | ReturnValType::VarName => {
-                                self.values.push(OutputNode::Variable(Scope::Local(word)));
+                                self.values
+                                    .push(OutputNode::Variable(Scope::Local(LocalVar {
+                                        name: word.to_string(),
+                                        return_type: var_type,
+                                    })));
                             }
                             _ => {
                                 return Err(format!(

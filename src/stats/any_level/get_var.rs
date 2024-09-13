@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 // if length 3: get val of variable in room, object, or player
 // if length 2: get val of local variable or global variable
@@ -61,7 +61,10 @@ impl CanValidate for GetVar {
             if let Some(var_type) = v.has_local_var(&second_word) {
                 match var_type {
                     ReturnValType::Number | ReturnValType::VarName => {
-                        self.var = Scope::Local(second_word.clone())
+                        self.var = Scope::Local(LocalVar {
+                            name: second_word.clone(),
+                            return_type: var_type,
+                        });
                     }
                     _ => {
                         return Err(format!(
@@ -101,10 +104,19 @@ impl CanValidate for GetVar {
 
             if second_child.node_type == ZilNodeType::Token(TokenType::Word) {
                 let second_word = get_token_as_word(&second_child).unwrap();
+
+                if second_word == "PLAYER" {
+                    self.scope = Some(Scope::Player);
+                    found_scope = true;
+                }
+
                 if let Some(var_type) = v.has_local_var(&second_word) {
                     match var_type {
-                        ReturnValType::ObjectName | ReturnValType::Location => {
-                            self.scope = Some(Scope::Local(second_word.clone()))
+                        ReturnValType::Location => {
+                            self.scope = Some(Scope::Local(LocalVar {
+                                name: second_word.clone(),
+                                return_type: var_type,
+                            }));
                         }
                         _ => {
                             return Err(format!(
@@ -149,7 +161,10 @@ impl CanValidate for GetVar {
             match v.has_local_var(&third_word) {
                 Some(rt) => match rt {
                     ReturnValType::VarName | ReturnValType::Number => {
-                        self.var = Scope::Local(third_word.clone());
+                        self.var = Scope::Local(LocalVar {
+                            name: third_word.clone(),
+                            return_type: rt,
+                        });
                     }
                     _ => {
                         return Err(format!(

@@ -1,17 +1,33 @@
-import { rooms } from "./rooms.js";
-
 export const player = {
-  currentRoom: 'forest1',
+  isPlayer: true,
+  startRoom: 'forest1',
   vars: {
-    distance: 0,
+    health: 40,
   },
   objects: [
-    'journal',
+    'axe',
+    'boots',
+    'cloak',
+    'flint',
+    'bowl',
+    'cup',
+    'kettle',
+    'cutlery',
+    'knife',
   ],
   hooks: {
+    enter: 'vDescRoom',
+    always: 'timePasses',
   },
 };
 
 export const globals = {
-  gVar: 1,
+  weather: 3,
+  dry: 2,
+  moon: 2,
+  day: 1,
+  time: 1,
+  detailedDesc: 0,
+  firstLookAround: 1,
+  firstExamine: 1,
 };

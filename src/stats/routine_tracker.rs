@@ -30,6 +30,7 @@ pub trait CanValidate {
 }
 
 pub struct Validator<'a> {
+    #[allow(dead_code)]
     pub player: &'a PlayerInfo,
     routine_codex: RoutineCodex<'a>,
     object_codex: ObjectCodex<'a>,
@@ -50,13 +51,14 @@ pub struct StackFrame {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ReturnValType {
     Unknown,
-    Number,     // an integer in js
-    Boolean,    // true/false in js
-    Text,       // " ... " in js
-    ObjectName, // a key in const objects
-    VarName,    // a variable name, usually ' ... ' in js
-    CmdWord,    // an all-uppercase part of the original command
-    Location,   // either PLAYER, a ROOM, or an OBJECT. Is always a full object in js
+    Number,  // an integer in js
+    Boolean, // true/false in js
+    Text,    // " ... " in js
+    // Variable value is guaranteed to be numeric, but only because this return type is
+    // only used during EACH-VAR, and those variables are always numeric
+    VarName,  // a variable name, usually ' ... ' in js.
+    CmdWord,  // an all-uppercase part of the original command
+    Location, // either a ROOM or an OBJECT. Is always a full object in js
     None,
     Any,
 }
@@ -64,9 +66,8 @@ pub enum ReturnValType {
 impl<'a> Validator<'a> {
     pub fn new(cross_ref: &'a CrossRef) -> Validator<'a> {
         let mut vars: HashMap<String, ReturnValType> = HashMap::new();
-        vars.insert("PLAYER".to_string(), ReturnValType::Location);
         vars.insert("CURRENT-ROOM".to_string(), ReturnValType::Location);
-        vars.insert("CMD-ACTION".to_string(), ReturnValType::CmdWord);
+        vars.insert("CMD-PRSA".to_string(), ReturnValType::CmdWord);
         vars.insert("CMD-PRSO".to_string(), ReturnValType::Location);
         vars.insert("CMD-PRSI".to_string(), ReturnValType::Location);
 
@@ -381,6 +382,17 @@ impl<'a> Validator<'a> {
             }
             "IS-EQUAL" => {
                 let mut v = super::any_level::is_equal::IsEqual::new();
+                match v.validate(self, n) {
+                    Ok(_) => {
+                        self.set_return_type(v.return_type());
+                        self.last_writer = Some(Box::new(v));
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            "IS-IN" => {
+                let mut v = super::any_level::is_in::IsIn::new();
                 match v.validate(self, n) {
                     Ok(_) => {
                         self.set_return_type(v.return_type());

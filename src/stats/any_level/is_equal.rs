@@ -1,7 +1,7 @@
 use crate::{
     js::write_output::OutputNode,
     stats::{
-        helpers::{get_token_as_number, get_token_as_word},
+        helpers::{get_token_as_number, get_token_as_text, get_token_as_word},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -10,21 +10,26 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
+// values are either all numeric or all text
 pub struct IsEqual {
+    pub numeric: bool,
     pub values: Vec<OutputNode>,
 }
 
 impl IsEqual {
     pub fn new() -> Self {
-        Self { values: Vec::new() }
+        Self {
+            numeric: true,
+            values: Vec::new(),
+        }
     }
 }
 
 impl HasReturnType for IsEqual {
     fn return_type(&self) -> ReturnValType {
-        ReturnValType::Number
+        ReturnValType::Boolean
     }
 }
 
@@ -38,52 +43,174 @@ impl CanValidate for IsEqual {
             ));
         }
 
+        let second_child = &n.children[1];
+
         v.expect_val(ReturnValType::Number);
 
-        for child in n.children.iter().skip(1) {
-            match child.node_type {
-                ZilNodeType::Token(TokenType::Number) => {
-                    let num = get_token_as_number(&child).unwrap();
-                    self.values.push(OutputNode::Number(num));
-                }
-                ZilNodeType::Token(TokenType::Word) => {
-                    let word = get_token_as_word(&child).unwrap();
-                    if let Some(var_type) = v.has_local_var(&word) {
-                        match var_type {
-                            ReturnValType::Number | ReturnValType::VarName => {
-                                self.values.push(OutputNode::Variable(Scope::Local(word)));
-                            }
-                            _ => {
-                                return Err(format!(
-                                    "Variable {} is not a numeric local variable\n{}",
-                                    word,
-                                    format_file_location(&n.children[1])
-                                ));
-                            }
+        match second_child.node_type {
+            ZilNodeType::Token(TokenType::Number) => {
+                let num = get_token_as_number(&second_child).unwrap();
+                self.values.push(OutputNode::Number(num));
+                self.numeric = true;
+            }
+            ZilNodeType::Token(TokenType::Text) => {
+                let text = get_token_as_text(&second_child).unwrap();
+                self.values.push(OutputNode::Text(text));
+                self.numeric = false;
+            }
+            ZilNodeType::Token(TokenType::Word) => {
+                let word = get_token_as_word(&second_child).unwrap();
+                if let Some(var_type) = v.has_local_var(&word) {
+                    match var_type {
+                        ReturnValType::Number | ReturnValType::VarName => {
+                            self.values
+                                .push(OutputNode::Variable(Scope::Local(LocalVar {
+                                    name: word.to_string(),
+                                    return_type: var_type,
+                                })));
+                            self.numeric = true;
                         }
-                    } else if v.is_global(&word) {
-                        self.values.push(OutputNode::Variable(Scope::Global(word)));
-                    } else {
+                        ReturnValType::CmdWord | ReturnValType::Text => {
+                            self.values
+                                .push(OutputNode::Variable(Scope::Local(LocalVar {
+                                    name: word.to_string(),
+                                    return_type: var_type,
+                                })));
+                            self.numeric = false;
+                        }
+                        _ => {
+                            return Err(format!(
+                                "Variable {} is not a numeric local variable\n{}",
+                                word,
+                                format_file_location(&n.children[1])
+                            ));
+                        }
+                    }
+                } else if v.is_global(&word) {
+                    self.values.push(OutputNode::Variable(Scope::Global(word)));
+                    self.numeric = true;
+                } else {
+                    return Err(format!(
+                        "Variable {} not found in local or global symbol table\n{}",
+                        word,
+                        format_file_location(&second_child)
+                    ));
+                }
+            }
+            ZilNodeType::Cluster => match v.validate_cluster(&second_child) {
+                Ok(_) => match v.take_last_writer() {
+                    Some(w) => {
+                        self.values.push(OutputNode::Writer(w));
+                        self.numeric = true;
+                    }
+                    None => unreachable!(),
+                },
+                Err(e) => return Err(e),
+            },
+            _ => {
+                return Err(format!(
+                    "Expected word, number, or cluster, found {}\n{}",
+                    second_child.node_type,
+                    format_file_location(&n)
+                ));
+            }
+        }
+
+        if self.numeric {
+            for child in n.children.iter().skip(2) {
+                match child.node_type {
+                    ZilNodeType::Token(TokenType::Number) => {
+                        let num = get_token_as_number(&child).unwrap();
+                        self.values.push(OutputNode::Number(num));
+                    }
+                    ZilNodeType::Token(TokenType::Word) => {
+                        let word = get_token_as_word(&child).unwrap();
+                        if let Some(var_type) = v.has_local_var(&word) {
+                            match var_type {
+                                ReturnValType::Number | ReturnValType::VarName => {
+                                    self.values.push(OutputNode::Variable(Scope::Local(
+                                        LocalVar {
+                                            name: word.to_string(),
+                                            return_type: var_type,
+                                        },
+                                    )));
+                                }
+                                _ => {
+                                    return Err(format!(
+                                        "Variable {} is not a numeric local variable\n{}",
+                                        word,
+                                        format_file_location(&n.children[1])
+                                    ));
+                                }
+                            }
+                        } else if v.is_global(&word) {
+                            self.values.push(OutputNode::Variable(Scope::Global(word)));
+                        } else {
+                            return Err(format!(
+                                "Variable {} not found in local or global symbol table\n{}",
+                                word,
+                                format_file_location(&child)
+                            ));
+                        }
+                    }
+                    ZilNodeType::Cluster => match v.validate_cluster(&child) {
+                        Ok(_) => match v.take_last_writer() {
+                            Some(w) => self.values.push(OutputNode::Writer(w)),
+                            None => unreachable!(),
+                        },
+                        Err(e) => return Err(e),
+                    },
+                    _ => {
                         return Err(format!(
-                            "Variable {} not found in local or global symbol table\n{}",
-                            word,
-                            format_file_location(&child)
+                            "Expected word, number, or cluster, found {}\n{}",
+                            child.node_type,
+                            format_file_location(&n)
                         ));
                     }
                 }
-                ZilNodeType::Cluster => match v.validate_cluster(&child) {
-                    Ok(_) => match v.take_last_writer() {
-                        Some(w) => self.values.push(OutputNode::Writer(w)),
-                        None => unreachable!(),
-                    },
-                    Err(e) => return Err(e),
-                },
-                _ => {
-                    return Err(format!(
-                        "Expected word, number, or cluster, found {}\n{}",
-                        child.node_type,
-                        format_file_location(&n)
-                    ));
+            }
+        } else {
+            for child in n.children.iter().skip(2) {
+                match child.node_type {
+                    ZilNodeType::Token(TokenType::Text) => {
+                        let text = get_token_as_text(&child).unwrap();
+                        self.values.push(OutputNode::Text(text));
+                    }
+                    ZilNodeType::Token(TokenType::Word) => {
+                        let word = get_token_as_word(&child).unwrap();
+                        if let Some(var_type) = v.has_local_var(&word) {
+                            match var_type {
+                                ReturnValType::CmdWord | ReturnValType::Text => {
+                                    self.values.push(OutputNode::Variable(Scope::Local(
+                                        LocalVar {
+                                            name: word.to_string(),
+                                            return_type: var_type,
+                                        },
+                                    )));
+                                }
+                                _ => {
+                                    return Err(format!(
+                                        "Variable {} is not a numeric local variable\n{}",
+                                        word,
+                                        format_file_location(&n.children[1])
+                                    ));
+                                }
+                            }
+                        } else {
+                            return Err(format!(
+                                "Variable {} not found in local or global symbol table\n{}",
+                                word,
+                                format_file_location(&child)
+                            ));
+                        }
+                    }
+                    _ => {
+                        return Err(format!(
+                            "Expected word, number, or cluster, found {}\n{}",
+                            child.node_type,
+                            format_file_location(&n)
+                        ));
+                    }
                 }
             }
         }

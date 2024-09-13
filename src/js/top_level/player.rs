@@ -5,21 +5,18 @@ use crate::{
 
 impl CanWriteOutput for PlayerStats {
     fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.writeln("import { rooms } from \"./rooms.js\";")?;
-        formatter.newline()?;
-
         formatter.writeln("export const player = {")?;
         formatter.indent();
+
+        formatter.writeln("isPlayer: true,")?;
 
         let info = self.get_info();
 
         match &info.room {
             Some(room) => {
-                formatter.writeln(&format!("currentRoom: '{}',", Formatter::safe_case(room)))?;
+                formatter.writeln(&format!("startRoom: '{}',", Formatter::safe_case(room)))?;
             }
-            None => {
-                formatter.writeln("currentRoom: Object.keys(rooms)[0],")?;
-            }
+            None => (),
         }
 
         formatter.writeln("vars: {")?;
@@ -40,12 +37,6 @@ impl CanWriteOutput for PlayerStats {
 
         formatter.writeln("hooks: {")?;
         formatter.indent();
-        if info.actions.first_enter.is_some() {
-            formatter.writeln(&format!(
-                "firstEnter: '{}',",
-                Formatter::safe_case(info.actions.first_enter.as_ref().unwrap())
-            ))?;
-        }
         if info.actions.enter.is_some() {
             formatter.writeln(&format!(
                 "enter: '{}',",

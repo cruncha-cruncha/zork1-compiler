@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 pub struct Location {
     pub scope: Scope,
@@ -43,10 +43,15 @@ impl CanValidate for Location {
         match n.children[1].node_type {
             ZilNodeType::Token(TokenType::Word) => {
                 let word = get_token_as_word(&n.children[1]).unwrap();
-                if let Some(var_type) = v.has_local_var(&word) {
+                if word == "PLAYER" {
+                    self.scope = Scope::Player;
+                } else if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
-                        ReturnValType::ObjectName | ReturnValType::Location => {
-                            self.scope = Scope::Local(word);
+                        ReturnValType::Location => {
+                            self.scope = Scope::Local(LocalVar {
+                                name: word.to_string(),
+                                return_type: var_type,
+                            });
                         }
                         _ => {
                             return Err(format!(

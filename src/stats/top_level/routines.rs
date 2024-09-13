@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::stats::cross_ref::{CrossRef, Populator};
 use crate::stats::helpers::get_token_as_word;
@@ -9,7 +9,7 @@ use crate::stats::cross_ref::Codex;
 
 pub struct RoutineStats {
     basis: Vec<ZilNode>,
-    all_routines: HashMap<String, RoutineInfo>,
+    all_routines: BTreeMap<String, RoutineInfo>,
 }
 
 // routines don't get any arguments
@@ -18,14 +18,14 @@ pub struct RoutineStats {
 pub struct RoutineInfo {
     index: usize,
     name: String,
-    var_names: HashSet<String>,
+    var_names: BTreeSet<String>,
 }
 
 impl RoutineStats {
     pub fn new() -> RoutineStats {
         RoutineStats {
             basis: Vec::new(),
-            all_routines: HashMap::new(),
+            all_routines: BTreeMap::new(),
         }
     }
 
@@ -37,8 +37,8 @@ impl RoutineStats {
         }
     }
 
-    fn validate_var_group(node: &ZilNode) -> Result<HashSet<String>, String> {
-        let mut out: HashSet<String> = HashSet::new();
+    fn validate_var_group(node: &ZilNode) -> Result<BTreeSet<String>, String> {
+        let mut out: BTreeSet<String> = BTreeSet::new();
         for c in node.children.iter() {
             if c.node_type != ZilNodeType::Token(TokenType::Word) {
                 return Err(format!(
@@ -157,11 +157,11 @@ impl Populator for RoutineStats {
 pub struct RoutineCodex<'a> {
     index: usize,
     basis: &'a Vec<ZilNode>,
-    all_routines: &'a HashMap<String, RoutineInfo>,
+    all_routines: &'a BTreeMap<String, RoutineInfo>,
 }
 pub struct RoutineCodexValue<'a> {
     pub name: &'a String,
-    pub var_names: &'a HashSet<String>,
+    pub var_names: &'a BTreeSet<String>,
     pub node: &'a ZilNode,
 }
 

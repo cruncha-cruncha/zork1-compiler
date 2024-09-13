@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 // starts a loop
 // the third child is a group of exactly one variable name
@@ -37,8 +37,7 @@ impl EachObj {
 
 impl HasReturnType for EachObj {
     fn return_type(&self) -> ReturnValType {
-        // returns 0 if no explicit return called
-        ReturnValType::Number
+        ReturnValType::None
     }
 }
 
@@ -69,10 +68,19 @@ impl CanValidate for EachObj {
 
         if second_child.node_type == ZilNodeType::Token(TokenType::Word) {
             let second_word = get_token_as_word(&second_child).unwrap();
+
+            if second_word == "PLAYER" {
+                self.scope = Scope::Player;
+                found_scope = true;
+            }
+
             if let Some(var_type) = v.has_local_var(&second_word) {
                 match var_type {
-                    ReturnValType::ObjectName | ReturnValType::Location => {
-                        self.scope = Scope::Local(second_word.clone());
+                    ReturnValType::Location => {
+                        self.scope = Scope::Local(LocalVar {
+                            name: second_word.clone(),
+                            return_type: var_type,
+                        });
                     }
                     _ => {
                         return Err(format!(

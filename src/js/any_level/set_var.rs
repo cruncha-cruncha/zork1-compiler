@@ -10,28 +10,30 @@ impl CanWriteOutput for SetVar {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.newline()?;
 
+        formatter.write("", true)?;
+
         if self.scope.is_some() {
             match self.scope.as_ref().unwrap() {
-                Scope::Local(ref name) => {
+                Scope::Local(ref local_var) => {
                     formatter.write(
-                        &format!("locals['{}'].vars[", Formatter::safe_case(name)),
-                        true,
+                        &format!("locals['{}'].vars[", Formatter::safe_case(&local_var.name)),
+                        false,
                     )?;
                 }
                 Scope::Room(ref name) => {
                     formatter.write(
                         &format!("rooms['{}'].vars[", Formatter::safe_case(name)),
-                        true,
+                        false,
                     )?;
                 }
                 Scope::Object(ref name) => {
                     formatter.write(
                         &format!("objects['{}'].vars[", Formatter::safe_case(name)),
-                        true,
+                        false,
                     )?;
                 }
                 Scope::LOC(ref w) => {
-                    formatter.write("setVar(", true)?;
+                    formatter.write("game.setVar(", false)?;
                     w.write_output(formatter)?;
                     formatter.write(", ", false)?;
                 }
@@ -39,30 +41,7 @@ impl CanWriteOutput for SetVar {
             }
         }
 
-        match self.var {
-            Scope::Bare(ref name) => {
-                formatter.write(
-                    &format!("'{}'", Formatter::safe_case(name)),
-                    self.scope.is_none(),
-                )?;
-            }
-            Scope::Local(ref name) => {
-                formatter.write(
-                    &format!("locals['{}']", Formatter::safe_case(name)),
-                    self.scope.is_none(),
-                )?;
-            }
-            Scope::Global(ref name) => {
-                formatter.write(
-                    &format!("globals['{}']", Formatter::safe_case(name)),
-                    self.scope.is_none(),
-                )?;
-            }
-            Scope::LOC(ref w) => {
-                w.write_output(formatter)?;
-            }
-            _ => panic!("IDK"),
-        }
+        self.var.write_output(formatter)?;
 
         if self.scope.is_some() {
             match self.scope.as_ref().unwrap() {
@@ -81,8 +60,11 @@ impl CanWriteOutput for SetVar {
             OutputNode::Number(n) => {
                 formatter.write(&format!("{}", n), false)?;
             }
-            OutputNode::Variable(Scope::Local(ref name)) => {
-                formatter.write(&format!("locals['{}']", Formatter::safe_case(name)), false)?;
+            OutputNode::Variable(Scope::Local(ref local_var)) => {
+                formatter.write(
+                    &format!("locals['{}']", Formatter::safe_case(&local_var.name)),
+                    false,
+                )?;
             }
             OutputNode::Variable(Scope::Global(ref name)) => {
                 formatter.write(&format!("globals[{}]", Formatter::safe_case(name)), false)?;

@@ -82,7 +82,7 @@ impl Populator for SynonymStats {
                 words.push(word.unwrap());
             }
 
-            self.all_synonyms.insert(first_word, words);
+            self.all_synonyms.insert(second_word, words);
         }
 
         Ok(())

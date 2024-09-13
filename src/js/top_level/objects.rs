@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     js::{
         formatter::Formatter,
@@ -96,25 +98,51 @@ impl CanWriteOutput for ObjectStats {
         formatter.writeln("};")?;
         formatter.newline()?;
 
-        formatter.writeln("export const lookupBySynonym = (word) => {")?;
+        formatter.writeln("export const translateSynonym = (word) => {")?;
         formatter.indent();
 
         formatter.writeln("switch (word) {")?;
 
+        // key: synonym, value: object names
+        let mut synonyms: BTreeMap<String, Vec<String>> = BTreeMap::new();
         for info in self.as_codex() {
-            if info.synonyms.is_empty() {
-                continue;
-            }
-
             for syn in info.synonyms.iter() {
+                if synonyms.contains_key(syn) {
+                    synonyms.get_mut(syn).unwrap().push(info.name.clone());
+                } else {
+                    synonyms.insert(syn.clone(), vec![info.name.clone()]);
+                }
+            }
+        }
+
+        // sort object names alphabetically
+        for val in synonyms.values_mut() {
+            val.sort();
+        }
+
+        // key: object names, value: synonyms
+        let mut object_names: BTreeMap<Vec<String>, Vec<String>> = BTreeMap::new();
+        for (syn, objs) in synonyms.iter() {
+            if object_names.contains_key(objs) {
+                object_names.get_mut(objs).unwrap().push(syn.clone());
+            } else {
+                object_names.insert(objs.clone(), vec![syn.clone()]);
+            }
+        }
+
+        for (objs, syns) in object_names.iter() {
+            for syn in syns.iter() {
                 formatter.writeln(&format!("case '{}':", syn))?;
             }
 
+            let object_list = objs
+                .iter()
+                .map(|o| format!("'{}'", Formatter::safe_case(o)))
+                .collect::<Vec<String>>()
+                .join(", ");
+
             formatter.indent();
-            formatter.writeln(&format!(
-                "return objects['{}'];",
-                Formatter::safe_case(&info.name)
-            ))?;
+            formatter.writeln(&format!("return [{}];", object_list))?;
             formatter.outdent();
         }
 

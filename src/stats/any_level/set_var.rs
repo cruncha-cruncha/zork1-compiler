@@ -22,10 +22,12 @@ pub struct SetVar {
 pub enum Scope {
     // illegal
     TBD,
+    // player ...
+    Player,
     // 'bare' ...
     Bare(String),
     // locals['local_name'] ...
-    Local(String),
+    Local(LocalVar),
     // globals['global_name'] ...
     Global(String),
     // rooms['room_name'] ...
@@ -36,6 +38,11 @@ pub enum Scope {
     // the result is an actual object in js
     // setVar(<writer>, ... )
     LOC(Box<dyn CanWriteOutput>), // setValue(<writer>, ...)
+}
+
+pub struct LocalVar {
+    pub name: String,
+    pub return_type: ReturnValType,
 }
 
 impl SetVar {
@@ -50,8 +57,7 @@ impl SetVar {
 
 impl HasReturnType for SetVar {
     fn return_type(&self) -> ReturnValType {
-        // return previous value, or 0 if freshly created
-        ReturnValType::Number
+        ReturnValType::None
     }
 }
 
@@ -78,7 +84,10 @@ impl CanValidate for SetVar {
 
             if let Some(var_type) = v.has_local_var(&second_word) {
                 if var_type == ReturnValType::Number || var_type == ReturnValType::VarName {
-                    self.var = Scope::Local(second_word.clone());
+                    self.var = Scope::Local(LocalVar {
+                        name: second_word.clone(),
+                        return_type: var_type,
+                    });
                 } else {
                     return Err(format!(
                         "Variable {} is not a number of local variable\n{}",
@@ -115,10 +124,19 @@ impl CanValidate for SetVar {
 
             if second_child.node_type == ZilNodeType::Token(TokenType::Word) {
                 let second_word = get_token_as_word(&second_child).unwrap();
+
+                if second_word == "PLAYER" {
+                    self.scope = Some(Scope::Player);
+                    found_scope = true;
+                }
+
                 if let Some(var_type) = v.has_local_var(&second_word) {
                     match var_type {
-                        ReturnValType::ObjectName | ReturnValType::Location => {
-                            self.scope = Some(Scope::Local(second_word.clone()));
+                        ReturnValType::Location => {
+                            self.scope = Some(Scope::Local(LocalVar {
+                                name: second_word.clone(),
+                                return_type: var_type,
+                            }));
                         }
                         _ => {
                             return Err(format!(
@@ -163,7 +181,10 @@ impl CanValidate for SetVar {
             match v.has_local_var(&third_word) {
                 Some(rt) => match rt {
                     ReturnValType::VarName | ReturnValType::Number => {
-                        self.var = Scope::Local(third_word.clone());
+                        self.var = Scope::Local(LocalVar {
+                            name: third_word.clone(),
+                            return_type: rt,
+                        });
                     }
                     _ => {
                         return Err(format!(
@@ -192,7 +213,10 @@ impl CanValidate for SetVar {
                 if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
                         ReturnValType::Number | ReturnValType::VarName => {
-                            self.value = OutputNode::Variable(Scope::Local(word.clone()));
+                            self.value = OutputNode::Variable(Scope::Local(LocalVar {
+                                name: word.clone(),
+                                return_type: var_type,
+                            }));
                         }
                         _ => {
                             return Err(format!(

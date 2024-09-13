@@ -9,21 +9,21 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 // move PLAYER to a ROOM
 // move an OBJECT to PLAYER, a ROOM, or another OBJECT
 
 pub struct Move {
-    pub thing: Scope,
-    pub to: Scope,
+    pub item: Scope,
+    pub destination: Scope,
 }
 
 impl Move {
     pub fn new() -> Self {
         Self {
-            thing: Scope::TBD,
-            to: Scope::TBD,
+            item: Scope::TBD,
+            destination: Scope::TBD,
         }
     }
 }
@@ -50,7 +50,7 @@ impl CanValidate for Move {
         let third_child = &n.children[2];
 
         if second_word.is_some() && second_word.as_ref().unwrap() == "PLAYER" {
-            self.thing = Scope::Local("player".to_string());
+            self.item = Scope::Player;
             match third_child.node_type {
                 ZilNodeType::Token(TokenType::Word) => {
                     let word = get_token_as_word(&third_child).unwrap();
@@ -61,13 +61,13 @@ impl CanValidate for Move {
                             format_file_location(&third_child)
                         ));
                     }
-                    self.to = Scope::Room(word);
+                    self.destination = Scope::Room(word);
                 }
                 ZilNodeType::Cluster => {
                     v.expect_val(ReturnValType::Location);
                     match v.validate_cluster(&third_child) {
                         Ok(_) => match v.take_last_writer() {
-                            Some(w) => self.to = Scope::LOC(w),
+                            Some(w) => self.destination = Scope::LOC(w),
                             None => unreachable!(),
                         },
                         Err(e) => return Err(e),
@@ -89,8 +89,11 @@ impl CanValidate for Move {
                 let second_word = second_word.unwrap();
                 if let Some(var_type) = v.has_local_var(&second_word) {
                     match var_type {
-                        ReturnValType::ObjectName | ReturnValType::Location => {
-                            self.thing = Scope::Local(second_word.clone())
+                        ReturnValType::Location => {
+                            self.item = Scope::Local(LocalVar {
+                                name: second_word.clone(),
+                                return_type: var_type,
+                            })
                         }
                         _ => {
                             return Err(format!(
@@ -101,7 +104,7 @@ impl CanValidate for Move {
                         }
                     }
                 } else if let Some(_object) = v.get_object(&second_word) {
-                    self.thing = Scope::Object(second_word.clone());
+                    self.item = Scope::Object(second_word.clone());
                 } else {
                     return Err(format!(
                         "Variable {} is not player, a room, or an object\n{}",
@@ -114,7 +117,7 @@ impl CanValidate for Move {
                 v.expect_val(ReturnValType::Location);
                 match v.validate_cluster(&second_child) {
                     Ok(_) => match v.take_last_writer() {
-                        Some(w) => self.thing = Scope::LOC(w),
+                        Some(w) => self.item = Scope::LOC(w),
                         None => unreachable!(),
                     },
                     Err(e) => return Err(e),
@@ -132,10 +135,15 @@ impl CanValidate for Move {
         match third_child.node_type {
             ZilNodeType::Token(TokenType::Word) => {
                 let word = get_token_as_word(&third_child).unwrap();
-                if let Some(var_type) = v.has_local_var(&word) {
+                if word == "PLAYER" {
+                    self.destination = Scope::Player;
+                } else if let Some(var_type) = v.has_local_var(&word) {
                     match var_type {
-                        ReturnValType::Location | ReturnValType::ObjectName => {
-                            self.to = Scope::Local(word.clone())
+                        ReturnValType::Location => {
+                            self.destination = Scope::Local(LocalVar {
+                                name: word.clone(),
+                                return_type: var_type,
+                            })
                         }
                         _ => {
                             return Err(format!(
@@ -146,9 +154,9 @@ impl CanValidate for Move {
                         }
                     }
                 } else if v.is_room(&word) {
-                    self.to = Scope::Room(word);
+                    self.destination = Scope::Room(word);
                 } else if v.is_object(&word) {
-                    self.to = Scope::Object(word);
+                    self.destination = Scope::Object(word);
                 } else {
                     return Err(format!(
                         "Expected player, room, or object, found {}\n{}",
@@ -161,7 +169,7 @@ impl CanValidate for Move {
                 v.expect_val(ReturnValType::Location);
                 match v.validate_cluster(&third_child) {
                     Ok(_) => match v.take_last_writer() {
-                        Some(w) => self.to = Scope::LOC(w),
+                        Some(w) => self.destination = Scope::LOC(w),
                         None => unreachable!(),
                     },
                     Err(e) => return Err(e),

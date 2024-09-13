@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::{
     js::{
@@ -18,7 +18,7 @@ use super::{
 
 pub struct RoutineRoot {
     pub name: String,
-    pub var_names: HashSet<String>,
+    pub var_names: BTreeSet<String>,
     pub body: Vec<OutputNode>,
 }
 
@@ -96,7 +96,10 @@ impl HasReturnType for RoutineStub {
 impl CanWriteOutput for RoutineStub {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.write(
-            &format!("routines[{}].func(player, prsa, prso, prsi)", self.name),
+            &format!(
+                "routines['{}'].func(locals['currentRoom'], locals['prsa'], locals['prso'], locals['prsi'])",
+                Formatter::safe_case(&self.name)
+            ),
             false,
         )?;
 

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::stats::cross_ref::{CrossRef, Populator};
 use crate::stats::helpers::get_token_as_word;
@@ -9,14 +9,14 @@ use crate::stats::cross_ref::Codex;
 
 pub struct DirectionStats {
     basis: Vec<ZilNode>,
-    all: HashSet<String>,
+    all: BTreeSet<String>,
 }
 
 impl DirectionStats {
     pub fn new() -> DirectionStats {
         DirectionStats {
             basis: Vec::new(),
-            all: HashSet::new(),
+            all: BTreeSet::new(),
         }
     }
 

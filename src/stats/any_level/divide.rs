@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 // divides one number by another
 // returns a number
@@ -64,7 +64,13 @@ impl CanValidate for Divide {
                     if let Some(var_type) = v.has_local_var(&word) {
                         match var_type {
                             ReturnValType::Number | ReturnValType::VarName => {
-                                set_value(i, OutputNode::Variable(Scope::Local(word)));
+                                set_value(
+                                    i,
+                                    OutputNode::Variable(Scope::Local(LocalVar {
+                                        name: word.clone(),
+                                        return_type: var_type,
+                                    })),
+                                );
                             }
                             _ => {
                                 return Err(format!(

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use crate::{
     stats::{
@@ -17,30 +17,28 @@ use super::objects::{DescType, ObjectCodex};
 
 pub struct RoomStats {
     basis: Vec<ZilNode>,
-    all_rooms: HashMap<String, RoomInfo>,
+    all_rooms: BTreeMap<String, RoomInfo>,
 }
 
 pub struct RoomInfo {
     index: usize,
     name: String,
     desc: Option<DescType>,
-    vars: HashMap<String, i32>,
+    vars: BTreeMap<String, i32>,
     actions: RoomActions,
-    directions: HashMap<String, Direction>,
+    directions: BTreeMap<String, Direction>,
     objects: Vec<String>,
 }
 
 pub struct RoomActions {
-    pub first_enter: Option<String>, // when player enters this room for the first time
-    pub enter: Option<String>,       // when player enters this room
-    pub exit: Option<String>,        // when player exits this room (pass as currentRoom)
-    pub always: Option<String>,      // after every command while in this room
+    pub enter: Option<String>,  // when player enters this room
+    pub exit: Option<String>,   // when player exits this room (pass as currentRoom)
+    pub always: Option<String>, // after every command while in this room
 }
 
 impl RoomActions {
     pub fn new() -> RoomActions {
         RoomActions {
-            first_enter: None,
             enter: None,
             exit: None,
             always: None,
@@ -54,19 +52,41 @@ impl RoomInfo {
             index: 0,
             name: String::new(),
             desc: None,
-            vars: HashMap::new(),
+            vars: BTreeMap::new(),
             actions: RoomActions::new(),
-            directions: HashMap::new(),
+            directions: BTreeMap::new(),
             objects: Vec::new(),
         }
     }
 
     fn crunch_desc(node: &ZilNode) -> Result<DescType, String> {
-        if node.children.len() != 2 {
+        if node.children.len() < 2 || node.children.len() > 3 {
             return Err(format!(
                 "Desc node doesn't have 2 children\n{}",
                 format_file_location(&node)
             ));
+        }
+
+        let mut cr = String::new();
+        if node.children.len() == 3 {
+            let word = get_token_as_word(&node.children[2]);
+            if word.is_none() {
+                return Err(format!(
+                    "Desc node has non-word third child\n{}",
+                    format_file_location(&node.children[2])
+                ));
+            }
+            let word = word.unwrap();
+
+            if word != "CR" {
+                return Err(format!(
+                    "Desc node has invalid third word:{}\n{}",
+                    word,
+                    format_file_location(&node.children[2])
+                ));
+            } else {
+                cr = "\\n".to_string();
+            }
         }
 
         match node.children[1].node_type {
@@ -74,7 +94,7 @@ impl RoomInfo {
                 get_token_as_word(&node.children[1]).unwrap(),
             )),
             ZilNodeType::Token(TokenType::Text) => Ok(DescType::Text(
-                get_token_as_text(&node.children[1]).unwrap(),
+                get_token_as_text(&node.children[1]).unwrap() + &cr,
             )),
             _ => {
                 return Err(format!(
@@ -85,7 +105,7 @@ impl RoomInfo {
         }
     }
 
-    fn crunch_vars(node: &ZilNode) -> Result<HashMap<String, i32>, String> {
+    fn crunch_vars(node: &ZilNode) -> Result<BTreeMap<String, i32>, String> {
         if node.children.len() < 3 {
             return Err(format!(
                 "Vars node doesn't have enough children\n{}",
@@ -98,7 +118,7 @@ impl RoomInfo {
             ));
         }
 
-        let mut out: HashMap<String, i32> = HashMap::new();
+        let mut out: BTreeMap<String, i32> = BTreeMap::new();
 
         for i in 0..(node.children.len() - 1) / 2 {
             let name = get_token_as_word(&node.children[i * 2 + 1]);
@@ -246,7 +266,7 @@ impl RoomStats {
     pub fn new() -> RoomStats {
         RoomStats {
             basis: Vec::new(),
-            all_rooms: HashMap::new(),
+            all_rooms: BTreeMap::new(),
         }
     }
 
@@ -338,12 +358,6 @@ impl Populator for RoomStats {
                             return Err(e);
                         }
                     },
-                    "ACT-FIRST" => match RoomInfo::crunch_action(&c) {
-                        Ok(v) => info.actions.first_enter = Some(v),
-                        Err(e) => {
-                            return Err(e);
-                        }
-                    },
                     "ACT-ENTER" => match RoomInfo::crunch_action(&c) {
                         Ok(v) => info.actions.enter = Some(v),
                         Err(e) => {
@@ -410,16 +424,6 @@ impl Populator for RoomStats {
         let room_codex = self.as_codex();
 
         for (key, info) in self.all_rooms.iter() {
-            if info.actions.first_enter.is_some() {
-                let action = info.actions.first_enter.as_ref().unwrap();
-                if routine_codex.lookup(action).is_none() {
-                    return Err(format!(
-                        "Object {} has invalid first-enter action routine: {}",
-                        key, action
-                    ));
-                }
-            }
-
             if info.actions.enter.is_some() {
                 let action = info.actions.enter.as_ref().unwrap();
                 if routine_codex.lookup(action).is_none() {
@@ -494,14 +498,14 @@ impl Populator for RoomStats {
 pub struct RoomCodex<'a> {
     index: usize,
     basis: &'a Vec<ZilNode>,
-    all_rooms: &'a HashMap<String, RoomInfo>,
+    all_rooms: &'a BTreeMap<String, RoomInfo>,
 }
 pub struct RoomCodexValue<'a> {
     pub name: &'a String,
     pub desc: &'a Option<DescType>,
-    pub vars: &'a HashMap<String, i32>,
+    pub vars: &'a BTreeMap<String, i32>,
     pub actions: &'a RoomActions,
-    pub directions: &'a HashMap<String, Direction>,
+    pub directions: &'a BTreeMap<String, Direction>,
     pub objects: &'a Vec<String>,
 }
 

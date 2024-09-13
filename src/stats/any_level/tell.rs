@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::Scope;
+use super::set_var::{LocalVar, Scope};
 
 pub struct Tell {
     pub text: Vec<OutputNode>,
@@ -60,7 +60,10 @@ impl CanValidate for Tell {
                     if let Some(var_type) = v.has_local_var(&word) {
                         match var_type {
                             ReturnValType::Number | ReturnValType::VarName => {
-                                self.text.push(OutputNode::Variable(Scope::Local(word)));
+                                self.text.push(OutputNode::Variable(Scope::Local(LocalVar {
+                                    name: word.clone(),
+                                    return_type: var_type,
+                                })));
                             }
                             _ => {
                                 return Err(format!(
