@@ -14,7 +14,6 @@ pub struct TokenGenerator<'a> {
     char_gen: &'a mut dyn CharGen,
     out_buf: VecDeque<Token>,
     in_quotes: bool,
-    in_escape: bool,
     text_buffer: TokenStrBuf,
     word_buffer: TokenStrBuf,
 }
@@ -100,6 +99,10 @@ impl<'a> TokenGenerator<'a> {
             return;
         }
 
+        if self.word_buffer.val.chars().last().unwrap() == '-' {
+            panic!("Unexpected dash\n{}", format_file_location(self));
+        }
+
         self.out_buf.push_back(Token {
             kind: TokenType::Word,
             value: self.word_buffer.get_val(),
@@ -171,37 +174,15 @@ impl<'a> Iterator for TokenGenerator<'a> {
             if self.in_quotes {
                 match c {
                     '"' => {
-                        if self.in_escape {
-                            self.text_buffer.push(c);
-                            self.in_escape = false;
-                        } else {
-                            self.add_token_from_text_buffer();
-                            self.in_quotes = false;
-                        }
+                        self.add_token_from_text_buffer();
+                        self.in_quotes = false;
                     }
-                    '\\' => {
-                        if self.in_escape {
-                            self.text_buffer.push(c);
-                            self.in_escape = false;
-                        } else {
-                            self.in_escape = true;
-                        }
+                    '\n' => {
+                        self.text_buffer.push(' ');
                     }
-                    _ => {
-                        if c == '\n' {
-                            self.text_buffer.push(' ');
-                        } else {
-                            self.text_buffer.push(c);
-                        }
-                    }
+                    _ => self.text_buffer.push(c),
                 }
 
-                continue;
-            }
-
-            if self.in_escape {
-                self.word_buffer.push(c);
-                self.in_escape = false;
                 continue;
             }
 
@@ -216,9 +197,6 @@ impl<'a> Iterator for TokenGenerator<'a> {
                     self.add_token_from_word_buffer();
                     self.text_buffer.set_info(&char_info);
                     self.in_quotes = true;
-                }
-                '\\' => {
-                    self.in_escape = true;
                 }
                 '<' => {
                     self.add_token_from_word_buffer();
@@ -237,9 +215,24 @@ impl<'a> Iterator for TokenGenerator<'a> {
                     self.add_token_from_char(TokenType::RightParen, &char_info);
                 }
                 _ => {
-                    self.word_buffer.push(c);
-                    if !self.word_buffer.has_info() {
-                        self.word_buffer.set_info(&char_info);
+                    let mut good_char = false;
+                    if c == '-' || c == ';' || c == '=' {
+                        good_char = true;
+                    } else if c.is_ascii_alphabetic() {
+                        if c.to_ascii_uppercase() == c {
+                            good_char = true;
+                        }
+                    } else if c.is_numeric() {
+                        good_char = true;
+                    }
+
+                    if good_char {
+                        self.word_buffer.push(c);
+                        if !self.word_buffer.has_info() {
+                            self.word_buffer.set_info(&char_info);
+                        }
+                    } else {
+                        panic!("illegal character: {}\n{}", c, format_file_location(self));
                     }
                 }
             }
@@ -256,7 +249,6 @@ pub fn new<'a>(char_gen: &'a mut impl CharGen) -> TokenGenerator<'a> {
         char_gen,
         out_buf: VecDeque::new(),
         in_quotes: false,
-        in_escape: false,
         text_buffer: TokenStrBuf::new(),
         word_buffer: TokenStrBuf::new(),
     }

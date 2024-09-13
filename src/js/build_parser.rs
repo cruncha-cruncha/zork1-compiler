@@ -1,17 +1,23 @@
 use crate::stats::{
+    cross_ref::Codex,
     helpers::contain_same_elements,
     top_level::{
         buzzi::BuzzStats,
+        directions::DirectionStats,
         synonyms::SynonymStats,
-        syntax::{SyntaxStats, SyntaxType},
+        syntax::{SyntaxItem, SyntaxStats},
     },
 };
 
-use super::{formatter::Formatter, write_output::CanWriteOutput};
+use super::{
+    formatter::Formatter,
+    write_output::{CanWriteOutput, ToJs},
+};
 
 pub struct ParseTree {
     branches: Vec<SyntaxStep>,
     buzz: Vec<String>,
+    directions: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -30,33 +36,35 @@ pub struct Cmd {
 
 #[derive(Clone, Debug)]
 pub struct Object {
-    pub find: Option<String>,
     pub restrictions: Vec<String>,
     pub children: Vec<SyntaxStep>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Action {
-    pub verb: String,
-    pub pre: Option<String>,
+    pub routine: String,
     pub children: Vec<SyntaxStep>,
 }
+
+// TODO: if player tries a command that starts with a known action but doesn't quite match the rest of the syntax,
+// suggest the syntax. Like if player tries 'SPREAD OVER BOARDS', suggest 'SPREAD OBJECT ON OBJECT'.
 
 impl ParseTree {
     pub fn new() -> ParseTree {
         ParseTree {
             branches: Vec::new(),
             buzz: Vec::new(),
+            directions: Vec::new(),
         }
     }
 
     pub fn parse_syntax(&mut self, syntax_stats: &SyntaxStats) {
         let mut branches: Vec<SyntaxStep> = Vec::new();
 
-        for line in syntax_stats.all_syntax.iter() {
-            let first_word = match line.first().unwrap() {
-                SyntaxType::Cmd(cmd) => cmd.name.clone(),
-                _ => panic!("First word is not a command"),
+        for line in syntax_stats.as_iter() {
+            let first_word = match line.first() {
+                Some(SyntaxItem::Cmd(cmd)) => cmd.name.clone(),
+                _ => unreachable!(),
             };
 
             let mut branch = match branches.iter_mut().find(|branch| match branch {
@@ -90,7 +98,11 @@ impl ParseTree {
     }
 
     pub fn add_buzzi(&mut self, buzzi: &BuzzStats) {
-        self.buzz = buzzi.all.iter().cloned().collect();
+        self.buzz = buzzi.get_vals();
+    }
+
+    pub fn add_directions(&mut self, directions: &DirectionStats) {
+        self.directions = directions.get_vals();
     }
 
     fn add_synonyms_recursive(
@@ -100,8 +112,8 @@ impl ParseTree {
         for child in children {
             match child {
                 SyntaxStep::Cmd(cmd) => {
-                    if let Some(synonyms) = synonyms.all_synonyms.get(&cmd.name) {
-                        cmd.synonyms = synonyms.clone();
+                    if let Some(synonyms) = synonyms.lookup(&cmd.name) {
+                        cmd.synonyms = synonyms;
                     }
                 }
                 _ => (),
@@ -143,13 +155,13 @@ impl ParseTree {
             .join(", ");
 
         formatter.writeln(&format!(
-            "const {{ objectNum, objectVal }} = findObjectMatchingParsedWord(words[{}], [{}]);",
+            "const {{ objectNum, objectVal }} = game.findObjectMatchingParsedWord(words[{}], [{}]);",
             depth - 1,
             objects_str
         ))?;
 
         formatter.writeln(&format!(
-            "if (objectVal) {{ if (prso && !prsi) {{ prsi = {{ word: words[{}], val: objectVal }}; }} else if (!prso) {{ prso = {{ word: words[{}], val: objectVal }}; }} }}",
+            "if (prso.val && !prsi.val) {{ prsi = {{ word: words[{}], val: objectVal }}; }} else if (!prso.val) {{ prso = {{ word: words[{}], val: objectVal }}; }}",
             depth - 1,
             depth - 1,
         ))?;
@@ -180,8 +192,8 @@ impl ParseTree {
         formatter.indent();
 
         formatter.writeln(&format!(
-            "return {{action: {}, prsa: words[0], prso, prsi }};",
-            action.unwrap().to_js()
+            "return {{routine: '{}', prsa, prso, prsi }};",
+            Formatter::safe_case(&action.unwrap().routine)
         ))?;
 
         formatter.outdent();
@@ -212,7 +224,7 @@ impl ParseTree {
         let object_children = SyntaxStep::get_object_children(children);
         self.write_output_objects(formatter, object_children, depth + 1)?;
 
-        formatter.writeln("return null;")?;
+        formatter.writeln("return { prsa, prso, prsi };")?;
         formatter.outdent();
 
         formatter.writeln("}")?;
@@ -224,47 +236,78 @@ impl ParseTree {
 
 impl CanWriteOutput for ParseTree {
     fn write_output(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.writeln(
-            "import { lookupBySynonym as lookupObjectBySynonym } from \"./objects.js\";",
-        )?;
-        formatter.writeln("")?;
+        formatter.writeln("import { game } from './game.js';")?;
+        formatter.newline()?;
 
         formatter.writeln(&format!(
-            "const buzz = [{}];",
+            "export const buzz = [{}];",
             self.buzz
                 .iter()
                 .map(|w| format!("\"{}\"", str::replace(w, "\"", "\\\"")))
                 .collect::<Vec<String>>()
                 .join(", ")
         ))?;
-        formatter.writeln("")?;
+        formatter.newline()?;
 
-        formatter.writeln("const findObjectMatchingParsedWord = (word, params) => {")?;
-        formatter.indent();
-
-        formatter.writeln("const object = lookupObjectBySynonym(word);")?;
-        formatter.writeln("if (!object) { return { objectNum: 0, objectVal: null }; }")?;
-        formatter
-            .writeln("// TODO: verify object matches one of the params, and if so, which one")?;
-        formatter.writeln("return { objectNum: 1, objectVal: object };")?;
-
-        formatter.outdent();
-        formatter.writeln("}")?;
-        formatter.writeln("")?;
+        formatter.writeln(&format!(
+            "export const directions = [{}];",
+            self.directions
+                .iter()
+                .map(|w| format!("\"{}\"", w))
+                .collect::<Vec<String>>()
+                .join(", ")
+        ))?;
+        formatter.newline()?;
 
         formatter.writeln("export const parseInput = (rawString) => {")?;
         formatter.indent();
 
         formatter
             .writeln("const words = rawString.split(\" \").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));")?;
-        formatter.writeln("let prso = null;")?;
-        formatter.writeln("let prsi = null;")?;
-        formatter.writeln("")?;
+        formatter.writeln("if ((words.length == 2) && (words[0] == \"GO\")) {")?;
+        formatter.indent();
+        formatter.writeln("return { move: words[1], prsa: translateAction(words[0]) };")?;
+        formatter.outdent();
+        formatter.writeln("}")?;
+        formatter.newline()?;
+
+        formatter.writeln("const prsa = translateAction(words[0]);")?;
+        formatter.writeln("let prso = {};")?;
+        formatter.writeln("let prsi = {};")?;
+        formatter.newline()?;
 
         formatter.outdent();
-
         self.write_output_recursive(formatter, &self.branches, 0)?;
 
+        formatter.writeln("}")?;
+
+        formatter.newline()?;
+        formatter.writeln("export const translateAction = (actionWord) => {")?;
+        formatter.indent();
+        formatter.writeln("switch (actionWord) {")?;
+        formatter.indent();
+
+        for branch in &self.branches {
+            match branch {
+                SyntaxStep::Cmd(cmd) => {
+                    for name in cmd.get_names() {
+                        formatter.writeln(&format!("case \"{}\":", name))?;
+                    }
+
+                    formatter.indent();
+                    formatter.writeln(&format!("return \"{}\";", cmd.name))?;
+                    formatter.outdent();
+                }
+                _ => unreachable!(),
+            }
+        }
+
+        formatter.writeln("default:")?;
+        formatter.indent();
+        formatter.writeln("return actionWord;")?;
+        formatter.outdent();
+        formatter.writeln("}")?;
+        formatter.outdent();
         formatter.writeln("}")?;
 
         Ok(())
@@ -320,30 +363,26 @@ impl SyntaxStep {
         }
     }
 
-    pub fn add_child(&mut self, new_child: &SyntaxType) -> usize {
+    pub fn add_child(&mut self, new_child: &SyntaxItem) -> usize {
         for (i, c) in self.get_children_mut().iter_mut().enumerate() {
             match c {
                 SyntaxStep::Cmd(cmd) => {
-                    if let SyntaxType::Cmd(ref new_cmd) = new_child {
+                    if let SyntaxItem::Cmd(ref new_cmd) = new_child {
                         if cmd.name == new_cmd.name {
                             return i;
                         }
                     }
                 }
                 SyntaxStep::Object(obj) => {
-                    if let SyntaxType::Object(ref new_obj) = new_child {
-                        if obj.find.as_deref() == new_obj.find.as_deref()
-                            && contain_same_elements(&obj.restrictions, &new_obj.restrictions)
-                        {
+                    if let SyntaxItem::Object(ref new_obj) = new_child {
+                        if contain_same_elements(&obj.restrictions, &new_obj.restrictions) {
                             return i;
                         }
                     }
                 }
                 SyntaxStep::Action(action) => {
-                    if let SyntaxType::Action(ref new_action) = new_child {
-                        if action.verb == new_action.verb
-                            && action.pre.as_deref() == new_action.pre.as_deref()
-                        {
+                    if let SyntaxItem::Action(ref new_action) = new_child {
+                        if action.routine == new_action.routine {
                             return i;
                         }
                     }
@@ -352,19 +391,17 @@ impl SyntaxStep {
         }
 
         let new_child = match new_child {
-            SyntaxType::Cmd(cmd) => SyntaxStep::Cmd(Cmd {
+            SyntaxItem::Cmd(cmd) => SyntaxStep::Cmd(Cmd {
                 name: cmd.name.clone(),
                 synonyms: Vec::new(),
                 children: Vec::new(),
             }),
-            SyntaxType::Object(obj) => SyntaxStep::Object(Object {
-                find: obj.find.clone(),
+            SyntaxItem::Object(obj) => SyntaxStep::Object(Object {
                 restrictions: obj.restrictions.clone(),
                 children: Vec::new(),
             }),
-            SyntaxType::Action(action) => SyntaxStep::Action(Action {
-                verb: action.verb.clone(),
-                pre: action.pre.clone(),
+            SyntaxItem::Action(action) => SyntaxStep::Action(Action {
+                routine: action.routine.clone(),
                 children: Vec::new(),
             }),
         };
@@ -383,56 +420,21 @@ impl Cmd {
     }
 }
 
-impl Object {
-    pub fn to_js(&self) -> String {
+impl ToJs for Object {
+    fn to_js(&self) -> String {
         let mut out = String::from("{");
 
-        let find = match self.find {
-            Some(ref f) => format!("find: \"{}\"", Formatter::safe_case(f)),
-            None => String::new(),
-        };
+        out.push_str("withVars: [");
 
-        let restrictions = if self.restrictions.len() > 0 {
-            let mut out = String::from("restrictions: [");
+        for (i, restriction) in self.restrictions.iter().enumerate() {
+            out.push_str(&format!("\"{}\"", Formatter::safe_case(restriction)));
 
-            for (i, restriction) in self.restrictions.iter().enumerate() {
-                out.push_str(&format!("\"{}\"", restriction));
-
-                if i < self.restrictions.len() - 1 {
-                    out.push_str(", ");
-                }
+            if i < self.restrictions.len() - 1 {
+                out.push_str(", ");
             }
-
-            out.push_str("]");
-
-            out
-        } else {
-            String::new()
-        };
-
-        out.push_str(&find);
-
-        if find.len() > 0 && restrictions.len() > 0 {
-            out.push_str(", ");
         }
 
-        out.push_str(&restrictions);
-
-        out.push_str("}");
-
-        out
-    }
-}
-
-impl Action {
-    pub fn to_js(&self) -> String {
-        let mut out = String::from("{");
-
-        out.push_str(&format!("verb: \"{}\"", Formatter::safe_case(&self.verb)));
-
-        if let Some(ref pre) = self.pre {
-            out.push_str(&format!(", pre: \"{}\"", Formatter::safe_case(pre)));
-        }
+        out.push_str("]");
 
         out.push_str("}");
 

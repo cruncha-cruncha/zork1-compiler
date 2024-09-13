@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang=en style="height:100%;box-sizing:border-box;">
+
+<!-- python3 -m http.server -->
+
+<head>
+    <meta charset=utf-8>
+    <title>Zil-Like</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./game.js" type="module"></script>
+</head>
+
+<body class="m-0 p-0 h-full">
+    <div class="h-full max-w-lg mx-auto flex">
+        <div class="flex flex-col p-2">
+            <ul id="output" class="grow overflow-y-scroll"></ul>
+            <div class="flex justify-center mt-2">
+                <form onSubmit="handleInput(event)">
+                    <input id="input" type="text" placeholder="command"
+                        class="px-2 py-1 border-2 border-gray-400 rounded-md" />
+                    <input type="submit" value="EXEC"
+                        class="cursor-pointer px-2 py-1 border-2 border-sky-800 bg-sky-800 text-white hover:bg-white hover:text-sky-800 rounded-md" />
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { game } from './game.js';
+        let logBuffer = [];
+        let noOutputLogs = true;
+
+        const outputElement = document.getElementById("output");
+
+        const logCommand = (command) => {
+            const itemElement = document.createElement("li");
+            itemElement.classList.add("text-right");
+            const textElement = document.createTextNode(`$ ${command}`);
+            itemElement.appendChild(textElement);
+            outputElement.appendChild(itemElement);
+        };
+
+        // all args are typeof string
+        const logger = (...args) => {
+            noOutputLogs = false;
+            let hasNewline = args.some(
+                (arg) => arg.includes("\n")
+            );
+
+            if (hasNewline) {
+                const out = [...logBuffer, ...args]
+                    .join("")
+                    .split("\n")
+                    .filter(s => s.length > 0);
+
+                for (const text of out) {
+                    const itemElement = document.createElement("li");
+                    const textElement = document.createTextNode("> " + text);
+                    itemElement.appendChild(textElement);
+                    outputElement.appendChild(itemElement);
+                }
+
+                outputElement.scrollTop = outputElement.scrollHeight;
+
+                logBuffer = [];
+            } else {
+                logBuffer.push(...args);
+            }
+        };
+
+        game.setLogger(logger);
+        game.start();
+
+        window.handleInput = function handleInput(event) {
+            event.preventDefault();
+
+            let input = document.getElementById("input").value;
+            document.getElementById("input").value = "";
+            logCommand(input);
+            noOutputLogs = true;
+
+            let result = game.handleRawInput(input);
+
+            if (logBuffer.length > 0) {
+                logger("\n");
+            }
+
+            if (!result.handled) {
+                if (result.goDirection) {
+                    logger("You can't go that way.\n");
+                } else if ((result.prso && !result.foundPrso) || (result.prsi && !result.foundPrsi)) {
+                    logger("Couldn't find anything to do with that.\n");
+                } else {
+                    logger("I don't understand that command.\n");
+                }
+            } else if (result.gameOver) {
+                // Do something
+            }
+
+            if (noOutputLogs) {
+                logger("Nothing happens.\n");
+            }
+        }
+    </script>
+</body>
+
+</html>

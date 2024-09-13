@@ -1,26 +1,30 @@
 use crate::{
-    stats::validate_recursive::{CanValidate, HasZilName, Validator},
+    js::write_output::OutputNode,
+    stats::routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     zil::{
         file_table::format_file_location,
-        node::{TokenType, ZilNode, ZilNodeType},
+        node::{ZilNode, ZilNodeType},
     },
 };
 
-// <AND <VERB? BRUSH> <EQUAL? ,PRSO ,TEETH>>
-// <AND <EQUAL? ,HERE ,LLD-ROOM> <NOT ,LLD-FLAG>>
-// <AND ,XB <IN? ,CANDLES ,WINNER> <FSET? ,CANDLES ,ONBIT> <NOT ,XC>>
-// <AND .HERE? <FSET? ,THIEF ,FIGHTBIT> <NOT <WINNING? ,THIEF>>>
+pub struct And {
+    pub values: Vec<OutputNode>,
+}
 
-pub struct And {}
+impl And {
+    pub fn new() -> Self {
+        Self { values: Vec::new() }
+    }
+}
 
-impl HasZilName for And {
-    fn zil_name(&self) -> &'static str {
-        "AND"
+impl HasReturnType for And {
+    fn return_type(&self) -> ReturnValType {
+        ReturnValType::Boolean
     }
 }
 
 impl CanValidate for And {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
+    fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
         if n.children.len() < 3 {
             return Err(format!(
                 "Expected at least 3 children, found {}\n{}",
@@ -29,13 +33,20 @@ impl CanValidate for And {
             ));
         }
 
+        v.expect_val(ReturnValType::Boolean);
+
         for child in n.children.iter().skip(1) {
             match child.node_type {
-                ZilNodeType::Token(TokenType::Word) => (),
-                ZilNodeType::Cluster => v.validate_cluster(child)?,
+                ZilNodeType::Cluster => match v.validate_cluster(&child) {
+                    Ok(_) => match v.take_last_writer() {
+                        Some(w) => self.values.push(OutputNode::Writer(w)),
+                        None => unreachable!(),
+                    },
+                    Err(e) => return Err(e),
+                },
                 _ => {
                     return Err(format!(
-                        "Expected word, found {}\n{}",
+                        "Expected word or cluster, found {}\n{}",
                         child.node_type,
                         format_file_location(&n)
                     ));

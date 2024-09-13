@@ -49,6 +49,10 @@ impl Formatter {
         self.file.write_all(s.as_bytes())
     }
 
+    pub fn newline(&mut self) -> Result<(), std::io::Error> {
+        self.write("\n", false)
+    }
+
     pub fn writeln(&mut self, s: &str) -> Result<(), std::io::Error> {
         self.write(s, true)?;
         self.write("\n", false)
@@ -84,6 +88,7 @@ impl Formatter {
         result
     }
 
+    #[allow(dead_code)]
     pub fn safe_case_option(input_option: &Option<String>) -> String {
         match input_option {
             Some(input) => Formatter::safe_case(input),

@@ -7,12 +7,12 @@ use crate::zil::{
 };
 
 use super::{
-    helpers::get_nth_child_as_word,
-    meta_handler::MetaHandler,
+    helpers::get_token_as_word,
+    routine_tracker::Validator,
     top_level::{
-        buzzi::BuzzStats, constants::ConstantStats, directions::DirectionStats,
-        globals::GlobalStats, objects::ObjectStats, rooms::RoomStats, routines::RoutineStats,
-        synonyms::SynonymStats, syntax::SyntaxStats,
+        buzzi::BuzzStats, directions::DirectionStats, globals::GlobalStats, objects::ObjectStats,
+        player::PlayerStats, rooms::RoomStats, routines::RoutineStats, synonyms::SynonymStats,
+        syntax::SyntaxStats,
     },
     weaver::Sigourney,
 };
@@ -23,14 +23,14 @@ pub trait Populator {
     fn validate(&self, cross_ref: &CrossRef) -> Result<(), String>;
 }
 
-pub trait Codex {
-    fn lookup(&self, word: &str) -> Option<&ZilNode>;
+pub trait Codex<T> {
+    fn lookup(&self, key: &str) -> Option<T>;
 }
 
 pub struct CrossRef {
     tree: Option<Tree>,
+    pub player: PlayerStats,
     pub globals: GlobalStats,
-    pub constants: ConstantStats,
     pub directions: DirectionStats,
     pub rooms: RoomStats,
     pub objects: ObjectStats,
@@ -45,8 +45,8 @@ impl CrossRef {
     pub fn new(tree: Tree) -> CrossRef {
         CrossRef {
             tree: Some(tree),
+            player: PlayerStats::new(),
             globals: GlobalStats::new(),
-            constants: ConstantStats::new(),
             directions: DirectionStats::new(),
             rooms: RoomStats::new(),
             objects: ObjectStats::new(),
@@ -55,6 +55,13 @@ impl CrossRef {
             synonyms: SynonymStats::new(),
             syntax: SyntaxStats::new(),
             others: Vec::new(),
+        }
+    }
+
+    pub fn name_is_illegal(name: &str) -> bool {
+        match name {
+            "CURRENT-ROOM" | "CMD-ACTION" | "CMD-PRSO" | "CMD-PRSI" | "PLAYER" => true,
+            _ => false,
         }
     }
 
@@ -67,7 +74,7 @@ impl CrossRef {
 
         for n in root.children.into_iter() {
             if n.node_type == ZilNodeType::Cluster {
-                match get_nth_child_as_word(0, &n) {
+                match get_token_as_word(&n.children[0]) {
                     Some(name) => {
                         self.handle_named_cluster(n, name);
                     }
@@ -92,75 +99,106 @@ impl CrossRef {
     }
 
     pub fn crunch_top_level(&mut self, thread_pool: &mut Sigourney) -> Result<(), String> {
-        // crunch all sub info
         let mut receivers: Vec<mpsc::Receiver<Result<(), String>>> = Vec::with_capacity(10);
-        receivers.push(thread_pool.run_fn(|| self.globals.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.constants.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.directions.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.rooms.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.objects.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.buzzi.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.routines.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.synonyms.crunch()));
-        receivers.push(thread_pool.run_fn(|| self.syntax.crunch()));
 
-        // wait for all threads to finish
-        for receiver in receivers.iter_mut() {
-            match receiver.recv().unwrap() {
-                Ok(_) => {}
-                Err(e) => return Err(e),
+        {
+            // crunch all sub info
+            receivers.push(thread_pool.run_fn(|| self.player.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.globals.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.directions.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.rooms.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.objects.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.buzzi.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.routines.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.synonyms.crunch()));
+            receivers.push(thread_pool.run_fn(|| self.syntax.crunch()));
+
+            // wait for all threads to finish
+            for receiver in receivers.iter_mut() {
+                match receiver.recv().unwrap() {
+                    Ok(_) => {}
+                    Err(e) => return Err(e),
+                }
+            }
+
+            receivers.clear();
+        }
+
+        {
+            // validate cross references
+            receivers.push(thread_pool.run_fn(|| self.player.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.globals.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.directions.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.rooms.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.objects.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.buzzi.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.routines.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.synonyms.validate(&self)));
+            receivers.push(thread_pool.run_fn(|| self.syntax.validate(&self)));
+
+            // wait for all threads to finish
+            for receiver in receivers.iter_mut() {
+                match receiver.recv().unwrap() {
+                    Ok(_) => {}
+                    Err(e) => return Err(e),
+                }
+            }
+
+            receivers.clear();
+        }
+
+        self.player.nest_objects(self.objects.as_codex());
+        self.rooms.nest_objects(self.objects.as_codex());
+        self.objects.nest_objects();
+
+        Ok(())
+    }
+
+    pub fn validate_routines_recursive(&self) -> Result<Validator, String> {
+        let mut validator = Validator::new(self);
+
+        for routine in self.routines.as_codex() {
+            validator.validate_cluster(routine.node)?;
+        }
+
+        Ok(validator)
+    }
+
+    pub fn validate_unique_names(&self) -> Result<(), String> {
+        let global_codex = self.globals.as_codex();
+        let room_codex = self.rooms.as_codex();
+        let object_codex = self.objects.as_codex();
+
+        for global in global_codex {
+            if room_codex.lookup(global.name).is_some() {
+                return Err(format!("Global name is same as room name: {}", global.name));
+            }
+
+            if object_codex.lookup(global.name).is_some() {
+                return Err(format!(
+                    "Global name is same as object name: {}",
+                    global.name
+                ));
             }
         }
 
-        receivers.clear();
-
-        // validate cross references
-        receivers.push(thread_pool.run_fn(|| self.globals.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.constants.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.directions.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.rooms.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.objects.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.buzzi.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.routines.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.synonyms.validate(&self)));
-        receivers.push(thread_pool.run_fn(|| self.syntax.validate(&self)));
-
-        // wait for all threads to finish
-        for receiver in receivers.iter_mut() {
-            match receiver.recv().unwrap() {
-                Ok(_) => {}
-                Err(e) => return Err(e),
+        for room in room_codex {
+            if object_codex.lookup(room.name).is_some() {
+                return Err(format!("Room name is same as object name: {}", room.name));
             }
         }
 
         Ok(())
     }
 
-    pub fn validate_routines(&mut self) -> Result<(), String> {
-        let meta_handler = MetaHandler::new();
-
-        let replaced_something = self.routines.resolve_meta_code(&meta_handler)?;
-
-        println!(
-            "resolved meta code, replaced_something: {}",
-            replaced_something
-        );
-
-        self.routines.remove_decls();
-
-        let v = super::validate_recursive::Validator::new(self);
-
-        self.routines.validate_recursive(&v)
-    }
-
     fn handle_named_cluster(&mut self, root: ZilNode, name: String) {
         match name.as_str() {
+            "PLAYER" => self.player.add_node(root),
             "ROOM" => self.rooms.add_node(root),
             "OBJECT" => self.objects.add_node(root),
             "DIRECTIONS" => self.directions.add_node(root),
             "ROUTINE" => self.routines.add_node(root),
             "GLOBAL" => self.globals.add_node(root),
-            "CONSTANT" => self.constants.add_node(root),
             "BUZZ" => self.buzzi.add_node(root),
             "SYNONYM" => self.synonyms.add_node(root),
             "SYNTAX" => self.syntax.add_node(root),

@@ -3,11 +3,11 @@ use std::collections::HashSet;
 use crate::stats::helpers::get_token_as_word;
 use crate::zil::{file_table::format_file_location, node::ZilNode};
 
-use crate::stats::cross_ref::Populator;
+use crate::stats::cross_ref::{CrossRef, Populator};
 
 pub struct BuzzStats {
     basis: Vec<ZilNode>,
-    pub all: HashSet<String>,
+    all: HashSet<String>,
 }
 
 impl BuzzStats {
@@ -18,37 +18,8 @@ impl BuzzStats {
         }
     }
 
-    pub fn validate_object_synonyms(
-        &self,
-        object_synonyms: &HashSet<String>,
-    ) -> Result<(), String> {
-        for s in self.all.iter() {
-            if object_synonyms.contains(s) {
-                return Err(format!("BUZZ has object synonym {}", s));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn validate_prepositions(&self, prepositions: &HashSet<String>) -> Result<(), String> {
-        for s in self.all.iter() {
-            if prepositions.contains(s) {
-                return Err(format!("BUZZ has preposition {}", s));
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn validate_verbs(&self, verbs: &HashSet<String>) -> Result<(), String> {
-        for s in self.all.iter() {
-            if verbs.contains(s) {
-                return Err(format!("BUZZ has verb {}", s));
-            }
-        }
-
-        Ok(())
+    pub fn get_vals(&self) -> Vec<String> {
+        self.all.iter().map(|s| String::from(s)).collect()
     }
 }
 
@@ -77,11 +48,24 @@ impl Populator for BuzzStats {
         Ok(())
     }
 
-    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
-        self.validate_object_synonyms(&cross_ref.objects.groups.synonyms)?;
-        self.validate_prepositions(&cross_ref.syntax.prepositions)?;
-        self.validate_verbs(&cross_ref.syntax.firsts)?;
-
+    fn validate(&self, _cross_ref: &CrossRef) -> Result<(), String> {
         Ok(())
+    }
+}
+
+pub struct BuzzIter<'a> {
+    index: usize,
+    all: &'a Vec<String>,
+}
+
+impl<'a> Iterator for BuzzIter<'a> {
+    type Item = &'a String;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.all.len() {
+            None
+        } else {
+            self.index += 1;
+            Some(&self.all[self.index - 1])
+        }
     }
 }

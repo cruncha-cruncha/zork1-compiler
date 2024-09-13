@@ -1,28 +1,42 @@
 use crate::{
-    stats::validate_recursive::{CanValidate, HasZilName, Validator},
+    js::write_output::OutputNode,
+    stats::routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     zil::{
         file_table::format_file_location,
-        node::{TokenType, ZilNode, ZilNodeType},
+        node::{ZilNode, ZilNodeType},
     },
 };
 
-// <COND (<FSET? ,KITCHEN-WINDOW ,OPENBIT> <TELL "open.">) (T <TELL "slightly ajar.">)>
-// <COND (<FSET? .OBJ ,OPENBIT> <TELL .STRCLS> <FCLEAR .OBJ ,OPENBIT> T) (T <TELL <PICK-ONE ,DUMMY>>)>
-// <COND (<VERB? FIND READ> <TELL "It only SAYS \"Granite Wall\"." CR>) (T <TELL "The wall isn't granite." CR>)>
-// <COND (.W <SET PI? T>)>
+// starts a conditional block
+// each group child is a branch
+// first node in the group is the condition
+// takes whichever branch who's condition is true first
 
-// if statement in js can be represented by an array of { condition, body } objects, which is exactly what we have here!
+pub struct Cond {
+    pub branches: Vec<Branch>,
+}
 
-pub struct Cond {}
+pub struct Branch {
+    pub condition: OutputNode,
+    pub body: Vec<OutputNode>,
+}
 
-impl HasZilName for Cond {
-    fn zil_name(&self) -> &'static str {
-        "COND"
+impl Cond {
+    pub fn new() -> Self {
+        Self {
+            branches: Vec::new(),
+        }
+    }
+}
+
+impl HasReturnType for Cond {
+    fn return_type(&self) -> ReturnValType {
+        ReturnValType::None
     }
 }
 
 impl CanValidate for Cond {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
+    fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
         if n.children.len() < 2 {
             return Err(format!(
                 "COND node has less than two children\n{}",
@@ -31,6 +45,11 @@ impl CanValidate for Cond {
         }
 
         for child in n.children.iter().skip(1) {
+            let mut branch = Branch {
+                condition: OutputNode::TBD,
+                body: Vec::new(),
+            };
+
             if child.node_type != ZilNodeType::Group {
                 return Err(format!(
                     "Child of COND node is not a group\n{}",
@@ -45,18 +64,33 @@ impl CanValidate for Cond {
                 ));
             }
 
-            for c in child.children.iter() {
-                match c.node_type {
-                    ZilNodeType::Token(TokenType::Word) => (),
-                    ZilNodeType::Cluster => v.validate_cluster(&c)?,
+            v.expect_val(ReturnValType::Boolean);
+            v.validate_cluster(&child.children[0])?;
+            match v.take_last_writer() {
+                Some(w) => branch.condition = OutputNode::Writer(w),
+                None => unreachable!(),
+            }
+
+            v.expect_val(ReturnValType::Any);
+            for gc in child.children.iter().skip(1) {
+                match gc.node_type {
+                    ZilNodeType::Cluster => match v.validate_cluster(&gc) {
+                        Ok(_) => match v.take_last_writer() {
+                            Some(w) => branch.body.push(OutputNode::Writer(w)),
+                            None => unreachable!(),
+                        },
+                        Err(e) => return Err(e),
+                    },
                     _ => {
                         return Err(format!(
-                            "Child of COND node is not a word or cluster\n{}",
-                            format_file_location(&c)
+                            "Child of COND node is not a cluster\n{}",
+                            format_file_location(&gc)
                         ));
                     }
                 }
             }
+
+            self.branches.push(branch);
         }
 
         return Ok(());

@@ -1,40 +1,103 @@
 use crate::{
-    stats::validate_recursive::{CanValidate, HasZilName, Validator},
+    js::write_output::OutputNode,
+    stats::{
+        helpers::{get_token_as_number, get_token_as_text, get_token_as_word},
+        routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
+    },
     zil::{
         file_table::format_file_location,
         node::{TokenType, ZilNode, ZilNodeType},
     },
 };
 
-// <TELL "open.">
-// <TELL <PICK-ONE ,DUMMY>>
-// <TELL "The boards are securely fastened." CR>
-// <TELL "It is hardly likely that the " D ,PRSO " is interested." CR>
+use super::set_var::{LocalVar, Scope};
 
-pub struct Tell {}
+pub struct Tell {
+    pub text: Vec<OutputNode>,
+    pub cr: bool,
+}
 
-impl HasZilName for Tell {
-    fn zil_name(&self) -> &'static str {
-        "TELL"
+impl Tell {
+    pub fn new() -> Self {
+        Self {
+            text: Vec::new(),
+            cr: false,
+        }
+    }
+}
+
+impl HasReturnType for Tell {
+    fn return_type(&self) -> ReturnValType {
+        ReturnValType::None
     }
 }
 
 impl CanValidate for Tell {
-    fn validate(&self, n: &ZilNode, v: &Validator) -> Result<(), String> {
+    fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
         if n.children.len() < 2 {
             return Err(format!(
-                "TELL node does not have enough children\n{}",
+                "Not enough children, found {}\n{}",
+                n.children.len(),
                 format_file_location(&n)
             ));
         }
 
-        for child in &n.children[1..] {
+        v.expect_vals(vec![ReturnValType::Number, ReturnValType::Text]);
+
+        for (i, child) in n.children.iter().skip(1).enumerate() {
             match child.node_type {
-                ZilNodeType::Token(TokenType::Word) | ZilNodeType::Token(TokenType::Text) => (),
-                ZilNodeType::Cluster => v.validate_cluster(&child)?,
+                ZilNodeType::Token(TokenType::Text) => {
+                    let text = get_token_as_text(child).unwrap();
+                    self.text.push(OutputNode::Text(text));
+                }
+                ZilNodeType::Token(TokenType::Word) => {
+                    let word = get_token_as_word(child).unwrap();
+                    if (i + 1 == n.children.len() - 1) && (word == "CR") {
+                        self.cr = true;
+                        continue;
+                    }
+
+                    if let Some(var_type) = v.has_local_var(&word) {
+                        match var_type {
+                            ReturnValType::Number | ReturnValType::VarName => {
+                                self.text.push(OutputNode::Variable(Scope::Local(LocalVar {
+                                    name: word.clone(),
+                                    return_type: var_type,
+                                })));
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Variable {} is not a numeric local variable\n{}",
+                                    word,
+                                    format_file_location(&child)
+                                ));
+                            }
+                        }
+                    } else if v.is_global(&word) {
+                        self.text.push(OutputNode::Variable(Scope::Global(word)));
+                    } else {
+                        return Err(format!(
+                            "Variable {} not found in local or global symbol table\n{}",
+                            word,
+                            format_file_location(&child)
+                        ));
+                    }
+                }
+                ZilNodeType::Token(TokenType::Number) => {
+                    let number = get_token_as_number(child).unwrap();
+                    self.text.push(OutputNode::Number(number));
+                }
+                ZilNodeType::Cluster => match v.validate_cluster(child) {
+                    Ok(_) => match v.take_last_writer() {
+                        Some(w) => self.text.push(OutputNode::Writer(w)),
+                        None => unreachable!(),
+                    },
+                    Err(e) => return Err(e),
+                },
                 _ => {
                     return Err(format!(
-                        "Child of TELL node is not a word or cluster\n{}",
+                        "Unexpected node type: {:?}\n{}",
+                        child.node_type,
                         format_file_location(&child)
                     ));
                 }
