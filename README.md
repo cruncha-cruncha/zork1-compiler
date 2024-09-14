@@ -10,7 +10,7 @@ There are three steps:
 
 ## Concepts
 
-Aka top-level keywords in the zil language.
+Aka top-level keywords in the zil-like language.
 
 Player
 
@@ -27,12 +27,14 @@ Room
 
 Object
 
+- `<OBJECT ... >`
 - in the player, a room, or another object
 - has variables
 - can contain nested objects, and those objects can contain nested objects, and so on
 
 Globals
 
+- `<GLOBAL ... >`
 - aka global variables
 - no new variables can be added at game time (unlike player, object, or room variables which can exist before the game starts or be added in the process of playing the game)
 
@@ -40,24 +42,29 @@ All 'variables' can only store integer values. If you try to read a variable tha
 
 Syntax
 
+- `<SYNTAX ... >`
 - defines an input command string
 - first word is the action (PRSA).
 - can work with up to two objects (PRSO and PRSI).
 
 Synonym
 
+- `<SYNONYM ... >`
 - used to define alternatives to any word in a syntax
 
 Buzz
 
+- `<BUZZ ... >`
 - used to ignore words when matching any syntax. These are effectively erased before being passed to the game-time parser.
 
 Directions
 
+- `<DIRECTIONS ... >`
 - directions which can be used with the special 'GO' command. Usually NORTH, SOUTH, EAST, and WEST, but can really be anything.
 
 Routines
 
+- `<ROUTINES ... >`
 - aka handlers, functions, algorithms, or code that does stuff
 - can define a set of local variables to use only within this routine. These, like other variables, can only hold integer values.
 - always has access to the player, current room, PRSA, PRSO, and PRSI. Can also read and modify any global variable
