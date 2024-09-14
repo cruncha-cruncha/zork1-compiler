@@ -1,16 +1,12 @@
 # zork1-compiler
 
-This is actually more like a game engine. It accepts a zil-like (zork implementation language -like) syntax, not actually zil (anywhere you read 'zil', think 'zil-like'). At first I thought it was a compiler, then a transpiler. Takes source code and converts it to js, doing some mild error checking in the process. It uses a recursive-descent parser (maybe).
+This is actually more like a game engine. It accepts a zil-like (zork implementation language -like) syntax, not actually zil (anywhere you read 'zil', think 'zil-like'). Takes source code and converts it to js, doing some error checking in the process. It uses a recursive-descent parser (I think).
 
 There are three steps:
 
-1. Parse zil code into an Abstract Syntax Tree. This code lives in the 'zil' folder.
+1. Parse zil code (./input-files) into an Abstract Syntax Tree. This code lives in the 'zil' folder.
 2. Convert data from that tree into a format more usable by js. This code lives in the 'stats' folder.
-3. Write js. This code lives in the 'js' folder.
-
-## I/O
-
-Every file in ./intput-files is assumed to be a .zil file. Output is a bunch of .js files in ./output-files.
+3. Write js (./output-files). This code lives in the 'js' folder.
 
 ## Concepts
 
@@ -21,7 +17,7 @@ Player
 - `<PLAYER ... >`
 - always in a room
 - has variables
-- has an inventory (aka can store objects in the player)
+- has an inventory (aka objects can be stored in the player)
 
 Room
 
@@ -40,13 +36,13 @@ Globals
 - aka global variables
 - no new variables can be added at game time (unlike player, object, or room variables which can exist before the game starts or be added in the process of playing the game)
 
-All 'variables' can only store integer values. If you try to read a variable that doesn't exist, you'll get a zero. So treat zero values accordingly (as if they were boolean false, or don't exist).
+All 'variables' can only store integer values. If you try to read a variable that doesn't exist, you'll get a zero. So treat zero values accordingly (as if they were boolean false or don't exist).
 
 Syntax
 
-- defines an input string
-- first word is the 'action'
-- can work with up to two objects (PRSO and PRSI). Explained in more detail later on.
+- defines an input command string
+- first word is the action (PRSA).
+- can work with up to two objects (PRSO and PRSI).
 
 Synonym
 
@@ -54,37 +50,37 @@ Synonym
 
 Buzz
 
-- used to ignore words when matching any syntax
+- used to ignore words when matching any syntax. These are effectively erased before being passed to the game-time parser.
 
 Directions
 
-- directions which can be used with the special 'GO' command (explained later on). Usually NORTH, SOUTH, EAST, and WEST (at minimum), but can really be anything.
+- directions which can be used with the special 'GO' command. Usually NORTH, SOUTH, EAST, and WEST, but can really be anything.
 
 Routines
 
-- aka actions
-- always has access to the player, current room, action, PRSO, and PRSI. Can also read and modify any global variable
-- can define a set of local variables to use only within this routine
+- aka handlers, functions, algorithms, or code that does stuff
+- can define a set of local variables to use only within this routine. These, like other variables, can only hold integer values.
+- always has access to the player, current room, PRSA, PRSO, and PRSI. Can also read and modify any global variable
 
 ## Hooks
 
-A routine can be assigned to any of the following hooks, which will be fired when certain conditions are met.
+A routine can be assigned to any of the following 'hooks', which will be fired (aka the routine will be executed) when certain conditions are met. Any routine can be assigned to any hook, but a hook can only be assigned to once (or zero times, they're optional).
 Player has three hooks:
 
 - ACT-ENTER: fires when the player enters any room
 - ACT-EXIT: fires when the player exits any room
-- ACT-ALWAYS: fires on every command
+- ACT-ALWAYS: fires after every command
 
 Every room has a similar set of three hooks:
 
 - ACT-ENTER: fires when the player enters this room
 - ACT-EXIT: fires when the player leaves this room
-- ACT-ALWAYS: fires on every command while the player is in this room
+- ACT-ALWAYS: fires after every command while the player is in this room
 
 Every object has six hooks:
 
-- ACT-IN-ROOM: fires on every command while this object is in the same room as the player
-- ACT-IN-PLAYER: fires on every command while this object is in the player's inventory
+- ACT-IN-ROOM: fires after every command while this object is in the same room as the player
+- ACT-IN-PLAYER: fires after every command while this object is in the player's inventory
 - ACT-ADD: fires when this object is added to the player's inventory
 - ACT-REMOVE: fires when this object is removed from the player's inventory
 - ACT-PRSO: fires if this object is successfully used as the PRSO in a command
@@ -106,14 +102,25 @@ Every object has six hooks:
 - room ACT-ALWAYS
 - player ACT-ALWAYS
 
-Object hooks fire for every object that was moved (including objects not explicitly moved by the player), and firing order is always respected. So if a theatre's (a room) ACT-ENTER hook removes a concert ticket (an object) from the players inventory, the concert ticket's ACT-REMOVE action will fire before the theatre's ACT-ALWAYS action.
+Object hooks generally fire for every object that was moved (including objects not explicitly moved by the player), and firing order is always respected. So if a theatre's (a room) ACT-ENTER hook removes a concert ticket (an object) from the players inventory, the concert ticket's ACT-REMOVE action will fire before the theatre's ACT-ALWAYS action.
+
+When a hook is inserted, it removes all upcoming hook calls of lower priority. This an opaque process which can lead to unexpected behaviour, so always test your hooks. Details of exactly when exactly hooks are inserted can muddled out of `./js-boilerplate/game.js`.
 
 ## Syntax
 
-How does it work? What are PRSO and PRSI? What's the special GO command?
+Let's look at an example: `<SYNTAX HIT OBJECT WITH OBJECT = V-HIT>`. A player could enter the command "HIT NAIL WITH HAMMER", in which case:
+
+- PRSA = 'HIT'
+- PRSO = the NAIL object
+- PRSI = the HAMMER object
+  (assuming NAIL and HAMMER exist and are accessible). Objects are accessible if they are in the PLAYER or CURRENT-ROOM. First OBJECT is always PRSO, second OBJECT is always PRSI. If there are no OBJECTS in a syntax, the PRSO and PRSI are (fake) empty objects in PLAYER.
+
+A special 'GO' command allows the player to move on their own, for example: "GO NORTH".
 
 ## Routines
 
 What are the illegal values? What can you do? What are some examples?
+
+# Compiling
 
 `cargo run`
