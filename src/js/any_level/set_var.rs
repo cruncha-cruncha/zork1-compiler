@@ -16,7 +16,7 @@ impl CanWriteOutput for SetVar {
             match self.scope.as_ref().unwrap() {
                 Scope::Local(ref local_var) => {
                     formatter.write(
-                        &format!("locals['{}'].vars[", Formatter::safe_case(&local_var.name)),
+                        &format!("locals['{}'].vars[", Formatter::safe_case(local_var)),
                         false,
                     )?;
                 }
@@ -32,10 +32,9 @@ impl CanWriteOutput for SetVar {
                         false,
                     )?;
                 }
-                Scope::LOC(ref w) => {
-                    formatter.write("game.setVar(", false)?;
+                Scope::Writer(ref w) => {
                     w.write_output(formatter)?;
-                    formatter.write(", ", false)?;
+                    formatter.write(".vars[", false)?;
                 }
                 _ => panic!("IDK"),
             }
@@ -44,14 +43,7 @@ impl CanWriteOutput for SetVar {
         self.var.write_output(formatter)?;
 
         if self.scope.is_some() {
-            match self.scope.as_ref().unwrap() {
-                Scope::LOC(_) => {
-                    formatter.write(", ", false)?;
-                }
-                _ => {
-                    formatter.write("] = ", false)?;
-                }
-            }
+            formatter.write("] = ", false)?;
         } else {
             formatter.write(" = ", false)?;
         }
@@ -62,7 +54,7 @@ impl CanWriteOutput for SetVar {
             }
             OutputNode::Variable(Scope::Local(ref local_var)) => {
                 formatter.write(
-                    &format!("locals['{}']", Formatter::safe_case(&local_var.name)),
+                    &format!("locals['{}']", Formatter::safe_case(local_var)),
                     false,
                 )?;
             }
@@ -75,14 +67,6 @@ impl CanWriteOutput for SetVar {
             _ => panic!("IDK"),
         }
 
-        if self.scope.is_some() {
-            match self.scope.as_ref().unwrap() {
-                Scope::LOC(_) => {
-                    formatter.write(");", false)?;
-                }
-                _ => (),
-            }
-        }
         formatter.write(";", false)?;
 
         Ok(())

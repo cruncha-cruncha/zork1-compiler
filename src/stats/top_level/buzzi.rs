@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use crate::stats::helpers::get_token_as_word;
-use crate::zil::{file_table::format_file_location, node::ZilNode};
+use crate::stats::helpers::{get_token_as_word, ValidationResult};
+use crate::zil::node::ZilNode;
 
 use crate::stats::cross_ref::{CrossRef, Populator};
 
@@ -28,19 +28,15 @@ impl Populator for BuzzStats {
         self.basis.push(node);
     }
 
-    fn crunch(&mut self) -> Result<(), String> {
+    fn crunch(&mut self) -> ValidationResult<()> {
         for n in self.basis.iter() {
             for c in n.children.iter().skip(1) {
-                match get_token_as_word(c) {
-                    Some(name) => {
-                        if !self.all.insert(name) {
-                            panic!(
-                                "Buzz node has duplicate child word {}",
-                                get_token_as_word(c).unwrap()
-                            );
-                        }
-                    }
-                    None => panic!("Buzz node has non-word child\n{}", format_file_location(&c)),
+                let word = match get_token_as_word(c) {
+                    Ok(v) => v,
+                    Err(e) => return Err(vec![e]),
+                };
+                if !self.all.insert(word.clone()) {
+                    return Err(vec![format!("Buzz node has duplicate child word {}", word)]);
                 }
             }
         }
@@ -48,7 +44,7 @@ impl Populator for BuzzStats {
         Ok(())
     }
 
-    fn validate(&self, _cross_ref: &CrossRef) -> Result<(), String> {
+    fn validate(&self, _cross_ref: &CrossRef) -> ValidationResult<()> {
         Ok(())
     }
 }

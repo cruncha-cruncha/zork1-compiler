@@ -1,6 +1,6 @@
 use crate::{
     stats::{
-        helpers::{get_token_as_word, num_children_between},
+        helpers::{get_token_as_word, num_children},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -11,106 +11,79 @@ use crate::{
 
 use super::set_var::Scope;
 
-pub struct IsIn {
-    pub container: Scope,
+// copy and move an OBJECT to PLAYER, a ROOM, or another OBJECT
+
+// TODO:
+// COPY-MOVE INST INST
+// COPY-MOVE INST IRP OBJ
+// COPY-MOVE IRP OBJ IRP
+// COPY-MOVE IRP OBJ IRP OBJ
+//
+// where:
+// PLAYER = PLAYER
+// ROOM = any word that is a room
+// INST = an object instance
+// IRP = an Inst, Room, or Player
+// OBJ = an object
+// and IRP OBJ = the first instance of OBJ in IRP
+// copy-move can fail
+
+pub struct CopyMove {
     pub item: Scope,
-    pub nested: bool,
+    pub destination: Scope,
 }
 
-impl IsIn {
+impl CopyMove {
     pub fn new() -> Self {
         Self {
-            container: Scope::TBD,
             item: Scope::TBD,
-            nested: false,
+            destination: Scope::TBD,
         }
     }
 }
 
-impl HasReturnType for IsIn {
+impl HasReturnType for CopyMove {
     fn return_type(&self) -> Vec<ReturnValType> {
+        // if copy-move was successful
         vec![ReturnValType::Boolean]
     }
 }
 
-impl CanValidate for IsIn {
+impl CanValidate for CopyMove {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        num_children_between(n, 3, 4)?;
+        num_children(n, 3)?;
+
+        v.expect_val(ReturnValType::Inst);
 
         let second_child = &n.children[1];
+        let second_word = get_token_as_word(&second_child);
         let third_child = &n.children[2];
-
-        v.expect_vals(vec![ReturnValType::Inst, ReturnValType::RP]);
 
         match second_child.node_type {
             ZilNodeType::Token(TokenType::Word) => {
-                let word = get_token_as_word(&second_child).unwrap();
-                if word == "PLAYER" {
-                    self.container = Scope::Player;
-                } else if let Some(return_type) = v.has_local_var(&word) {
+                let second_word = second_word.unwrap();
+                if let Some(return_type) = v.has_local_var(&second_word) {
                     match return_type {
-                        ReturnValType::Inst => self.container = Scope::Local(word),
+                        ReturnValType::Inst => self.item = Scope::Local(second_word),
                         _ => {
                             return Err(format!(
-                                "Variable {} is not an object instance\n{}",
-                                word,
+                                "Variable {} is not a room or object\n{}",
+                                second_word,
                                 format_file_location(&second_child)
                             ));
                         }
                     }
-                } else if v.is_room(&word) {
-                    self.container = Scope::Room(word);
+                } else if v.is_object(&second_word) {
+                    self.item = Scope::Object(second_word);
                 } else {
                     return Err(format!(
-                        "Word {} not player, and not found in locals or rooms\n{}",
-                        word,
+                        "Word {} not found in locals, globals, or objects\n{}",
+                        second_word,
                         format_file_location(&n.children[1])
                     ));
                 }
             }
             ZilNodeType::Cluster => match v.validate_cluster(&second_child) {
-                Ok(_) => match v.take_last_writer() {
-                    Some(w) => self.container = Scope::Writer(w),
-                    None => unreachable!(),
-                },
-                Err(e) => return Err(e),
-            },
-            _ => {
-                return Err(format!(
-                    "Expected word, or cluster, found {}\n{}",
-                    second_child.node_type,
-                    format_file_location(&n)
-                ));
-            }
-        }
-
-        match third_child.node_type {
-            ZilNodeType::Token(TokenType::Word) => {
-                let word = get_token_as_word(&third_child).unwrap();
-                if word == "PLAYER" {
-                    self.item = Scope::Player;
-                } else if let Some(return_type) = v.has_local_var(&word) {
-                    match return_type {
-                        ReturnValType::Inst => self.item = Scope::Local(word),
-                        _ => {
-                            return Err(format!(
-                                "Variable {} is not an object instance\n{}",
-                                word,
-                                format_file_location(&third_child)
-                            ));
-                        }
-                    }
-                } else if v.is_object(&word) {
-                    self.item = Scope::Object(word);
-                } else {
-                    return Err(format!(
-                        "Word {} not player, and not found in locals or rooms\n{}",
-                        word,
-                        format_file_location(&n.children[1])
-                    ));
-                }
-            }
-            ZilNodeType::Cluster => match v.validate_cluster(&third_child) {
                 Ok(_) => match v.take_last_writer() {
                     Some(w) => self.item = Scope::Writer(w),
                     None => unreachable!(),
@@ -119,16 +92,53 @@ impl CanValidate for IsIn {
             },
             _ => {
                 return Err(format!(
-                    "Expected word, or cluster, found {}\n{}",
-                    third_child.node_type,
-                    format_file_location(&n)
+                    "Expected a word, or cluster, found {}\n{}",
+                    second_child.node_type,
+                    format_file_location(&second_child)
                 ));
             }
         }
 
-        if n.children.len() == 4 {
-            // don't care what the fourth child is, presence is enough
-            self.nested = true;
+        match third_child.node_type {
+            ZilNodeType::Token(TokenType::Word) => {
+                let word = get_token_as_word(&third_child).unwrap();
+                if word == "PLAYER" {
+                    self.destination = Scope::Player;
+                } else if let Some(return_type) = v.has_local_var(&word) {
+                    match return_type {
+                        ReturnValType::Inst => self.destination = Scope::Local(word),
+                        _ => {
+                            return Err(format!(
+                                "Variable {} is not a room or object\n{}",
+                                word,
+                                format_file_location(&third_child)
+                            ));
+                        }
+                    }
+                } else if v.is_room(&word) {
+                    self.destination = Scope::Room(word);
+                } else {
+                    return Err(format!(
+                        "Expected player, room, or object, found {}\n{}",
+                        word,
+                        format_file_location(&third_child)
+                    ));
+                }
+            }
+            ZilNodeType::Cluster => match v.validate_cluster(&third_child) {
+                Ok(_) => match v.take_last_writer() {
+                    Some(w) => self.destination = Scope::Writer(w),
+                    None => unreachable!(),
+                },
+                Err(e) => return Err(e),
+            },
+            _ => {
+                return Err(format!(
+                    "Expected a word, or cluster, found {}\n{}",
+                    third_child.node_type,
+                    format_file_location(&third_child)
+                ));
+            }
         }
 
         Ok(())

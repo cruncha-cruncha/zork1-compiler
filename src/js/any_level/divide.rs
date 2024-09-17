@@ -11,6 +11,8 @@ impl CanWriteOutput for Divide {
         formatter.write(" / ", false)?;
         self.divisor.write_output(formatter)?;
 
+        // game deseigner has to protect against divide-by-zero
+
         formatter.write(")", false)?;
 
         Ok(())

@@ -1,6 +1,6 @@
 use crate::stats::{
     cross_ref::Codex,
-    helpers::contain_same_elements,
+    helpers::contains_same_elements,
     top_level::{
         buzzi::BuzzStats,
         directions::DirectionStats,
@@ -375,7 +375,7 @@ impl SyntaxStep {
                 }
                 SyntaxStep::Object(obj) => {
                     if let SyntaxItem::Object(ref new_obj) = new_child {
-                        if contain_same_elements(&obj.restrictions, &new_obj.restrictions) {
+                        if contains_same_elements(&obj.restrictions, &new_obj.restrictions) {
                             return i;
                         }
                     }

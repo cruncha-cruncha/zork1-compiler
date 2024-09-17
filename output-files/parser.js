@@ -1,6 +1,6 @@
 import { game } from './game.js';
 
-export const buzz = ["OF", "THE", "AGAIN", "ALL", "A", "SOME"];
+export const buzz = ["A", "THE", "AGAIN", "SOME", "OF", "ALL"];
 
 export const directions = ["DOWN", "EAST", "IN", "NORTH", "OUT", "SOUTH", "UP", "WEST"];
 
@@ -76,7 +76,7 @@ export const parseInput = (rawString) => {
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {routine: 'vWeatherReport', prsa, prso, prsi };
+        return {routine: 'weatherReport', prsa, prso, prsi };
       }
       return { prsa, prso, prsi };
     }
@@ -166,7 +166,7 @@ export const parseInput = (rawString) => {
   case "POUR":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: ["canContain"]}]);
       if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
       switch (objectNum) {
       case 1:
@@ -197,7 +197,7 @@ export const parseInput = (rawString) => {
   case "FILL":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: ["canContain"]}]);
       if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
       switch (objectNum) {
       case 1:
@@ -213,54 +213,6 @@ export const parseInput = (rawString) => {
               default:
                 if (words.length == 4) {
                   return {routine: 'vPutIn', prsa, prso, prsi };
-                }
-                return { prsa, prso, prsi };
-              }
-            }
-            return { prsa, prso, prsi };
-          }
-        default:
-          return { prsa, prso, prsi };
-        }
-      }
-      return { prsa, prso, prsi };
-    }
-  case "THROW":
-    switch (words[1]) {
-    default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
-      if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
-      switch (objectNum) {
-      case 1:
-        switch (words[2]) {
-        case "AT":
-          switch (words[3]) {
-          default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
-            if (prso.val && !prsi.val) { prsi = { word: words[3], val: objectVal }; } else if (!prso.val) { prso = { word: words[3], val: objectVal }; }
-            switch (objectNum) {
-            case 1:
-              switch (words[4]) {
-              default:
-                if (words.length == 4) {
-                  return {routine: 'vThrowAt', prsa, prso, prsi };
-                }
-                return { prsa, prso, prsi };
-              }
-            }
-            return { prsa, prso, prsi };
-          }
-        case "OVER":
-          switch (words[3]) {
-          default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
-            if (prso.val && !prsi.val) { prsi = { word: words[3], val: objectVal }; } else if (!prso.val) { prso = { word: words[3], val: objectVal }; }
-            switch (objectNum) {
-            case 1:
-              switch (words[4]) {
-              default:
-                if (words.length == 4) {
-                  return {routine: 'vThrowAt', prsa, prso, prsi };
                 }
                 return { prsa, prso, prsi };
               }
@@ -318,7 +270,7 @@ export const parseInput = (rawString) => {
         case "WITH":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: ["maxDamage"]}]);
             if (prso.val && !prsi.val) { prsi = { word: words[3], val: objectVal }; } else if (!prso.val) { prso = { word: words[3], val: objectVal }; }
             switch (objectNum) {
             case 1:
@@ -364,7 +316,7 @@ export const parseInput = (rawString) => {
   case "IMBIBE":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: ["edible"]}]);
       if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
       switch (objectNum) {
       case 1:
@@ -380,38 +332,33 @@ export const parseInput = (rawString) => {
     }
   case "WORK":
     switch (words[1]) {
-    case "ON":
-      switch (words[2]) {
-      default:
-        const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[2], [{withVars: []}]);
-        if (prso.val && !prsi.val) { prsi = { word: words[2], val: objectVal }; } else if (!prso.val) { prso = { word: words[2], val: objectVal }; }
-        switch (objectNum) {
-        case 1:
+    default:
+      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
+      switch (objectNum) {
+      case 1:
+        switch (words[2]) {
+        case "WITH":
           switch (words[3]) {
-          case "WITH":
-            switch (words[4]) {
-            default:
-              const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[4], [{withVars: []}]);
-              if (prso.val && !prsi.val) { prsi = { word: words[4], val: objectVal }; } else if (!prso.val) { prso = { word: words[4], val: objectVal }; }
-              switch (objectNum) {
-              case 1:
-                switch (words[5]) {
-                default:
-                  if (words.length == 5) {
-                    return {routine: 'vWorkWith', prsa, prso, prsi };
-                  }
-                  return { prsa, prso, prsi };
-                }
-              }
-              return { prsa, prso, prsi };
-            }
           default:
+            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: ["maxHealth"]}]);
+            if (prso.val && !prsi.val) { prsi = { word: words[3], val: objectVal }; } else if (!prso.val) { prso = { word: words[3], val: objectVal }; }
+            switch (objectNum) {
+            case 1:
+              switch (words[4]) {
+              default:
+                if (words.length == 4) {
+                  return {routine: 'vWorkWith', prsa, prso, prsi };
+                }
+                return { prsa, prso, prsi };
+              }
+            }
             return { prsa, prso, prsi };
           }
+        default:
+          return { prsa, prso, prsi };
         }
-        return { prsa, prso, prsi };
       }
-    default:
       return { prsa, prso, prsi };
     }
   case "SPARK":
@@ -441,36 +388,6 @@ export const parseInput = (rawString) => {
     default:
       return { prsa, prso, prsi };
     }
-  case "ENTER":
-    switch (words[1]) {
-    case "CABIN":
-      switch (words[2]) {
-      default:
-        if (words.length == 2) {
-          return {routine: 'canEnterCabin', prsa, prso, prsi };
-        }
-        return { prsa, prso, prsi };
-      }
-    default:
-      return { prsa, prso, prsi };
-    }
-  case "BAIT":
-    switch (words[1]) {
-    default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
-      if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
-      switch (objectNum) {
-      case 1:
-        switch (words[2]) {
-        default:
-          if (words.length == 2) {
-            return {routine: 'vBait', prsa, prso, prsi };
-          }
-          return { prsa, prso, prsi };
-        }
-      }
-      return { prsa, prso, prsi };
-    }
   case "TALK":
     switch (words[1]) {
     case "TO":
@@ -491,40 +408,6 @@ export const parseInput = (rawString) => {
         return { prsa, prso, prsi };
       }
     default:
-      return { prsa, prso, prsi };
-    }
-  case "SING":
-    switch (words[1]) {
-    default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
-      if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
-      switch (objectNum) {
-      case 1:
-        switch (words[2]) {
-        default:
-          if (words.length == 2) {
-            return {routine: 'vSing', prsa, prso, prsi };
-          }
-          return { prsa, prso, prsi };
-        }
-      }
-      return { prsa, prso, prsi };
-    }
-  case "WHISPER":
-    switch (words[1]) {
-    default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
-      if (prso.val && !prsi.val) { prsi = { word: words[1], val: objectVal }; } else if (!prso.val) { prso = { word: words[1], val: objectVal }; }
-      switch (objectNum) {
-      case 1:
-        switch (words[2]) {
-        default:
-          if (words.length == 2) {
-            return {routine: 'vWhisper', prsa, prso, prsi };
-          }
-          return { prsa, prso, prsi };
-        }
-      }
       return { prsa, prso, prsi };
     }
   case "PEE":
@@ -640,8 +523,6 @@ export const translateAction = (actionWord) => {
       return "PUT";
     case "FILL":
       return "FILL";
-    case "THROW":
-      return "THROW";
     case "OPEN":
       return "OPEN";
     case "CLOSE":
@@ -662,16 +543,8 @@ export const translateAction = (actionWord) => {
       return "WORK";
     case "SPARK":
       return "SPARK";
-    case "ENTER":
-      return "ENTER";
-    case "BAIT":
-      return "BAIT";
     case "TALK":
       return "TALK";
-    case "SING":
-      return "SING";
-    case "WHISPER":
-      return "WHISPER";
     case "PEE":
       return "PEE";
     case "WRITE":

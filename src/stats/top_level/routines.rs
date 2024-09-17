@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::stats::cross_ref::{CrossRef, Populator};
-use crate::stats::helpers::get_token_as_word;
-use crate::zil::node::{TokenType, ZilNodeType};
+use crate::stats::helpers::{get_token_as_word, num_children_more_than, ValidationResult};
+use crate::zil::node::ZilNodeType;
 use crate::zil::{file_table::format_file_location, node::ZilNode};
 
 use crate::stats::cross_ref::Codex;
@@ -37,23 +37,13 @@ impl RoutineStats {
         }
     }
 
-    fn validate_var_group(node: &ZilNode) -> Result<BTreeSet<String>, String> {
+    fn crunch_var_names(node: &ZilNode) -> Result<BTreeSet<String>, String> {
         let mut out: BTreeSet<String> = BTreeSet::new();
         for c in node.children.iter() {
-            if c.node_type != ZilNodeType::Token(TokenType::Word) {
-                return Err(format!(
-                    "Routine node has non-word child in vars definition group\n{}",
-                    format_file_location(&node)
-                ));
-            }
-
-            let word = get_token_as_word(c).unwrap();
-            if out.contains(&word) {
-                return Err(format!(
-                    "Routine node has duplicate variable name in vars definition group\n{}",
-                    format_file_location(&node)
-                ));
-            }
+            let word = match get_token_as_word(c) {
+                Ok(v) => v,
+                Err(e) => return Err(e),
+            };
 
             out.insert(word);
         }
@@ -67,62 +57,61 @@ impl Populator for RoutineStats {
         self.basis.push(node);
     }
 
-    fn crunch(&mut self) -> Result<(), String> {
+    fn crunch(&mut self) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
         for (i, node) in self.basis.iter().enumerate() {
-            if node.children.len() < 3 {
-                return Err(format!(
-                    "Possible routine node doesn't have enough children\n{}",
-                    format_file_location(&node)
-                ));
+            let mut routine_errors: Vec<String> = Vec::new();
+
+            match num_children_more_than(node, 2) {
+                Ok(_) => {}
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
             }
 
-            let first_word = get_token_as_word(&node.children[0]).unwrap_or_default();
-            if first_word != "ROUTINE" {
-                unreachable!();
-            }
-
-            let second_word = get_token_as_word(&node.children[1]);
-            if second_word.is_none() {
-                return Err(format!(
-                    "Routine node has non-word second child\n{}",
-                    format_file_location(&node)
-                ));
-            }
+            let routine_name = match get_token_as_word(&node.children[1]) {
+                Ok(v) => v,
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+            };
 
             if node.children[2].node_type != ZilNodeType::Group {
-                return Err(format!(
+                routine_errors.push(format!(
                     "Routine node has non-group third child\n{}",
                     format_file_location(&node)
                 ));
             }
 
-            let var_names = match RoutineStats::validate_var_group(&node.children[2]) {
-                Ok(vars) => vars,
+            let var_names = match RoutineStats::crunch_var_names(&node.children[2]) {
+                Ok(v) => v,
                 Err(e) => {
-                    return Err(e);
+                    routine_errors.push(e);
+                    BTreeSet::new()
                 }
             };
 
             for c in node.children.iter().skip(3) {
                 if c.node_type != ZilNodeType::Cluster {
-                    return Err(format!(
+                    routine_errors.push(format!(
                         "Routine node has non-cluster body child\n{}",
                         format_file_location(&node)
                     ));
                 }
             }
 
-            let name = second_word.unwrap();
             match self.all_routines.insert(
-                name.clone(),
+                routine_name.clone(),
                 RoutineInfo {
                     index: i,
-                    name,
+                    name: routine_name,
                     var_names,
                 },
             ) {
                 Some(old_val) => {
-                    return Err(format!(
+                    routine_errors.push(format!(
                         "Duplicate routine name: {}\n{}",
                         old_val.name,
                         format_file_location(&node)
@@ -130,25 +119,38 @@ impl Populator for RoutineStats {
                 }
                 None => {}
             }
+
+            if routine_errors.len() > 0 {
+                errors.append(&mut routine_errors);
+            }
+        }
+
+        if errors.len() > 0 {
+            return Err(errors);
         }
 
         Ok(())
     }
 
-    fn validate(&self, _cross_ref: &CrossRef) -> Result<(), String> {
+    fn validate(&self, _cross_ref: &CrossRef) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
         for (key, val) in self.all_routines.iter() {
             if CrossRef::name_is_illegal(key) {
-                return Err(format!("Illegal routine name: {}", key));
+                errors.push(format!("Illegal routine name: {}", key));
             }
 
             for var in val.var_names.iter() {
                 if CrossRef::name_is_illegal(var) {
-                    return Err(format!("Illegal variable name: {}", var));
+                    errors.push(format!("Illegal variable name: {}", var));
                 }
             }
         }
 
         // deeper recursive validation is performed later (see CanValidate)
+
+        if errors.len() > 0 {
+            return Err(errors);
+        }
 
         Ok(())
     }

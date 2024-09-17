@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
 use crate::{
-    stats::{cross_ref::Codex, helpers::get_token_as_word},
+    stats::{
+        cross_ref::Codex,
+        helpers::{get_token_as_word, num_children_more_than, ValidationResult},
+    },
     zil::{
         file_table::format_file_location,
         node::{TokenType, ZilNode, ZilNodeType},
@@ -68,14 +71,19 @@ impl SyntaxStats {
         }
     }
 
-    fn validate_routines<T>(&self, routines: &impl Codex<T>) -> Result<(), String> {
+    fn validate_routines<T>(&self, routines: &impl Codex<T>) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
         for v in self.all_routine_names.iter() {
             if routines.lookup(&v).is_none() {
-                return Err(format!(
+                errors.push(format!(
                     "Can't find definition for routine {} (in some syntax)",
                     v
                 ));
             }
+        }
+
+        if errors.len() > 0 {
+            return Err(errors);
         }
 
         Ok(())
@@ -87,42 +95,41 @@ impl Populator for SyntaxStats {
         self.basis.push(node);
     }
 
-    fn crunch(&mut self) -> Result<(), String> {
+    fn crunch(&mut self) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
         for line in self.basis.iter() {
+            let mut syntax_errors: Vec<String> = Vec::new();
             let mut steps: Vec<SyntaxItem> = Vec::new();
             let mut obj_count = 0;
 
-            if line.children.len() < 4 {
-                return Err(format!(
-                    "Possible syntax node doesn't have enough children\n{}",
-                    format_file_location(&line)
-                ));
+            match num_children_more_than(line, 3) {
+                Ok(_) => {}
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
             }
 
-            let first_word = get_token_as_word(&line.children[0]).unwrap_or_default();
-            if first_word != "SYNTAX" {
-                unreachable!();
-            }
+            let second_word = match get_token_as_word(&line.children[1]) {
+                Ok(v) => v,
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+            };
 
-            let second_word = get_token_as_word(&line.children[1]);
-            if second_word.is_none() {
-                return Err(format!(
-                    "Syntax node has non-word second child\n{}",
-                    format_file_location(&line)
-                ));
-            }
-
-            let second_word = second_word.unwrap();
             if second_word == "OBJECT" {
-                return Err(format!(
+                errors.push(format!(
                     "Syntax node's second child cannot be OBJECT\n{}",
                     format_file_location(&line)
                 ));
+                continue;
             } else if second_word == "GO" {
-                return Err(format!(
+                errors.push(format!(
                     "Syntax node's second child cannot be GO (this action is reserved)\n{}",
                     format_file_location(&line)
                 ));
+                continue;
             }
 
             steps.push(SyntaxItem::Cmd(Cmd { name: second_word }));
@@ -146,40 +153,42 @@ impl Populator for SyntaxStats {
                         let step = match steps.last_mut().unwrap() {
                             SyntaxItem::Object(obj) => obj,
                             _ => {
-                                return Err(format!(
+                                syntax_errors.push(format!(
                                     "Syntax has group node, but previous word is not OBJECT\n{}",
                                     format_file_location(&n)
                                 ));
+                                continue;
                             }
                         };
 
                         let mut restrictions: Vec<String> = Vec::new();
                         for c in n.children.iter() {
-                            let word = get_token_as_word(c);
-                            if word.is_none() {
-                                return Err(format!(
-                                    "Syntax has group node with non-word child\n{}",
-                                    format_file_location(&n)
-                                ));
-                            } else {
-                                restrictions.push(word.unwrap());
-                            }
+                            let word = match get_token_as_word(c) {
+                                Ok(v) => Some(v),
+                                Err(e) => {
+                                    syntax_errors.push(e);
+                                    continue;
+                                }
+                            };
+
+                            restrictions.push(word.unwrap());
                         }
 
                         step.restrictions = restrictions;
                     }
                     _ => {
-                        return Err(format!(
+                        syntax_errors.push(format!(
                             "Syntax has child which is not word or cluster, is:{}\n{}",
                             n.node_type,
                             format_file_location(&n)
                         ));
+                        continue;
                     }
                 }
             }
 
             if obj_count > 2 {
-                return Err(format!(
+                syntax_errors.push(format!(
                     "Syntax has too many variables (allowed at most two OBJECTs)\n{}",
                     format_file_location(&line)
                 ));
@@ -188,18 +197,23 @@ impl Populator for SyntaxStats {
             let second_last_word =
                 get_token_as_word(&line.children[line.children.len() - 2]).unwrap_or_default();
             if second_last_word != "=" {
-                return Err(format!(
+                syntax_errors.push(format!(
                     "Syntax node's second-last child must be '='\n{}",
                     format_file_location(&line)
                 ));
             }
 
-            let last_word = get_token_as_word(line.children.last().unwrap());
-            if last_word.is_none() {
-                return Err(format!(
-                    "Syntax node's last child must be a word\n{}",
-                    format_file_location(&line)
-                ));
+            let last_word = match get_token_as_word(line.children.last().unwrap()) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    syntax_errors.push(e);
+                    None
+                }
+            };
+
+            if syntax_errors.len() > 0 {
+                errors.append(&mut syntax_errors);
+                continue;
             }
 
             let last_word = last_word.unwrap();
@@ -211,10 +225,14 @@ impl Populator for SyntaxStats {
             self.all_routine_names.insert(last_word);
         }
 
+        if errors.len() > 0 {
+            return Err(errors);
+        }
+
         Ok(())
     }
 
-    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
+    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> ValidationResult<()> {
         self.validate_routines(&cross_ref.routines.as_codex())?;
 
         Ok(())

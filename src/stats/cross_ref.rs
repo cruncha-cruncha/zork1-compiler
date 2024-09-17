@@ -7,7 +7,7 @@ use crate::zil::{
 };
 
 use super::{
-    helpers::get_token_as_word,
+    helpers::{parse_token_as_word, ValidationResult},
     routine_tracker::Validator,
     top_level::{
         buzzi::BuzzStats, directions::DirectionStats, globals::GlobalStats, objects::ObjectStats,
@@ -19,8 +19,8 @@ use super::{
 
 pub trait Populator {
     fn add_node(&mut self, node: ZilNode);
-    fn crunch(&mut self) -> Result<(), String>;
-    fn validate(&self, cross_ref: &CrossRef) -> Result<(), String>;
+    fn crunch(&mut self) -> ValidationResult<()>;
+    fn validate(&self, cross_ref: &CrossRef) -> ValidationResult<()>;
 }
 
 pub trait Codex<T> {
@@ -60,7 +60,7 @@ impl CrossRef {
 
     pub fn name_is_illegal(name: &str) -> bool {
         match name {
-            "CURRENT-ROOM" | "CMD-ACTION" | "CMD-PRSO" | "CMD-PRSI" | "PLAYER" => true,
+            "CURRENT-ROOM" | "CMD" | "PRSO" | "PRSI" | "PLAYER" => true,
             _ => false,
         }
     }
@@ -74,7 +74,7 @@ impl CrossRef {
 
         for n in root.children.into_iter() {
             if n.node_type == ZilNodeType::Cluster {
-                match get_token_as_word(&n.children[0]) {
+                match parse_token_as_word(&n.children[0]) {
                     Some(name) => {
                         self.handle_named_cluster(n, name);
                     }
@@ -98,8 +98,8 @@ impl CrossRef {
         }
     }
 
-    pub fn crunch_top_level(&mut self, thread_pool: &mut Sigourney) -> Result<(), String> {
-        let mut receivers: Vec<mpsc::Receiver<Result<(), String>>> = Vec::with_capacity(10);
+    pub fn crunch_top_level(&mut self, thread_pool: &mut Sigourney) -> ValidationResult<()> {
+        let mut receivers: Vec<mpsc::Receiver<ValidationResult<()>>> = Vec::with_capacity(10);
 
         {
             // crunch all sub info

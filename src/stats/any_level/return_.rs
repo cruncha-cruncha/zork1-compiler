@@ -1,7 +1,7 @@
 use crate::{
     js::write_output::OutputNode,
     stats::{
-        helpers::{get_token_as_number, get_token_as_word},
+        helpers::{get_token_as_number, get_token_as_text, get_token_as_word, num_children},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::{LocalVar, Scope};
+use super::set_var::Scope;
 
 pub struct Return {
     // always have to return a number, even if it has no meaning
@@ -26,41 +26,36 @@ impl Return {
 }
 
 impl HasReturnType for Return {
-    fn return_type(&self) -> ReturnValType {
-        ReturnValType::Number
+    fn return_type(&self) -> Vec<ReturnValType> {
+        vec![ReturnValType::Number]
     }
 }
 
 impl CanValidate for Return {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() != 2 {
-            return Err(format!(
-                "Expected 2 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children(n, 2)?;
 
         v.expect_val(ReturnValType::Number);
 
         match n.children[1].node_type {
+            ZilNodeType::Token(TokenType::Text) => {
+                let text = get_token_as_text(&n.children[1]).unwrap();
+                self.value = OutputNode::Text(text);
+            }
             ZilNodeType::Token(TokenType::Number) => {
                 let num = get_token_as_number(&n.children[1]).unwrap();
                 self.value = OutputNode::Number(num);
             }
             ZilNodeType::Token(TokenType::Word) => {
                 let word = get_token_as_word(&n.children[1]).unwrap();
-                if let Some(var_type) = v.has_local_var(&word) {
-                    match var_type {
-                        ReturnValType::Number | ReturnValType::VarName => {
-                            self.value = OutputNode::Variable(Scope::Local(LocalVar {
-                                name: word.clone(),
-                                return_type: var_type,
-                            }));
+                if let Some(return_type) = v.has_local_var(&word) {
+                    match return_type {
+                        ReturnValType::Number => {
+                            self.value = OutputNode::Variable(Scope::Local(word));
                         }
                         _ => {
                             return Err(format!(
-                                "Variable {} is not a numeric local variable\n{}",
+                                "Variable {} is not a number\n{}",
                                 word,
                                 format_file_location(&n.children[1])
                             ));
@@ -70,7 +65,7 @@ impl CanValidate for Return {
                     self.value = OutputNode::Variable(Scope::Global(word));
                 } else {
                     return Err(format!(
-                        "Variable {} not found in local or global symbol table\n{}",
+                        "Word {} is not player, and not found in locals, globals, rooms, or objects\n{}",
                         word,
                         format_file_location(&n.children[1])
                     ));

@@ -1,6 +1,7 @@
 pub mod add;
 pub mod and;
 pub mod cond;
+pub mod copy_move;
 pub mod desc;
 pub mod divide;
 pub mod each_obj;

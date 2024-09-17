@@ -1,6 +1,9 @@
 use crate::{
     js::write_output::OutputNode,
-    stats::routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
+    stats::{
+        helpers::num_children_more_than,
+        routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
+    },
     zil::{
         file_table::format_file_location,
         node::{ZilNode, ZilNodeType},
@@ -18,20 +21,14 @@ impl And {
 }
 
 impl HasReturnType for And {
-    fn return_type(&self) -> ReturnValType {
-        ReturnValType::Boolean
+    fn return_type(&self) -> Vec<ReturnValType> {
+        vec![ReturnValType::Boolean]
     }
 }
 
 impl CanValidate for And {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() < 3 {
-            return Err(format!(
-                "Expected at least 3 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children_more_than(n, 2)?;
 
         v.expect_val(ReturnValType::Boolean);
 
@@ -46,7 +43,7 @@ impl CanValidate for And {
                 },
                 _ => {
                     return Err(format!(
-                        "Expected word or cluster, found {}\n{}",
+                        "Expected cluster, found {}\n{}",
                         child.node_type,
                         format_file_location(&n)
                     ));

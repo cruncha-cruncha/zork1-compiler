@@ -215,6 +215,8 @@ const newGame = () => {
       const objectsAccessible = currentRoom.objects.map(
         (name) => objects[name]
       );
+
+      // TODO: allow nested objects if in player inventory?
       objectsAccessible.push(...player.objects.map((name) => objects[name]));
 
       // objectsMatching is an object[]
@@ -407,15 +409,6 @@ const newGame = () => {
       }
 
       return false;
-    },
-
-    // TODO: are these necessary? Couldn't we handle it in rust?
-    getVar(scope, name) {
-      return scope.vars[name] || 0;
-    },
-
-    setVar(scope, name, value) {
-      scope.vars[name] = value;
     },
   };
 };

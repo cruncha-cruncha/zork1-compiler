@@ -1,6 +1,6 @@
 use crate::{
     stats::{
-        helpers::get_token_as_word,
+        helpers::{get_token_as_word, num_children},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::set_var::{LocalVar, Scope};
+use super::set_var::Scope;
 
 pub struct Location {
     pub scope: Scope,
@@ -22,50 +22,39 @@ impl Location {
 }
 
 impl HasReturnType for Location {
-    fn return_type(&self) -> ReturnValType {
-        // this is always a full object in js
-        ReturnValType::Location
+    fn return_type(&self) -> Vec<ReturnValType> {
+        match self.scope {
+            Scope::Player => vec![ReturnValType::RP],
+            _ => vec![ReturnValType::Inst, ReturnValType::RP],
+        }
     }
 }
 
 impl CanValidate for Location {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() != 2 {
-            return Err(format!(
-                "Expected 2 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children(n, 2)?;
 
-        v.expect_val(ReturnValType::Location);
+        v.expect_vals(vec![ReturnValType::Inst, ReturnValType::RP]);
 
         match n.children[1].node_type {
             ZilNodeType::Token(TokenType::Word) => {
                 let word = get_token_as_word(&n.children[1]).unwrap();
                 if word == "PLAYER" {
                     self.scope = Scope::Player;
-                } else if let Some(var_type) = v.has_local_var(&word) {
-                    match var_type {
-                        ReturnValType::Location => {
-                            self.scope = Scope::Local(LocalVar {
-                                name: word.to_string(),
-                                return_type: var_type,
-                            });
-                        }
+                } else if let Some(return_type) = v.has_local_var(&word) {
+                    match return_type {
+                        ReturnValType::Inst => self.scope = Scope::Local(word),
                         _ => {
                             return Err(format!(
-                                "Variable {} is not player, a room, or an object\n{}",
+                                "Variable {} is not a room or object\n{}",
                                 word,
                                 format_file_location(&n.children[1])
                             ));
                         }
                     }
-                } else if v.is_object(&word) {
-                    self.scope = Scope::Object(word);
                 } else {
                     return Err(format!(
-                        "Variable {} is a word, but not an object or local object variable\n{}",
+                        "Word {} is not player, and not found in locals, globals, or objects\n{}",
                         word,
                         format_file_location(&n.children[1])
                     ));
@@ -74,7 +63,7 @@ impl CanValidate for Location {
             ZilNodeType::Cluster => match v.validate_cluster(&n.children[1]) {
                 Ok(_) => match v.take_last_writer() {
                     Some(w) => {
-                        self.scope = Scope::LOC(w);
+                        self.scope = Scope::Writer(w);
                     }
                     None => unreachable!(),
                 },
@@ -82,7 +71,7 @@ impl CanValidate for Location {
             },
             _ => {
                 return Err(format!(
-                    "Expected number, found {}\n{}",
+                    "Expected word, or cluster, found {}\n{}",
                     n.children[1].node_type,
                     format_file_location(&n.children[1])
                 ));

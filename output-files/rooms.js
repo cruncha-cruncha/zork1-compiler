@@ -1,9 +1,67 @@
 export const rooms = {
+  cabin: {
+    isRoom: 'cabin',
+    desc: { text: "You're inside a log cabin. It's rustic, but has a lovely fireplace.\n" },
+    objects: {
+      bedFrame: ['inst_9',],
+      book: ['inst_4',],
+      bucket: ['inst_11',],
+      chair: ['inst_7','inst_8',],
+      firePlace: ['inst_10',],
+      nails: ['inst_12',],
+      table: ['inst_6',],
+    },
+    vars: {
+      aboveGround: 1,
+      isLocked: 1,
+    },
+    move: {
+      EAST: { room: 'cabinExterior' },
+      NORTH: { room: 'cabinExterior' },
+      OUT: { room: 'cabinExterior' },
+      SOUTH: { room: 'cabinExterior' },
+      WEST: { room: 'cabinExterior' },
+    },
+    hooks: {
+    },
+  },
+  cabinExterior: {
+    isRoom: 'cabinExterior',
+    desc: { routine: 'descCabinExterior' },
+    objects: {
+      cabinDoor: ['inst_1',],
+      cabinDoorKey: ['inst_3',],
+      cabinWindow: ['inst_2',],
+    },
+    vars: {
+      aboveGround: 1,
+      firstTime: 1,
+    },
+    move: {
+      EAST: { room: 'field1' },
+      NORTH: { room: 'field2' },
+      SOUTH: { room: 'forest2' },
+      WEST: { room: 'forest3' },
+    },
+    hooks: {
+    },
+  },
+  storage: {
+    isRoom: 'storage',
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+    },
+    hooks: {
+    },
+  },
   forest1: {
     isRoom: 'forest1',
-    desc: { routine: 'fDescForest1' },
-    objects: [
-    ],
+    desc: { routine: 'descForest1' },
+    objects: {
+    },
     vars: {
       aboveGround: 1,
       firstTime: 1,
@@ -19,8 +77,8 @@ export const rooms = {
   forest2: {
     isRoom: 'forest2',
     desc: { text: "You're in a forest, the trees are thinner here. There's a trail heading NORTH (and back SOUTH).\n" },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -31,51 +89,11 @@ export const rooms = {
     hooks: {
     },
   },
-  cabinExterior: {
-    isRoom: 'cabinExterior',
-    desc: { routine: 'fDescCabinExterior' },
-    objects: [
-      'cabinDoor',
-      'cabinWindow',
-      'detritus1',
-    ],
-    vars: {
-      aboveGround: 1,
-      firstTime: 1,
-    },
-    move: {
-      EAST: { room: 'field1' },
-      IN: { routine: 'canEnterCabin' },
-      NORTH: { room: 'field2' },
-      SOUTH: { room: 'forest2' },
-      WEST: { room: 'forest3' },
-    },
-    hooks: {
-    },
-  },
-  cabin: {
-    isRoom: 'cabin',
-    desc: { text: "You're inside a log cabin. It's rustic, but has a lovely fireplace." },
-    objects: [
-    ],
-    vars: {
-      aboveGround: 1,
-    },
-    move: {
-      EAST: { room: 'cabinExterior' },
-      NORTH: { room: 'cabinExterior' },
-      OUT: { room: 'cabinExterior' },
-      SOUTH: { room: 'cabinExterior' },
-      WEST: { room: 'cabinExterior' },
-    },
-    hooks: {
-    },
-  },
   forest3: {
     isRoom: 'forest3',
     desc: { text: "You're in a lightly-populated forest, and a small stream burbles nearby.\n" },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -91,8 +109,8 @@ export const rooms = {
   forest4: {
     isRoom: 'forest4',
     desc: { text: "The forest is thicker again here, but the trail still looks good, and the you can hear a stream.\n" },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -108,8 +126,8 @@ export const rooms = {
   forest5: {
     isRoom: 'forest5',
     desc: { text: "You're in the forest. The trail is faint here, and barely-worn.\n" },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -125,8 +143,8 @@ export const rooms = {
   forest6: {
     isRoom: 'forest6',
     desc: { text: "This is deep forest, but there is trail running SOUTH and EAST\n" },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -142,8 +160,8 @@ export const rooms = {
   lake1: {
     isRoom: 'lake1',
     desc: { text: "You find yourself at the edge a large, calm lake\n" },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -159,8 +177,8 @@ export const rooms = {
   field1: {
     isRoom: 'field1',
     desc: { text: "A massive field stretches out all around you, with wild grass and sage." },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -176,8 +194,8 @@ export const rooms = {
   field2: {
     isRoom: 'field2',
     desc: { text: "This field seems to go on forever, gently rolling past the horizon.\n" },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -193,8 +211,8 @@ export const rooms = {
   cliff1: {
     isRoom: 'cliff1',
     desc: { text: "Grassy fields abruptly stop at the edge of a cliff, a stream hurtling over. You can taste more adventure awaiting in the land below." },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -210,8 +228,8 @@ export const rooms = {
   caveEntrance1: {
     isRoom: 'caveEntrance1',
     desc: { text: "Amidst boulders and tree trunks a black space beckons you forward. A cave. You could GO DOWN, but there is no telling whether you would come back up." },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
       aboveGround: 1,
     },
@@ -227,8 +245,8 @@ export const rooms = {
   caveEntrance2: {
     isRoom: 'caveEntrance2',
     desc: { text: "Out of the forest appears a large, rocky hole in the ground. A cave. You could GO DOWN." },
-    objects: [
-    ],
+    objects: {
+    },
     vars: {
     },
     move: {

@@ -12,9 +12,9 @@ impl Rand {
 }
 
 impl HasReturnType for Rand {
-    fn return_type(&self) -> ReturnValType {
+    fn return_type(&self) -> Vec<ReturnValType> {
         // returns an integer from 0 to 99 (inclusive)
-        ReturnValType::Number
+        vec![ReturnValType::Number]
     }
 }
 

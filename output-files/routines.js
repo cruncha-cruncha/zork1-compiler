@@ -4,29 +4,37 @@ import { objects } from './objects.js';
 import { rooms } from './rooms.js';
 
 export const routines = {
-  canEnterCabin: {
-    isRoutine: 'canEnterCabin',
-    func: canEnterCabin,
+  descCabinExterior: {
+    isRoutine: 'descCabinExterior',
+    func: descCabinExterior,
+  },
+  prsoCabinDoor: {
+    isRoutine: 'prsoCabinDoor',
+    func: prsoCabinDoor,
+  },
+  descBook: {
+    isRoutine: 'descBook',
+    func: descBook,
+  },
+  prsoBook: {
+    isRoutine: 'prsoBook',
+    func: prsoBook,
+  },
+  prsoTable: {
+    isRoutine: 'prsoTable',
+    func: prsoTable,
+  },
+  descForest1: {
+    isRoutine: 'descForest1',
+    func: descForest1,
   },
   timePasses: {
     isRoutine: 'timePasses',
     func: timePasses,
   },
-  vDetritus1Prso: {
-    isRoutine: 'vDetritus1Prso',
-    func: vDetritus1Prso,
-  },
-  fDescForest1: {
-    isRoutine: 'fDescForest1',
-    func: fDescForest1,
-  },
-  vWeatherReport: {
-    isRoutine: 'vWeatherReport',
-    func: vWeatherReport,
-  },
-  fDescCabinExterior: {
-    isRoutine: 'fDescCabinExterior',
-    func: fDescCabinExterior,
+  weatherReport: {
+    isRoutine: 'weatherReport',
+    func: weatherReport,
   },
   vDescRoom: {
     isRoutine: 'vDescRoom',
@@ -43,14 +51,6 @@ export const routines = {
   vInventory: {
     isRoutine: 'vInventory',
     func: vInventory,
-  },
-  fCabinDoorPrso: {
-    isRoutine: 'fCabinDoorPrso',
-    func: fCabinDoorPrso,
-  },
-  vThrowAt: {
-    isRoutine: 'vThrowAt',
-    func: vThrowAt,
   },
   vSparkAt: {
     isRoutine: 'vSparkAt',
@@ -84,14 +84,6 @@ export const routines = {
     isRoutine: 'vTalkTo',
     func: vTalkTo,
   },
-  vSing: {
-    isRoutine: 'vSing',
-    func: vSing,
-  },
-  vWhisper: {
-    isRoutine: 'vWhisper',
-    func: vWhisper,
-  },
   vTake: {
     isRoutine: 'vTake',
     func: vTake,
@@ -124,10 +116,6 @@ export const routines = {
     isRoutine: 'vWorkWith',
     func: vWorkWith,
   },
-  vBait: {
-    isRoutine: 'vBait',
-    func: vBait,
-  },
   vSwim: {
     isRoutine: 'vSwim',
     func: vSwim,
@@ -142,12 +130,86 @@ export const routines = {
   },
 };
 
-function canEnterCabin(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
+function descCabinExterior(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  if ((((objects['cabinDoor'].vars['isLocked'] || 0) === 1) && ((objects['cabinWindow'].vars['isSmashed'] || 0) === 0))) {
-    game.log("There's no way into the cabin, you need to break something or find a key.", '\n');
+  if (((locals['prso'].vars['firstTime'] || 0) === 1)) {
+    locals['prso'].vars['firstTime'] = 0;
+    game.log("You're at the transition between a forest and a field. There are trails in all directions, but at the center a cabin! It's got a scenic window facing the fields. You could try to OPEN DOOR", '\n');
+    return 1;
+  }
+  game.log("You're outside a cabin on the edge of a forest, overlooking some fields.", '\n');
+  if (((rooms['cabin'].vars['isLocked'] || 0) === 1)) {
+    game.log("The cabin door is locked. Where's the key?", '\n');
+  }
+  return 0;
+}
+
+function prsoCabinDoor(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
+  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
+  if ((locals['cmd'] === "OPEN")) {
+    if ((game.isInLocation(locals['currentRoom'], player, objects['cabinDoorKey'], false) && ((rooms['cabin'].vars['isLocked'] || 0) === 1))) {
+      locals['prso'].vars['isLocked'] = 0;
+      game.log("The key works!", '\n');
+      game.move(locals, player, rooms['cabin'])
+    } else if (((rooms['cabin'].vars['isLocked'] || 0) === 0)) {
+      game.move(locals, player, rooms['cabin'])
+    } else if ((1 === 1)) {
+      game.log("The door is locked. You should LOOK AROUND for a key.", '\n');
+    }
+  }
+  return 0;
+}
+
+function descBook(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
+  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
+  if (((locals['prso'].vars['health'] || 0) === 0)) {
+    game.log("a torn-up book");
+    return 1;
+  } else if ((globals['detailedDesc'] === 1)) {
+    game.log("This leather-bound journal's yellowing pages are covered in scratchy handwriting, probably done with charcoal. You can make out a few passages:", '\n');
+    game.log("...boat is coming along, should be ready in...", '\n');
+    game.log("...beast is hungry, what does it eat down there? No use mining any more...", '\n');
+    game.log("...lost the gem, a crow must have taken it...", '\n');
+    return 1;
+  }
+  game.log("a BOOK");
+  return 0;
+}
+
+function prsoBook(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
+  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
+  if ((((locals['prso'].vars['health'] || 0) > 0) && (locals['cmd'] === "UNPACK") && game.isInLocation(locals['currentRoom'], locals['prso'], objects['bookPages'], false))) {
+    game.move(locals, locals['prso'], player)
+    game.log("You've ripped out some blank pages from the book", '\n');
+  } else if ((locals['cmd'] === "HIT")) {
+    if (((locals['prso'].vars['health'] || 0) > 0)) {
+      game.log("Why are you hitting this book?", '\n');
+      if (game.isInLocation(locals['currentRoom'], locals['prso'], objects['bookPages'], false)) {
+        game.move(locals, locals['prso'], locals['currentRoom'])
+        game.log("You've cut out some pages onto the floor.", '\n');
+      }
+      locals['prso'].vars['health'] = ((locals['prso'].vars['health'] || 0) + -1);
+    }
+  }
+  return 0;
+}
+
+function prsoTable(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
+  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
+  return 0;
+}
+
+function descForest1(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
+  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
+  if (((rooms['forest1'].vars['firstTime'] || 0) === 1)) {
+    rooms['forest1'].vars['firstTime'] = 0;
+    game.log("It's the end of summer, and you're in a dense forest. Birds and other small creatures can be heard rustling, buzzing, and chirping through the undergrowth. The smell of pine hangs thick in the air. Light filters down through needles and leaves.", '\n');routines['weatherReport'].func(locals['currentRoom'], locals['prsa'], locals['prso'], locals['prsi'])
+    game.log("There's a trail up ahead, it looks like you could GO NORTH", '\n');
+  } else if ((globals['detailedDesc'] === 1)) {
+    game.log("You're in dense forest. The undergrowth is thick with dead branches, leaves, and other detritus. Vines, bushes, and brush all vie for a spot in the sunlight. Even during a thunderstorm, the wind barely penetrates this far down, leaving the air hot and thick with the smell of pine.", '\n');
+    game.log("Despite the foliage, there's a well-defined trail heading NORTH and WEST", '\n');
   } else if ((1 === 1)) {
-    game.move(locals, player, rooms['cabin'])
+    game.log("You're in a dense forest. There's a trail heading NORTH and WEST.", '\n');
   }
   return 0;
 }
@@ -168,9 +230,9 @@ function timePasses(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
       globals['time'] = 1;
     } else if ((globals['time'] === -8)) {
       globals['day'] = (globals['day'] + 1);
-      globals['moon'] = (globals['moon'] + 1);
-      if ((globals['moon'] === 24)) {
-        globals['moon'] = 0;
+      globals['moonPhase'] = (globals['moonPhase'] + 1);
+      if ((globals['moonPhase'] === 24)) {
+        globals['moonPhase'] = 0;
       }
       locals['newW'] = Math.floor(Math.random() * 100);
       if ((30 > locals['newW'])) {
@@ -191,37 +253,8 @@ function timePasses(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   return 0;
 }
 
-function vDetritus1Prso(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  if ((locals['cmdPrsa'] === "UNPACK")) {
-    for (let object of game.getObjectsIn(objects['detritus1'])) {
-      locals['obj'] = object;
-      if (!((locals['obj'].vars['noTake'] || 0) === 1)) {
-        game.move(locals, locals['obj'], locals['currentRoom'])
-      }
-    }
-    game.log("Unpackable items are now on the ground.", '\n');
-  }
-  return 0;
-}
-
-function fDescForest1(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  if (((rooms['forest1'].vars['firstTime'] || 0) === 1)) {
-    rooms['forest1'].vars['firstTime'] = 0;
-    game.log("It's the end of summer. You're in a dense forest. Birds and other small creatures can be heard rustling through the undergrowth and the smell of pine hangs thick in the air. Light filters down through needles and leaves.", '\n');routines['vWeatherReport'].func(locals['currentRoom'], locals['prsa'], locals['prso'], locals['prsi'])
-    game.log("There's a trail up ahead, it looks like you could GO NORTH", '\n');
-  } else if ((globals['detailedDesc'] === 1)) {
-    game.log("You're in dense forest. The undergrowth is thick with dead branches, leaves, and other detritus. Vines, bushes, and brush all vie for a spot in the sunlight. Even during a thunderstorm, the wind barely penetrates this far down, leaving the air hot and thick with the smell of pine.", '\n');
-    game.log("Despite the foliage, there's a well-defined trail heading NORTH and WEST", '\n');
-  } else if ((1 === 1)) {
-    game.log("You're in a dense forest. There's a trail heading NORTH and WEST.", '\n');
-  }
-  return 0;
-}
-
-function vWeatherReport(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, isNight: 0};
+function weatherReport(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
+  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, isNight: 0,untilFull: 0};
   if ((globals['time'] > 48)) {
     locals['isNight'] = 0;
     game.log("It's evening, ");
@@ -241,13 +274,18 @@ function vWeatherReport(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
     locals['isNight'] = 1;
     game.log("It's late at night, ");
   }
-  if ((globals['moon'] === 0)) {
+  if ((globals['moonPhase'] === 0)) {
     game.log("new moon, ");
-  } else if (((globals['moon'] > 0) && (globals['moon'] < 12))) {
-    game.log("the moon is waxing, ");
-  } else if ((globals['moon'] === 12)) {
+  } else if (((globals['moonPhase'] > 0) && (globals['moonPhase'] < 12))) {
+    locals['untilFull'] = (globals['moonPhase'] - 11);
+    game.log("the moon is waxing (", locals['untilFull'].toString(), " day");
+    if (!(locals['untilFull'] === 1)) {
+      game.log("s");
+    }
+    game.log(" until full), ");
+  } else if ((globals['moonPhase'] === 12)) {
     game.log("full moon, ");
-  } else if (((globals['moon'] > 12) && (globals['moon'] < 24))) {
+  } else if (((globals['moonPhase'] > 12) && (globals['moonPhase'] < 24))) {
     game.log("the moon is waning, ");
   }
   if ((globals['weather'] === 3)) {
@@ -286,20 +324,6 @@ function vWeatherReport(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   return 0;
 }
 
-function fDescCabinExterior(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  if (((rooms['cabinExterior'].vars['firstTime'] || 0) === 1)) {
-    rooms['cabinExterior'].vars['firstTime'] = 0;
-    game.log("You're at the transition between a forest and a field. There are trails in all directions, but at the center a cabin! It's got a scenic window facing the fields. You could try to OPEN DOOR", '\n');
-    return 1;
-  }
-  game.log("You're outside a cabin on the edge of a forest, overlooking some fields.", '\n');
-  if (((objects['cabinDoor'].vars['isLocked'] || 0) === 1)) {
-    game.log("The cabin door is locked. Where's the key?", '\n');
-  }
-  return 0;
-}
-
 function vDescRoom(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
   game.describe(locals['currentRoom']);
@@ -323,9 +347,11 @@ function vDescObjectsInRoom(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   }
   for (let object of game.getObjectsIn(locals['currentRoom'])) {
     locals['obj'] = object;
-    locals['count'] = (locals['count'] + 1);
-    game.describe(locals['obj']);
-    game.log('\n');
+    if (((locals['obj'].vars['hidden'] || 0) === 0)) {
+      locals['count'] = (locals['count'] + 1);
+      game.describe(locals['obj']);
+      game.log('\n');
+    }
   }
   if ((locals['count'] === 0)) {
     game.log("This space appears to be empty.", '\n');
@@ -337,9 +363,11 @@ function vInventory(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, count: 0};
   for (let object of game.getObjectsIn(player)) {
     locals['obj'] = object;
-    locals['count'] = (locals['count'] + 1);
-    game.describe(locals['obj']);
-    game.log('\n');
+    if (((locals['obj'].vars['hidden'] || 0) === 0)) {
+      locals['count'] = (locals['count'] + 1);
+      game.describe(locals['obj']);
+      game.log('\n');
+    }
   }
   if ((locals['count'] === 0)) {
     game.log("There's nothing in your inventory.", '\n');
@@ -347,37 +375,13 @@ function vInventory(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   return 0;
 }
 
-function fCabinDoorPrso(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  if ((locals['cmdPrsa'] === "OPEN")) {
-    if ((game.isInLocation(locals['currentRoom'], player, objects['cabinDoorKey'], false) && ((objects['cabinDoor'].vars['isLocked'] || 0) === 1))) {
-      objects['cabinDoor'].vars['isLocked'] = 0;
-      game.log("The key works!", '\n');
-      game.move(locals, player, rooms['cabin'])
-    } else if (((objects['cabinDoor'].vars['isLocked'] || 0) === 0)) {
-      game.move(locals, player, rooms['cabin'])
-    } else if ((1 === 1)) {
-      game.log("The door is locked. You should LOOK AROUND for a key.", '\n');
-    }
-  }
-  return 0;
-}
-
-function vThrowAt(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
-  return 0;
-}
-
 function vSparkAt(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("Spark it at what?", '\n');
   return 0;
 }
 
 function vHitWith(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
   return 0;
 }
 
@@ -388,26 +392,27 @@ function vOpen(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
 
 function vClose(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
   return 0;
 }
 
 function vExamine(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, count: 0,r: 0};
   globals['detailedDesc'] = 1;
-  game.describe(locals['cmdPrso']);
+  game.describe(locals['prso']);
   globals['detailedDesc'] = 0;
   game.log('\n');
   if ((globals['firstExamine'] === 1)) {
     globals['firstExamine'] = 0;
-    game.log("If there's any interesting item in this object, you can UNPACK it to remove the nested items. After that, can TAKE the item off the ground.", '\n');
+    game.log("The EXAMINE command will list items nested inside the object, and might also tell you more about the object itself. If there's any interesting items in this object, you can UNPACK it to remove the nested items. After that, can TAKE an item off the ground.", '\n');
   }
-  game.log("...contains:", '\n');
-  for (let object of game.getObjectsIn(locals['cmdPrso'])) {
+  game.log("and inside:", '\n');
+  for (let object of game.getObjectsIn(locals['prso'])) {
     locals['obj'] = object;
-    game.describe(locals['obj']);
-    game.log('\n');
-    locals['count'] = (locals['count'] + 1);
+    if (((locals['obj'].vars['hidden'] || 0) === 0)) {
+      locals['count'] = (locals['count'] + 1);
+      game.describe(locals['obj']);
+      game.log('\n');
+    }
   }
   if ((locals['count'] === 0)) {
     locals['r'] = Math.floor(Math.random() * 100);
@@ -426,40 +431,26 @@ function vExamine(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
 
 function vEat(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
   return 0;
 }
 
 function vPutIn(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
   return 0;
 }
 
 function vTalkTo(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
-  return 0;
-}
-
-function vSing(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
-  return 0;
-}
-
-function vWhisper(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
   return 0;
 }
 
 function vTake(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  if (((locals['cmdPrso'].vars['noTake'] || 0) === 1)) {
+  if (((locals['prso'].vars['noTake'] || 0) === 1)) {
     game.log("This can't be picked up.", '\n');
+  } else if (!((locals['prso'].vars['hidden'] || 0) === 0)) {
   } else if ((1 === 1)) {
-    game.move(locals, locals['cmdPrso'], player)
+    game.move(locals, locals['prso'], player)
     game.log("Picked up!", '\n');
   }
   return 0;
@@ -472,13 +463,11 @@ function vTakeOut(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
 
 function vPeeOn(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
   return 0;
 }
 
 function vCook(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
   return 0;
 }
 
@@ -502,19 +491,6 @@ function vDrop(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
 
 function vWorkWith(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
   const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  game.log("// TODO", '\n');
-  return 0;
-}
-
-function vBait(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {
-  const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, };
-  if (!((locals['cmdPrso'].vars['canBait'] || 0) === 1)) {
-    game.log("Can't bait that", '\n');
-    return 0;
-  }
-  locals['cmdPrso'].vars['baited'] = 1;
-  game.log("Baited, SET OBJECT DOWN to see if it will catch anything.", '\n');
-  return 1;
   return 0;
 }
 

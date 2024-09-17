@@ -1,13 +1,16 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::{
     stats::{
         cross_ref::{Codex, CrossRef, Populator},
-        helpers::{get_token_as_number, get_token_as_text, get_token_as_word},
+        helpers::{
+            get_token_as_number, get_token_as_word, i32_to_usize, num_children_between,
+            num_children_more_than, DescType, Helpers, ValidationResult,
+        },
     },
     zil::{
         file_table::format_file_location,
-        node::{TokenType, ZilNode, ZilNodeType},
+        node::{ZilNode, ZilNodeType},
     },
 };
 
@@ -20,16 +23,36 @@ pub struct ObjectInfo {
     index: usize,
     name: String,
     synonyms: BTreeSet<String>,
-    loc: Option<String>, // can be room or object
     desc: Option<DescType>,
     vars: BTreeMap<String, i32>,
+    copies: Vec<ObjectInstance>,
     actions: ObjectActions,
-    objects: Vec<String>,
 }
 
-pub enum DescType {
-    Routine(String),
-    Text(String),
+/*
+<OBJECT LOG
+    (COPY
+        <PLAYER (VARS DEAD 1 CAN-TAKE 1)>
+        <ROOM FOREST-1 (VARS DEAD 1 CAN-TAKE 0)>
+        <TREE 1 (VARS DEAD 0 CAN-TAKE 1)>
+    )
+*/
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ObjectInstance {
+    pub name: String,
+    pub id: String,
+    pub loc: ObjectLocation,
+    pub vars: BTreeMap<String, i32>,
+    pub nested: BTreeMap<String, Vec<String>>, // key: instance parent name, location must be ::Object(...)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ObjectLocation {
+    Player,
+    Room(String),
+    // id is only valid if parent is an object instance, and is only filled out after nesting objects
+    Object(String, usize, Option<String>), // parent name, index, id
 }
 
 pub struct ObjectActions {
@@ -60,167 +83,145 @@ impl ObjectInfo {
             index: 0,
             name: String::new(),
             synonyms: BTreeSet::new(),
-            loc: None,
             desc: None,
             vars: BTreeMap::new(),
+            copies: Vec::new(),
             actions: ObjectActions::new(),
-            objects: Vec::new(),
         }
     }
 
-    fn crunch_synonyms(node: &ZilNode) -> Result<BTreeSet<String>, String> {
-        if node.children.len() < 2 {
-            return Err(format!(
-                "Synonyms group has too few children\n{}",
-                format_file_location(&node)
-            ));
+    fn crunch_synonyms(node: &ZilNode) -> ValidationResult<BTreeSet<String>> {
+        match num_children_more_than(node, 1) {
+            Err(e) => return Err(vec![e]),
+            _ => (),
         }
 
         let mut out: BTreeSet<String> = BTreeSet::new();
         for c in node.children.iter().skip(1) {
-            let word = get_token_as_word(c);
-            if word.is_none() {
-                return Err(format!(
-                    "Synonyms group has non-word child\n{}",
+            let word = match get_token_as_word(c) {
+                Ok(v) => v,
+                Err(e) => {
+                    return Err(vec![e]);
+                }
+            };
+            out.insert(word);
+        }
+
+        Ok(out)
+    }
+
+    fn crunch_copies<F>(
+        gen_inst_id: &mut F,
+        node: &ZilNode,
+    ) -> ValidationResult<Vec<ObjectInstance>>
+    where
+        F: FnMut() -> String,
+    {
+        let mut errors: Vec<String> = Vec::new();
+        let mut out: Vec<ObjectInstance> = Vec::new();
+        if let Err(e) = num_children_more_than(node, 1) {
+            return Err(vec![e]);
+        }
+
+        for c in node.children.iter().skip(1) {
+            if c.node_type != ZilNodeType::Cluster {
+                errors.push(format!(
+                    "Expected cluster, found \n{}",
                     format_file_location(&c)
                 ));
+                continue;
             }
 
-            out.insert(word.unwrap());
-        }
-
-        Ok(out)
-    }
-
-    fn crunch_location(node: &ZilNode) -> Result<String, String> {
-        if node.children.len() != 2 {
-            return Err(format!(
-                "Location node doesn't have 2 children\n{}",
-                format_file_location(&node)
-            ));
-        }
-
-        let word = get_token_as_word(&node.children[1]);
-        if word.is_none() {
-            return Err(format!(
-                "Location node has non-word second child\n{}",
-                format_file_location(&node.children[1])
-            ));
-        }
-
-        Ok(word.unwrap())
-    }
-
-    fn crunch_desc(node: &ZilNode) -> Result<DescType, String> {
-        if node.children.len() != 2 {
-            return Err(format!(
-                "Desc node doesn't have 2 children\n{}",
-                format_file_location(&node)
-            ));
-        }
-
-        let mut cr = String::new();
-        if node.children.len() == 3 {
-            let word = get_token_as_word(&node.children[2]);
-            if word.is_none() {
-                return Err(format!(
-                    "Desc node has non-word third child\n{}",
-                    format_file_location(&node.children[2])
-                ));
+            if let Err(e) = num_children_more_than(c, 0) {
+                errors.push(e);
+                continue;
             }
-            let word = word.unwrap();
 
-            if word != "CR" {
-                return Err(format!(
-                    "Desc node has invalid third word:{}\n{}",
-                    word,
-                    format_file_location(&node.children[2])
-                ));
+            let scope = match get_token_as_word(&c.children[0]) {
+                Ok(v) => v,
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+            };
+
+            let mut find_vars = 0;
+            let mut loc = ObjectLocation::Player;
+            if scope == "ROOM" {
+                if let Err(e) = num_children_between(c, 2, 3) {
+                    errors.push(e);
+                    continue;
+                }
+                let room = match get_token_as_word(&c.children[1]) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                };
+                loc = ObjectLocation::Room(room);
+                if c.children.len() == 3 {
+                    find_vars = 2;
+                }
+            } else if scope == "PLAYER" {
+                // do nothing, loc is already player
+                if let Err(e) = num_children_between(c, 1, 2) {
+                    errors.push(e);
+                    continue;
+                }
+                if c.children.len() == 2 {
+                    find_vars = 1;
+                }
             } else {
-                cr = "\\n".to_string();
+                if let Err(e) = num_children_between(c, 2, 3) {
+                    errors.push(e);
+                    continue;
+                }
+
+                let obj_index = match get_token_as_number(&c.children[1]) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                };
+
+                let obj_index = match i32_to_usize(obj_index) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        errors.push(e);
+                        continue;
+                    }
+                };
+
+                loc = ObjectLocation::Object(scope, obj_index, None);
+
+                if c.children.len() == 3 {
+                    find_vars = 2;
+                }
             }
+
+            let mut vars: BTreeMap<String, i32> = BTreeMap::new();
+            if find_vars > 0 {
+                vars = Helpers::crunch_vars(&c.children[find_vars])?;
+            }
+
+            // name and default vars are added later
+
+            out.push(ObjectInstance {
+                name: String::new(),
+                id: gen_inst_id(),
+                loc: loc,
+                vars: vars,
+                nested: BTreeMap::new(),
+            });
         }
 
-        match node.children[1].node_type {
-            ZilNodeType::Token(TokenType::Word) => Ok(DescType::Routine(
-                get_token_as_word(&node.children[1]).unwrap(),
-            )),
-            ZilNodeType::Token(TokenType::Text) => Ok(DescType::Text(
-                get_token_as_text(&node.children[1]).unwrap() + &cr,
-            )),
-            _ => {
-                return Err(format!(
-                    "Desc node has invalid second child\n{}",
-                    format_file_location(&node.children[1])
-                ));
-            }
-        }
-    }
-
-    fn crunch_vars(node: &ZilNode) -> Result<BTreeMap<String, i32>, String> {
-        if node.children.len() < 3 {
-            return Err(format!(
-                "Vars node doesn't have enough children\n{}",
-                format_file_location(&node)
-            ));
-        } else if node.children.len() % 2 == 0 {
-            return Err(format!(
-                "Vars node doesn't have an odd number of children\n{}",
-                format_file_location(&node)
-            ));
-        }
-
-        let mut out: BTreeMap<String, i32> = BTreeMap::new();
-
-        for i in 0..(node.children.len() - 1) / 2 {
-            let name = get_token_as_word(&node.children[i * 2 + 1]);
-            if name.is_none() {
-                return Err(format!(
-                    "Vars node has non-word name child\n{}",
-                    format_file_location(&node.children[i * 2 + 1])
-                ));
-            }
-
-            let name = name.unwrap();
-            if out.contains_key(&name) {
-                return Err(format!(
-                    "Vars node has duplicate variable name:{}\n{}",
-                    name,
-                    format_file_location(&node.children[i * 2 + 1])
-                ));
-            }
-
-            let val = get_token_as_number(&node.children[i * 2 + 2]);
-            if val.is_none() {
-                return Err(format!(
-                    "Vars node has invalid value child\n{}",
-                    format_file_location(&node.children[i * 2 + 2])
-                ));
-            }
-
-            out.insert(name, val.unwrap());
+        if errors.len() > 0 {
+            return Err(errors);
         }
 
         Ok(out)
-    }
-
-    fn crunch_action(node: &ZilNode) -> Result<String, String> {
-        if node.children.len() != 2 {
-            return Err(format!(
-                "Action node doesn't have 2 children\n{}",
-                format_file_location(&node)
-            ));
-        }
-
-        let word = get_token_as_word(&node.children[1]);
-        if word.is_none() {
-            return Err(format!(
-                "Action node has non-word second child\n{}",
-                format_file_location(&node.children[1])
-            ));
-        }
-
-        Ok(word.unwrap())
     }
 }
 
@@ -241,23 +242,61 @@ impl ObjectStats {
     }
 
     pub fn nest_objects(&mut self) {
-        let mut objects_in_objects: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        for (key, info) in self.all_objects.iter() {
-            if info.loc.is_some() {
-                let loc = info.loc.as_ref().unwrap();
+        // ObjectLocation(name of parent object, index of copy (aka instance) in parent object)
+        // BTreeMap<name of child object, Vec<id> of child object instances>
+        let mut objects_in_objects: HashMap<ObjectLocation, BTreeMap<String, Vec<String>>> =
+            HashMap::new();
 
-                if let Some(v) = objects_in_objects.get_mut(loc) {
-                    v.push(key.clone());
-                } else {
-                    objects_in_objects.insert(loc.clone(), vec![key.clone()]);
+        for info in self.all_objects.values() {
+            for copy in info.copies.iter() {
+                match copy.loc {
+                    ObjectLocation::Object(ref name, index, ..) => {
+                        // add id to object location
+                        let id = self.all_objects.get(name).unwrap().copies[index - 1]
+                            .id
+                            .clone();
+                        let loc = ObjectLocation::Object(name.clone(), index, Some(id));
+
+                        // save for later
+                        let list = match objects_in_objects.get_mut(&loc) {
+                            Some(v) => v,
+                            None => {
+                                let new_list: BTreeMap<String, Vec<String>> = BTreeMap::new();
+                                objects_in_objects.insert(loc.clone(), new_list);
+                                objects_in_objects.get_mut(&loc).unwrap()
+                            }
+                        };
+
+                        list.insert(copy.name.clone(), vec![copy.id.clone()]);
+                    }
+                    _ => (),
                 }
             }
         }
 
-        for (key, info) in self.all_objects.iter_mut() {
-            if let Some(v) = objects_in_objects.get(key) {
-                info.objects = v.clone();
+        for (parent, nested) in objects_in_objects.into_iter() {
+            let (name, index, id) = match parent {
+                ObjectLocation::Object(name, index, id) => (name, index, id),
+                _ => unreachable!(),
+            };
+
+            // update all object instance locs with id
+            for (child_name, child_ids) in nested.iter() {
+                for child_id in child_ids.iter() {
+                    let child = self.all_objects.get_mut(child_name).unwrap();
+                    let child_copy = child.copies.iter_mut().find(|c| c.id == *child_id).unwrap();
+                    child_copy.loc = ObjectLocation::Object(name.clone(), index, id.clone());
+                }
             }
+
+            // nest objects
+            self.all_objects
+                .get_mut(&name)
+                .unwrap()
+                .copies
+                .get_mut(index - 1)
+                .unwrap()
+                .nested = nested;
         }
     }
 }
@@ -267,148 +306,235 @@ impl Populator for ObjectStats {
         self.basis.push(node);
     }
 
-    fn crunch(&mut self) -> Result<(), String> {
+    fn crunch(&mut self) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
+        let mut inst_id = 0;
+
+        let mut next_inst_id = || -> String {
+            inst_id += 1;
+            format!("inst_{}", inst_id)
+        };
+
         for (i, node) in self.basis.iter().enumerate() {
+            let mut object_errors: Vec<String> = Vec::new();
             let mut info = ObjectInfo::new();
 
-            if node.children.len() < 2 {
-                return Err(format!(
-                    "Possible object node doesn't have enough children\n{}",
-                    format_file_location(&node)
-                ));
+            if let Err(e) = num_children_more_than(node, 1) {
+                errors.push(e);
+                continue;
             }
 
-            let first_word = get_token_as_word(&node.children[0]).unwrap_or_default();
-            if first_word != "OBJECT" {
-                unreachable!();
-            }
-
-            let second_word = get_token_as_word(&node.children[1]);
-            if second_word.is_none() {
-                return Err(format!(
-                    "Object node has non-word second child\n{}",
-                    format_file_location(&node)
-                ));
-            }
+            let object_name = match get_token_as_word(&node.children[1]) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    object_errors.push(e);
+                    None
+                }
+            };
 
             for c in node.children.iter().skip(2) {
                 if c.node_type != ZilNodeType::Group {
-                    return Err(format!(
-                        "Object node has non-group child in body\n{}",
+                    object_errors.push(format!(
+                        "Expected group, found \n{}",
                         format_file_location(&c)
                     ));
+                    continue;
                 }
 
-                if c.children.len() < 1 {
-                    return Err(format!(
-                        "Object node has unnamed group\n{}",
-                        format_file_location(&c)
-                    ));
+                if let Err(e) = num_children_more_than(c, 0) {
+                    object_errors.push(e);
+                    continue;
                 }
 
-                let child_word = get_token_as_word(&c.children[0]);
-                if child_word.is_none() {
-                    return Err(format!(
-                        "Object node has group with non-word first child\n{}",
-                        format_file_location(&c)
-                    ));
-                }
+                let group_name = match get_token_as_word(&c.children[0]) {
+                    Ok(v) => Some(v),
+                    Err(e) => {
+                        object_errors.push(e);
+                        continue;
+                    }
+                };
+                let group_name = group_name.unwrap();
 
-                let child_word = child_word.unwrap();
-                match child_word.as_str() {
-                    "AKA" => match ObjectInfo::crunch_synonyms(&c) {
-                        Ok(v) => info.synonyms = v,
-                        Err(e) => {
-                            return Err(e);
+                match group_name.as_str() {
+                    "AKA" => {
+                        if info.synonyms.len() > 0 {
+                            object_errors.push(format!(
+                                "Duplicate synonyms node\n{}",
+                                format_file_location(&c)
+                            ));
+                        } else {
+                            match ObjectInfo::crunch_synonyms(&c) {
+                                Ok(v) => info.synonyms = v,
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "IN" => match ObjectInfo::crunch_location(&c) {
-                        Ok(v) => info.loc = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "COPY" => {
+                        if info.copies.len() > 0 {
+                            object_errors
+                                .push(format!("Duplicate copy node\n{}", format_file_location(&c)));
+
+                            // let huh = self.next_inst_id();
+                        } else {
+                            match ObjectInfo::crunch_copies(&mut next_inst_id, &c) {
+                                Ok(v) => info.copies = v,
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "DESC" => match ObjectInfo::crunch_desc(&c) {
-                        Ok(v) => info.desc = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "DESC" => {
+                        if info.desc.is_some() {
+                            object_errors
+                                .push(format!("Duplicate desc node\n{}", format_file_location(&c)));
+                        } else {
+                            match Helpers::crunch_desc(&c) {
+                                Ok(v) => info.desc = Some(v),
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "VARS" => match ObjectInfo::crunch_vars(&c) {
-                        Ok(v) => info.vars = v,
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "VARS" => {
+                        if info.vars.len() > 0 {
+                            object_errors
+                                .push(format!("Duplicate vars node\n{}", format_file_location(&c)));
+                        } else {
+                            match Helpers::crunch_vars(&c) {
+                                Ok(v) => info.vars = v,
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "ACT-IN-ROOM" => match ObjectInfo::crunch_action(&c) {
-                        Ok(v) => info.actions.in_room = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "ACT-IN-ROOM" => {
+                        if info.actions.in_room.is_some() {
+                            object_errors.push(format!(
+                                "Duplicate in-room action node\n{}",
+                                format_file_location(&c)
+                            ));
+                        } else {
+                            match Helpers::crunch_action(&c) {
+                                Ok(v) => info.actions.in_room = Some(v),
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "ACT-IN-PLAYER" => match ObjectInfo::crunch_action(&c) {
-                        Ok(v) => info.actions.in_player = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "ACT-IN-PLAYER" => {
+                        if info.actions.in_player.is_some() {
+                            object_errors.push(format!(
+                                "Duplicate in-player action node\n{}",
+                                format_file_location(&c)
+                            ));
+                        } else {
+                            match Helpers::crunch_action(&c) {
+                                Ok(v) => info.actions.in_player = Some(v),
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "ACT-ADD" => match ObjectInfo::crunch_action(&c) {
-                        Ok(v) => info.actions.enter_player = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "ACT-ADD" => {
+                        if info.actions.enter_player.is_some() {
+                            object_errors.push(format!(
+                                "Duplicate enter-player action node\n{}",
+                                format_file_location(&c)
+                            ));
+                        } else {
+                            match Helpers::crunch_action(&c) {
+                                Ok(v) => info.actions.enter_player = Some(v),
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "ACT-REMOVE" => match ObjectInfo::crunch_action(&c) {
-                        Ok(v) => info.actions.exit_player = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "ACT-REMOVE" => {
+                        if info.actions.exit_player.is_some() {
+                            object_errors.push(format!(
+                                "Duplicate exit-player action node\n{}",
+                                format_file_location(&c)
+                            ));
+                        } else {
+                            match Helpers::crunch_action(&c) {
+                                Ok(v) => info.actions.exit_player = Some(v),
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "ACT-PRSO" => match ObjectInfo::crunch_action(&c) {
-                        Ok(v) => info.actions.prso = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "ACT-PRSO" => {
+                        if info.actions.prso.is_some() {
+                            object_errors.push(format!(
+                                "Duplicate prso action node\n{}",
+                                format_file_location(&c)
+                            ));
+                        } else {
+                            match Helpers::crunch_action(&c) {
+                                Ok(v) => info.actions.prso = Some(v),
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
-                    "ACT-PRSI" => match ObjectInfo::crunch_action(&c) {
-                        Ok(v) => info.actions.prsi = Some(v),
-                        Err(e) => {
-                            return Err(e);
+                    }
+                    "ACT-PRSI" => {
+                        if info.actions.prsi.is_some() {
+                            object_errors.push(format!(
+                                "Duplicate prsi action node\n{}",
+                                format_file_location(&c)
+                            ));
+                        } else {
+                            match Helpers::crunch_action(&c) {
+                                Ok(v) => info.actions.prsi = Some(v),
+                                Err(mut e) => object_errors.append(&mut e),
+                            }
                         }
-                    },
+                    }
                     _ => {
-                        return Err(format!(
+                        object_errors.push(format!(
                             "Object node has unknown group:{}\n{}",
-                            child_word.as_str(),
+                            group_name.clone(),
                             format_file_location(&c)
                         ));
                     }
                 }
             }
 
-            let second_word = second_word.unwrap();
+            if object_errors.len() > 0 {
+                errors.append(&mut object_errors);
+                continue;
+            }
+
+            let object_name = object_name.unwrap();
+
+            for copy in info.copies.iter_mut() {
+                copy.name = object_name.clone();
+                for (name, val) in info.vars.iter() {
+                    if !copy.vars.contains_key(name) {
+                        copy.vars.insert(name.clone(), *val);
+                    }
+                }
+            }
 
             info.index = i;
-            info.name = second_word.clone();
-            match self.all_objects.insert(second_word, info) {
-                Some(old_val) => {
-                    return Err(format!(
+            info.name = object_name.clone();
+            match self.all_objects.insert(object_name.clone(), info) {
+                Some(_) => {
+                    errors.push(format!(
                         "Duplicate object name: {}\n{}",
-                        old_val.name,
+                        object_name,
                         format_file_location(&node)
                     ));
+                    continue;
                 }
-                None => {}
+                None => (),
             }
+        }
+
+        if errors.len() > 0 {
+            return Err(errors);
         }
 
         Ok(())
     }
 
-    fn validate(&self, cross_ref: &CrossRef) -> Result<(), String> {
+    fn validate(&self, cross_ref: &CrossRef) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
         for key in self.all_objects.keys() {
             if CrossRef::name_is_illegal(key) {
-                return Err(format!("Illegal object name: {}", key));
+                errors.push(format!("Illegal object name: {}", key));
             }
         }
 
@@ -417,15 +543,34 @@ impl Populator for ObjectStats {
         let object_codex = self.as_codex();
 
         for (key, info) in self.all_objects.iter() {
-            if info.loc.is_some() {
-                let loc = info.loc.as_ref().unwrap();
+            for copies in info.copies.iter() {
+                match copies.loc {
+                    ObjectLocation::Player => (),
+                    ObjectLocation::Room(ref room) => {
+                        if room_codex.lookup(room).is_none() {
+                            errors.push(format!(
+                                "Object {} has invalid copy location room: {}",
+                                key, room
+                            ));
+                        }
+                    }
+                    ObjectLocation::Object(ref obj, i, ..) => {
+                        let parent = object_codex.lookup(obj);
+                        if parent.is_none() {
+                            errors.push(format!(
+                                "Object {} has invalid copy location object name: {}",
+                                key, obj
+                            ));
+                        }
+                        let parent = parent.unwrap();
 
-                if loc == "PLAYER" {
-                    continue;
-                }
-
-                if room_codex.lookup(loc).is_none() && object_codex.lookup(loc).is_none() {
-                    return Err(format!("Object {} has invalid location: {}", key, loc));
+                        if parent.copies.len() < i {
+                            errors.push(format!(
+                                "Object {} has invalid copy location object ({}) index: {}, only has {} copies",
+                                key, obj, i, parent.copies.len()
+                            ));
+                        }
+                    }
                 }
             }
 
@@ -433,20 +578,20 @@ impl Populator for ObjectStats {
                 match info.desc.as_ref().unwrap() {
                     DescType::Routine(routine) => {
                         if routine_codex.lookup(routine).is_none() {
-                            return Err(format!(
+                            errors.push(format!(
                                 "Object {} has invalid desc routine: {}",
                                 key, routine
                             ));
                         }
                     }
-                    DescType::Text(_) => (),
+                    _ => (),
                 }
             }
 
             if info.actions.in_room.is_some() {
                 let action = info.actions.in_room.as_ref().unwrap();
                 if routine_codex.lookup(action).is_none() {
-                    return Err(format!(
+                    errors.push(format!(
                         "Object {} has invalid in-room action routine: {}",
                         key, action
                     ));
@@ -456,7 +601,7 @@ impl Populator for ObjectStats {
             if info.actions.in_player.is_some() {
                 let action = info.actions.in_player.as_ref().unwrap();
                 if routine_codex.lookup(action).is_none() {
-                    return Err(format!(
+                    errors.push(format!(
                         "Object {} has invalid in-player action routine: {}",
                         key, action
                     ));
@@ -466,7 +611,7 @@ impl Populator for ObjectStats {
             if info.actions.enter_player.is_some() {
                 let action = info.actions.enter_player.as_ref().unwrap();
                 if routine_codex.lookup(action).is_none() {
-                    return Err(format!(
+                    errors.push(format!(
                         "Object {} has invalid add-player action routine: {}",
                         key, action
                     ));
@@ -476,7 +621,7 @@ impl Populator for ObjectStats {
             if info.actions.exit_player.is_some() {
                 let action = info.actions.exit_player.as_ref().unwrap();
                 if routine_codex.lookup(action).is_none() {
-                    return Err(format!(
+                    errors.push(format!(
                         "Object {} has invalid remove-player action routine: {}",
                         key, action
                     ));
@@ -486,7 +631,7 @@ impl Populator for ObjectStats {
             if info.actions.prso.is_some() {
                 let action = info.actions.prso.as_ref().unwrap();
                 if routine_codex.lookup(action).is_none() {
-                    return Err(format!(
+                    errors.push(format!(
                         "Object {} has invalid prso action routine: {}",
                         key, action
                     ));
@@ -496,12 +641,16 @@ impl Populator for ObjectStats {
             if info.actions.prsi.is_some() {
                 let action = info.actions.prsi.as_ref().unwrap();
                 if routine_codex.lookup(action).is_none() {
-                    return Err(format!(
+                    errors.push(format!(
                         "Object {} has invalid prsi action routine: {}",
                         key, action
                     ));
                 }
             }
+        }
+
+        if errors.len() > 0 {
+            return Err(errors);
         }
 
         Ok(())
@@ -516,11 +665,10 @@ pub struct ObjectCodex<'a> {
 pub struct ObjectCodexValue<'a> {
     pub name: &'a String,
     pub synonyms: &'a BTreeSet<String>,
-    pub loc: &'a Option<String>,
     pub desc: &'a Option<DescType>,
     pub vars: &'a BTreeMap<String, i32>,
+    pub copies: &'a Vec<ObjectInstance>,
     pub actions: &'a ObjectActions,
-    pub objects: &'a Vec<String>,
 }
 
 impl<'a> Iterator for ObjectCodex<'a> {
@@ -537,11 +685,10 @@ impl<'a> Iterator for ObjectCodex<'a> {
             Some(ObjectCodexValue {
                 name: &info.name,
                 synonyms: &info.synonyms,
-                loc: &info.loc,
                 desc: &info.desc,
                 vars: &info.vars,
+                copies: &info.copies,
                 actions: &info.actions,
-                objects: &info.objects,
             })
         }
     }
@@ -560,11 +707,10 @@ impl<'a> Codex<ObjectCodexValue<'a>> for ObjectCodex<'a> {
         return Some(ObjectCodexValue {
             name: &info.name,
             synonyms: &info.synonyms,
-            loc: &info.loc,
             desc: &info.desc,
             vars: &info.vars,
+            copies: &info.copies,
             actions: &info.actions,
-            objects: &info.objects,
         });
     }
 }

@@ -33,9 +33,9 @@ impl RoutineRoot {
 }
 
 impl HasReturnType for RoutineRoot {
-    fn return_type(&self) -> ReturnValType {
+    fn return_type(&self) -> Vec<ReturnValType> {
         // returns 0 if no explicit return called
-        ReturnValType::Number
+        vec![ReturnValType::Number]
     }
 }
 
@@ -87,9 +87,9 @@ impl RoutineStub {
 }
 
 impl HasReturnType for RoutineStub {
-    fn return_type(&self) -> ReturnValType {
+    fn return_type(&self) -> Vec<ReturnValType> {
         // returns 0 if no explicit return called
-        ReturnValType::Number
+        vec![ReturnValType::Number]
     }
 }
 
