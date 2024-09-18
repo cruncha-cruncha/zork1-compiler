@@ -666,6 +666,7 @@ pub struct ObjectCodexValue<'a> {
     pub name: &'a String,
     pub synonyms: &'a BTreeSet<String>,
     pub desc: &'a Option<DescType>,
+    #[allow(dead_code)]
     pub vars: &'a BTreeMap<String, i32>,
     pub copies: &'a Vec<ObjectInstance>,
     pub actions: &'a ObjectActions,

@@ -97,7 +97,7 @@ impl CanWriteOutput for RoutineStub {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.write(
             &format!(
-                "routines['{}'].func(locals['currentRoom'], locals['prsa'], locals['prso'], locals['prsi'])",
+                "routines['{}'].func(locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi'])",
                 Formatter::safe_case(&self.name)
             ),
             false,

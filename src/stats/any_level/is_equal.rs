@@ -14,9 +14,6 @@ use crate::{
 
 use super::set_var::Scope;
 
-// TODO
-// handle OBJ == INST
-
 pub struct IsEqual {
     pub val_type: ReturnValType,
     pub values: Vec<OutputNode>,
@@ -41,7 +38,7 @@ impl CanValidate for IsEqual {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
         num_children_more_than(n, 2)?;
 
-        let mut expect: ReturnValType = ReturnValType::Unknown;
+        let expect: ReturnValType;
         v.expect_val(ReturnValType::Any);
 
         let first_child = &n.children[1];
@@ -101,6 +98,7 @@ impl CanValidate for IsEqual {
             }
         }
 
+        self.val_type = expect;
         v.expect_val(expect);
 
         for child in n.children.iter().skip(2) {

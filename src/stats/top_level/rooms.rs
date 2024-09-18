@@ -4,8 +4,8 @@ use crate::{
     stats::{
         cross_ref::{CrossRef, Populator},
         helpers::{
-            get_token_as_text, get_token_as_word, num_children_between, num_children_more_than,
-            DescType, Helpers, ValidationResult,
+            get_token_as_text, get_token_as_word, num_children, num_children_between,
+            num_children_more_than, DescType, Helpers, ValidationResult,
         },
     },
     zil::{
@@ -80,7 +80,16 @@ impl RoomInfo {
         let second_word = get_token_as_word(&node.children[1])?;
 
         if second_word == "PER" {
-            let routine = get_token_as_word(&node.children[2])?;
+            if node.children[2].node_type != ZilNodeType::Cluster {
+                return Err(format!(
+                    "Expected cluster, found \n{}",
+                    format_file_location(&node.children[2])
+                ));
+            }
+
+            num_children(&node.children[2], 1)?;
+
+            let routine = get_token_as_word(&node.children[2].children[0])?;
 
             return Ok(Direction {
                 name: first_word,

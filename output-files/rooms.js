@@ -30,8 +30,8 @@ export const rooms = {
     desc: { routine: 'descCabinExterior' },
     objects: {
       cabinDoor: ['inst_1',],
-      cabinDoorKey: ['inst_3',],
       cabinWindow: ['inst_2',],
+      detritus: ['inst_13',],
     },
     vars: {
       aboveGround: 1,

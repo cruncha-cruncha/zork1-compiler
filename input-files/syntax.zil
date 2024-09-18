@@ -10,7 +10,8 @@
 <SYNONYM EXAMINE INSPECT READ INVESTIGATE>
 <SYNTAX TAKE OBJECT = V-TAKE>
 <SYNONYM TAKE GATHER GET>
-<SYNTAX UNPACK OBJECT = V-TAKE-OUT>
+<SYNTAX EMPTY OBJECT = V-TAKE-OUT>
+<SYNONYM EMPTY UNPACK>
 <SYNTAX DROP OBJECT = V-DROP>
 <SYNTAX PUT OBJECT (CAN-CONTAIN) INTO OBJECT = V-PUT-IN>
 <SYNONYM PUT PLACE POUR>
@@ -45,12 +46,12 @@
 <GLOBAL FIRST-EXAMINE 1>
 
 <ROUTINE V-DESC-ROOM ()
-      <DESC CURRENT-ROOM>
+      <DESC C-ROOM>
 >
 
 <ROUTINE V-ROOM-DETAIL () 
       <SET-VAR DETAILED-DESC 1>
-      <DESC CURRENT-ROOM>
+      <DESC C-ROOM>
       <SET-VAR DETAILED-DESC 0>
 >
 
@@ -63,13 +64,10 @@
             <TELL "Objects nested inside other objects are not listed, but might show up
             if you EXAMINE their container." CR>
       )>
-      <EACH-OBJ CURRENT-ROOM (OBJ)
-            <COND(
-                  <IS-EQUAL <GET-VAR OBJ HIDDEN> 0>
-                  <SET-VAR COUNT <ADD COUNT 1>>
-                  <DESC OBJ>
-                  <TELL CR>
-            )>
+      <EACH-OBJ C-ROOM (OBJ)
+            <SET-VAR COUNT <ADD COUNT 1>>
+            <DESC OBJ>
+            <TELL CR>
       >
       <COND (
             <IS-EQUAL COUNT 0>
@@ -79,12 +77,9 @@
 
 <ROUTINE V-INVENTORY (COUNT)
       <EACH-OBJ PLAYER (OBJ)
-            <COND(
-                  <IS-EQUAL <GET-VAR OBJ HIDDEN> 0>
-                  <SET-VAR COUNT <ADD COUNT 1>>
-                  <DESC OBJ>
-                  <TELL CR>
-            )>
+            <SET-VAR COUNT <ADD COUNT 1>>
+            <DESC OBJ>
+            <TELL CR>
       >
       <COND (
             <IS-EQUAL COUNT 0>
@@ -119,18 +114,15 @@
             <SET-VAR FIRST-EXAMINE 0>
             <TELL "The EXAMINE command will list items nested inside the object, and might also
             tell you more about the object itself. If there's any interesting
-            items in this object, you can UNPACK it to remove the nested items.
+            items in this object, you can EMPTY it to remove the nested items.
             After that, can TAKE an item off the ground." CR>
       )>
 
       <TELL "and inside:" CR>
       <EACH-OBJ PRSO (OBJ) 
-            <COND(
-                  <IS-EQUAL <GET-VAR OBJ HIDDEN> 0>
-                  <SET-VAR COUNT <ADD COUNT 1>>
-                  <DESC OBJ>
-                  <TELL CR>
-            )>
+            <SET-VAR COUNT <ADD COUNT 1>>
+            <DESC OBJ>
+            <TELL CR>
       >
 
       <COND (
@@ -168,9 +160,6 @@
       <COND (
             <IS-EQUAL <GET-VAR PRSO NO-TAKE> 1>
             <TELL "This can't be picked up." CR>
-      )(
-            <NOT <IS-EQUAL <GET-VAR PRSO HIDDEN> 0>>
-            ;"do nothing"
       )(
             <IS-EQUAL 1 1>
             <MOVE PRSO PLAYER>

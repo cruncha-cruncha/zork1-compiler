@@ -263,6 +263,9 @@ impl CanWriteOutput for ParseTree {
         formatter.indent();
 
         formatter
+            .writeln("if (!rawString || typeof rawString !== 'string') { return { prsa: '' }; }")?;
+
+        formatter
             .writeln("const words = rawString.split(\" \").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));")?;
         formatter.writeln("if ((words.length == 2) && (words[0] == \"GO\")) {")?;
         formatter.indent();

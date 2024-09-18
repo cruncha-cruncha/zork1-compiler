@@ -60,7 +60,7 @@ impl CrossRef {
 
     pub fn name_is_illegal(name: &str) -> bool {
         match name {
-            "CURRENT-ROOM" | "CMD" | "PRSO" | "PRSI" | "PLAYER" => true,
+            "C-ROOM" | "CMD" | "PRSO" | "PRSI" | "PLAYER" | "GAME" => true,
             _ => false,
         }
     }

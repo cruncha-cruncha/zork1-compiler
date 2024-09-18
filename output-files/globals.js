@@ -6,12 +6,12 @@ export const player = {
     maxHealth: 50,
   },
   objects: {
-    axe: ['inst_13',],
-    cloak: ['inst_14',],
-    cup: ['inst_16',],
-    flint: ['inst_15',],
-    kettle: ['inst_17',],
-    knife: ['inst_18',],
+    axe: ['inst_14',],
+    cloak: ['inst_15',],
+    cup: ['inst_17',],
+    flint: ['inst_16',],
+    kettle: ['inst_18',],
+    knife: ['inst_19',],
   },
   hooks: {
     enter: 'vDescRoom',

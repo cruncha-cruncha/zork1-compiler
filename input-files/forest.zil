@@ -92,6 +92,12 @@
 
 <OBJECT BOAT-FRAME>
 
+<OBJECT DETRITUS
+      (AKA BRUSH DETRITUS)
+      (DESC "leafy DETRITUS")
+      (COPY <ROOM CABIN-EXTERIOR>)
+      (ACT-PRSO <PRSO-DETRITUS>)>
+
 <ROUTINE DESC-FOREST-1 ()
       <COND (
             <IS-EQUAL <GET-VAR FOREST-1 FIRST-TIME> 1>
@@ -114,5 +120,22 @@
       )(
             <IS-EQUAL 1 1>
             <TELL "You're in a dense forest. There's a trail heading NORTH and WEST." CR>
+      )>
+>
+
+<ROUTINE PRSO-DETRITUS (COUNT)
+      <COND (
+            <IS-EQUAL CMD "EMPTY">
+            <EACH-OBJ PRSO (OBJ)
+                  <MOVE OBJ C-ROOM>
+                  <SET-VAR COUNT <ADD COUNT 1>>
+            >
+            <COND (
+                  <IS-DES COUNT 0>
+                  <TELL "Emptied" CR>
+            )(
+                  <IS-EQUAL 1 1>
+                  <TELL "Nothing to unpack" CR>
+            )>
       )>
 >

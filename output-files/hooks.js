@@ -52,21 +52,21 @@ export const newHooks = () => {
     }
 
     let next = buffer.shift();
-    const routine = routines[next.routineName];
-    routine.func(next.currentRoom, ...game.getRoutineCommandArgs());
+    const routine = routines[next.rName];
+    routine.func(next.cRoom, ...game.getRoutineCommandArgs());
 
     return next;
   }
 
   return {
-    insert(hookType, routineName, currentRoom) {
+    insert(hookType, rName, cRoom) {
       const priority = getPriority(hookType);
 
       if (buffer.length === 0) {
         buffer.push({
           priority,
-          routineName,
-          currentRoom,
+          rName,
+          cRoom,
         });
         return;
       }
@@ -86,14 +86,14 @@ export const newHooks = () => {
 
       buffer.splice(low, buffer.length - low, {
         priority,
-        routineName,
-        currentRoom,
+        rName,
+        cRoom,
       });
     },
 
-    call(routineName, currentRoom) {
-      const routine = routines[routineName];
-      routine.func(currentRoom, ...game.getRoutineCommandArgs());
+    callDescription(rName, cRoom, prso) {
+      const routine = routines[rName];
+      routine.func(cRoom, "", prso, "");
     },
 
     callNext,

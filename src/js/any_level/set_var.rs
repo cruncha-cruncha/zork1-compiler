@@ -1,8 +1,5 @@
 use crate::{
-    js::{
-        formatter::Formatter,
-        write_output::{CanWriteOutput, OutputNode},
-    },
+    js::{formatter::Formatter, write_output::CanWriteOutput},
     stats::any_level::set_var::{Scope, SetVar},
 };
 
@@ -12,60 +9,45 @@ impl CanWriteOutput for SetVar {
 
         formatter.write("", true)?;
 
-        if self.scope.is_some() {
-            match self.scope.as_ref().unwrap() {
-                Scope::Local(ref local_var) => {
-                    formatter.write(
-                        &format!("locals['{}'].vars[", Formatter::safe_case(local_var)),
-                        false,
-                    )?;
-                }
-                Scope::Room(ref name) => {
-                    formatter.write(
-                        &format!("rooms['{}'].vars[", Formatter::safe_case(name)),
-                        false,
-                    )?;
-                }
-                Scope::Object(ref name) => {
-                    formatter.write(
-                        &format!("objects['{}'].vars[", Formatter::safe_case(name)),
-                        false,
-                    )?;
-                }
-                Scope::Writer(ref w) => {
-                    w.write_output(formatter)?;
-                    formatter.write(".vars[", false)?;
-                }
-                _ => panic!("IDK"),
-            }
+        if self.object.is_some() {
+            formatter.write("game.getInst(", false)?;
         }
 
-        self.var.write_output(formatter)?;
-
         if self.scope.is_some() {
-            formatter.write("] = ", false)?;
-        } else {
-            formatter.write(" = ", false)?;
+            self.scope.as_ref().unwrap().write_output(formatter)?;
         }
 
-        match self.value {
-            OutputNode::Number(n) => {
-                formatter.write(&format!("{}", n), false)?;
-            }
-            OutputNode::Variable(Scope::Local(ref local_var)) => {
+        if self.object.is_some() {
+            formatter.write(
+                &format!(
+                    ", '{}')",
+                    Formatter::safe_case(self.object.as_ref().unwrap())
+                ),
+                false,
+            )?;
+        }
+
+        if self.scope.is_some() {
+            formatter.write(".vars[", false)?;
+        }
+
+        match self.var {
+            Scope::Object(ref hacky_var) => {
                 formatter.write(
-                    &format!("locals['{}']", Formatter::safe_case(local_var)),
+                    &format!("locals[locals['{}']]", Formatter::safe_case(hacky_var)),
                     false,
                 )?;
             }
-            OutputNode::Variable(Scope::Global(ref name)) => {
-                formatter.write(&format!("globals[{}]", Formatter::safe_case(name)), false)?;
-            }
-            OutputNode::Writer(ref w) => {
-                w.write_output(formatter)?;
-            }
-            _ => panic!("IDK"),
+            _ => self.var.write_output(formatter)?,
         }
+
+        if self.scope.is_some() {
+            formatter.write("]", false)?;
+        }
+
+        formatter.write(" = ", false)?;
+
+        self.value.write_output(formatter)?;
 
         formatter.write(";", false)?;
 

@@ -54,7 +54,7 @@ impl CanValidate for Location {
                     }
                 } else {
                     return Err(format!(
-                        "Word {} is not player, and not found in locals, globals, or objects\n{}",
+                        "Word {} is not player, and not found in locals\n{}",
                         word,
                         format_file_location(&n.children[1])
                     ));

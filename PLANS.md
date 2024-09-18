@@ -116,7 +116,7 @@ Obsidian shard is extremely sharp but not strong (has a lot of damage but loses 
 
 The gold-lump can be found if you hit enough rocks. It does nothing, but you can't carry it and the boat at the same time. Hitting rocks with anything other than the pick-axe will damage them severely. The pick-axe is just lying in a room in the underground.
 
-The obsidian shard is glinting in the underground lake, but only if you're wearing the magic-ring or have drank mushroom tea / soup. You simply unpack the water, then take it. Can unpack even if you don't see it glimmering.
+The obsidian shard is glinting in the underground lake, but only if you're wearing the magic-ring or have drank mushroom tea / soup. You simply empty the water, then take it. Can empty even if you don't see it glimmering.
 
 There is a sword in the underground. If you have the magic-ring, you can pick up and wield the sword no problem. If not, picking up the sword will result in it immediately disintegrating (0 DAMAGE), unless you've drank mushroom tea / soup or talked to the crow, in which case it will go to 1 DAMAGE. Examining the sword reveals something about this danger.
 
@@ -167,63 +167,3 @@ We can have an infinite supply of charcoal, as long as it only counts as one obj
 # Config
 
 Would like a bash script to checkout main, cargo run, checkout gh-page, merge main, then push.
-
-// TODO: get rid of detritus in cabin-exterior, have key lying on the ground.
-// if player drops log or detritus or stick or similar in the forest, it should go back to storage when they leave that room
-// when player enters a forest, roll to see if a log/detritus/stick/similar appears
-
-// a COPY-MOVE command would be cool. Would have to change the MOVE command:
-if three children, look for the second child in the current room
-if four children, second child is the scope, and look for the third child in there
-
-// would love it if IS-EQUAL also worked on objects
-
-LOC object
-LOC scope object
-
-- always returns a scope
-
-MOVE player room
-MOVE object scope
-MOVE scope object scope
-MOVE scope object scope object
-COPY-MOVE object scope
-COPY-MOVE scope object scope
-COPY-MOVE scope object scope object
-
-- object has to be zilnodetype::token(tokenType::word)
-- object has to be the actual name of an object
-- scope has to be zilnodetype::token(tokenType::word) or zilnodetype::cluster
-- if scope is word, look for PLAYER, locals, globals, or rooms
-- if scope is word and above is not found, js findObject function must look for object in player or current room
-- if scope is cluster, js isScope function must verify that it's a scope
-
-TELL ...anything
-
-- if number or text, print text or number
-- if word, must be local or global variable. Js tellVar will sort it out from there
-- if cluster, Js tellVar will sort it out
-- last word can be CR
-
-GET-VAR word
-SET-VAR word value
-
-- word must be a local or global variable
-- value can be anything
-- if value is word, must be a local or global variable
-
-GET-VAR scope name
-SET-VAR scope name value
-
-- name can be text or word
-- if word, must be a local variable with return type text
-
-IS-IN scope scope
-IS-EQUAL ...anything
-IS-TYPE object word
-
-- word must be an actual name of object
-
-RETURN anything
-
-- to begin with, all variables have to be number or text

@@ -31,7 +31,7 @@
 <OBJECT CABIN-DOOR-KEY
       (AKA KEY DOOR-KEY CABIN-KEY)
       (DESC "a KEY")
-      (COPY <ROOM CABIN-EXTERIOR>)>
+      (COPY <DETRITUS 1>)>
 
 <OBJECT BOOK
     (AKA BOOK)
@@ -133,7 +133,7 @@
 
 <ROUTINE PRSO-BOOK ()
     <COND (
-        <AND <IS-DES <GET-VAR PRSO HEALTH> 0> <IS-EQUAL CMD "UNPACK"> <IS-IN PRSO BOOK-PAGES>>
+        <AND <IS-DES <GET-VAR PRSO HEALTH> 0> <IS-EQUAL CMD "EMPTY"> <IS-IN PRSO BOOK-PAGES>>
         <MOVE PRSO BOOK-PAGES PLAYER>
         <TELL "You've ripped out some blank pages from the book" CR>
     )(
@@ -143,7 +143,7 @@
             <TELL "Why are you hitting this book?" CR>
             <COND (
                 <IS-IN PRSO BOOK-PAGES>
-                <MOVE PRSO BOOK-PAGES CURRENT-ROOM>
+                <MOVE PRSO BOOK-PAGES C-ROOM>
                 <TELL "You've cut out some pages onto the floor." CR>
             )>
             <SET-VAR PRSO HEALTH <ADD <GET-VAR PRSO HEALTH> -1>>

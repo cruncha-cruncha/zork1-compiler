@@ -1,10 +1,11 @@
 import { game } from './game.js';
 
-export const buzz = ["A", "THE", "AGAIN", "SOME", "OF", "ALL"];
+export const buzz = ["SOME", "AGAIN", "A", "THE", "ALL", "OF"];
 
 export const directions = ["DOWN", "EAST", "IN", "NORTH", "OUT", "SOUTH", "UP", "WEST"];
 
 export const parseInput = (rawString) => {
+  if (!rawString || typeof rawString !== 'string') { return { prsa: '' }; }
   const words = rawString.split(" ").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));
   if ((words.length == 2) && (words[0] == "GO")) {
     return { move: words[1], prsa: translateAction(words[0]) };
@@ -127,6 +128,7 @@ export const parseInput = (rawString) => {
       }
       return { prsa, prso, prsi };
     }
+  case "EMPTY":
   case "UNPACK":
     switch (words[1]) {
     default:
@@ -513,8 +515,9 @@ export const translateAction = (actionWord) => {
     case "GATHER":
     case "GET":
       return "TAKE";
+    case "EMPTY":
     case "UNPACK":
-      return "UNPACK";
+      return "EMPTY";
     case "DROP":
       return "DROP";
     case "PUT":

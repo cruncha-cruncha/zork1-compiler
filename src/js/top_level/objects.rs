@@ -36,6 +36,10 @@ impl CanWriteOutput for ObjectStats {
                 formatter.writeln(&format!("{}: {{", Formatter::safe_case(&obj.id)))?;
                 formatter.indent();
 
+                formatter.writeln(&format!("isObject: '{}',", Formatter::safe_case(&obj.name)))?;
+
+                formatter.writeln(&format!("isInst: '{}',", Formatter::safe_case(&obj.id)))?;
+
                 match obj.loc {
                     ObjectLocation::Player => {
                         formatter.writeln("loc: { scope: 'player' },")?;
@@ -49,8 +53,9 @@ impl CanWriteOutput for ObjectStats {
                     ObjectLocation::Object(ref name, _index, ref id) => {
                         let id = id.as_ref().unwrap();
                         formatter.writeln(&format!(
-                            "loc: {{ scope: 'object', name: '{}', id: '{}' }},",
-                            name, id
+                            "loc: {{ scope: 'object', name: '{}', inst: '{}' }},",
+                            Formatter::safe_case(name),
+                            id
                         ))?;
                     }
                 }

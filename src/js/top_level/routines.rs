@@ -64,15 +64,12 @@ impl CanWriteOutput for RoutineToots {
 impl CanWriteOutput for RoutineRoot {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.writeln(&format!(
-            "function {}(currentRoom, cmdPrsa, cmdPrso, cmdPrsi) {{",
+            "function {}(cRoom, cmd, prso, prsi) {{",
             Formatter::safe_case(&self.name)
         ))?;
         formatter.indent();
 
-        formatter.write(
-            "const locals = {currentRoom, cmdPrsa, cmdPrso, cmdPrsi, ",
-            true,
-        )?;
+        formatter.write("const locals = {cRoom, cmd, prso, prsi, ", true)?;
         let locals = self
             .var_names
             .iter()

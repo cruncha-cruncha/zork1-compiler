@@ -9,11 +9,39 @@ impl CanWriteOutput for Move {
 
         formatter.write("game.move(locals, ", true)?;
 
+        if self.item_name.is_some() {
+            formatter.write("game.getInst(", false)?;
+        }
+
         self.item_scope.write_output(formatter)?;
+
+        if self.item_name.is_some() {
+            formatter.write(
+                &format!(
+                    ", '{}')",
+                    Formatter::safe_case(self.item_name.as_ref().unwrap())
+                ),
+                false,
+            )?;
+        }
 
         formatter.write(", ", false)?;
 
+        if self.destination_name.is_some() {
+            formatter.write("game.getInst(", false)?;
+        }
+
         self.destination_scope.write_output(formatter)?;
+
+        if self.destination_name.is_some() {
+            formatter.write(
+                &format!(
+                    ", '{}')",
+                    Formatter::safe_case(self.destination_name.as_ref().unwrap())
+                ),
+                false,
+            )?;
+        }
 
         formatter.write(")", false)?;
 

@@ -4,6 +4,8 @@ export const objects = {
     desc: { text: "the cabin DOOR" },
     copies: {
       inst_1: {
+        isObject: 'cabinDoor',
+        isInst: 'inst_1',
         loc: { scope: 'room', name: 'cabinExterior' },
         vars: {
           canOpen: 1,
@@ -22,6 +24,8 @@ export const objects = {
     desc: { text: "a cabin WINDOW" },
     copies: {
       inst_2: {
+        isObject: 'cabinWindow',
+        isInst: 'inst_2',
         loc: { scope: 'room', name: 'cabinExterior' },
         vars: {
           noTake: 1,
@@ -38,7 +42,9 @@ export const objects = {
     desc: { text: "a KEY" },
     copies: {
       inst_3: {
-        loc: { scope: 'room', name: 'cabinExterior' },
+        isObject: 'cabinDoorKey',
+        isInst: 'inst_3',
+        loc: { scope: 'object', name: 'detritus', inst: 'inst_13' },
         vars: {
         },
         objects: {
@@ -53,6 +59,8 @@ export const objects = {
     desc: { routine: 'descBook' },
     copies: {
       inst_4: {
+        isObject: 'book',
+        isInst: 'inst_4',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
           health: 2,
@@ -71,7 +79,9 @@ export const objects = {
     desc: { text: "some PAPER" },
     copies: {
       inst_5: {
-        loc: { scope: 'object', name: 'BOOK', id: 'inst_4' },
+        isObject: 'bookPages',
+        isInst: 'inst_5',
+        loc: { scope: 'object', name: 'book', inst: 'inst_4' },
         vars: {
         },
         objects: {
@@ -86,6 +96,8 @@ export const objects = {
     desc: { text: "a wooden TABLE" },
     copies: {
       inst_6: {
+        isObject: 'table',
+        isInst: 'inst_6',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
         },
@@ -101,6 +113,8 @@ export const objects = {
     desc: { text: "a wooden CHAIR" },
     copies: {
       inst_7: {
+        isObject: 'chair',
+        isInst: 'inst_7',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
         },
@@ -108,6 +122,8 @@ export const objects = {
         },
       },
       inst_8: {
+        isObject: 'chair',
+        isInst: 'inst_8',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
         },
@@ -123,6 +139,8 @@ export const objects = {
     desc: { text: "a wooden BED frame" },
     copies: {
       inst_9: {
+        isObject: 'bedFrame',
+        isInst: 'inst_9',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
         },
@@ -138,6 +156,8 @@ export const objects = {
     desc: { text: "a FIREPLACE" },
     copies: {
       inst_10: {
+        isObject: 'firePlace',
+        isInst: 'inst_10',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
           noTake: 1,
@@ -154,6 +174,8 @@ export const objects = {
     desc: { text: "a BUCKET" },
     copies: {
       inst_11: {
+        isObject: 'bucket',
+        isInst: 'inst_11',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
         },
@@ -169,6 +191,8 @@ export const objects = {
     desc: { text: "some NAILS" },
     copies: {
       inst_12: {
+        isObject: 'nails',
+        isInst: 'inst_12',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
         },
@@ -512,11 +536,32 @@ export const objects = {
     hooks: {
     },
   },
+  detritus: {
+    isObject: 'detritus',
+    desc: { text: "leafy DETRITUS" },
+    copies: {
+      inst_13: {
+        isObject: 'detritus',
+        isInst: 'inst_13',
+        loc: { scope: 'room', name: 'cabinExterior' },
+        vars: {
+        },
+        objects: {
+          cabinDoorKey: ['inst_3',],
+        },
+      },
+    },
+    hooks: {
+      prso: 'prsoDetritus',
+    },
+  },
   axe: {
     isObject: 'axe',
     desc: { text: "an AXE" },
     copies: {
-      inst_13: {
+      inst_14: {
+        isObject: 'axe',
+        isInst: 'inst_14',
         loc: { scope: 'player' },
         vars: {
           damage: 3,
@@ -535,7 +580,9 @@ export const objects = {
     isObject: 'cloak',
     desc: { text: "a CLOAK" },
     copies: {
-      inst_14: {
+      inst_15: {
+        isObject: 'cloak',
+        isInst: 'inst_15',
         loc: { scope: 'player' },
         vars: {
         },
@@ -550,7 +597,9 @@ export const objects = {
     isObject: 'flint',
     desc: { text: "FLINT" },
     copies: {
-      inst_15: {
+      inst_16: {
+        isObject: 'flint',
+        isInst: 'inst_16',
         loc: { scope: 'player' },
         vars: {
         },
@@ -565,7 +614,9 @@ export const objects = {
     isObject: 'cup',
     desc: { text: "a CUP" },
     copies: {
-      inst_16: {
+      inst_17: {
+        isObject: 'cup',
+        isInst: 'inst_17',
         loc: { scope: 'player' },
         vars: {
         },
@@ -580,7 +631,9 @@ export const objects = {
     isObject: 'kettle',
     desc: { text: "a KETTLE" },
     copies: {
-      inst_17: {
+      inst_18: {
+        isObject: 'kettle',
+        isInst: 'inst_18',
         loc: { scope: 'player' },
         vars: {
         },
@@ -595,7 +648,9 @@ export const objects = {
     isObject: 'knife',
     desc: { text: "a KNIFE" },
     copies: {
-      inst_18: {
+      inst_19: {
+        isObject: 'knife',
+        isInst: 'inst_19',
         loc: { scope: 'player' },
         vars: {
           damage: 2,
@@ -642,6 +697,9 @@ export const translateSynonym = (word) => {
     return ['cloak'];
   case 'CUP':
     return ['cup'];
+  case 'BRUSH':
+  case 'DETRITUS':
+    return ['detritus'];
   case 'FIRE':
     return ['fire'];
   case 'FIRE-PLACE':

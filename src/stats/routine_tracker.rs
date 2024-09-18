@@ -60,7 +60,7 @@ pub enum ReturnValType {
 impl<'a> Validator<'a> {
     pub fn new(cross_ref: &'a CrossRef) -> Validator<'a> {
         let mut vars: HashMap<String, ReturnValType> = HashMap::new();
-        vars.insert("CURRENT-ROOM".to_string(), ReturnValType::Inst);
+        vars.insert("C-ROOM".to_string(), ReturnValType::Inst);
         vars.insert("CMD".to_string(), ReturnValType::Text);
         vars.insert("PRSO".to_string(), ReturnValType::Inst);
         vars.insert("PRSI".to_string(), ReturnValType::Inst);
