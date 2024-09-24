@@ -1,6 +1,9 @@
 use crate::{
     js::write_output::OutputNode,
-    stats::routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
+    stats::{
+        helpers::num_children,
+        routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
+    },
     zil::{
         file_table::format_file_location,
         node::{ZilNode, ZilNodeType},
@@ -20,20 +23,14 @@ impl Not {
 }
 
 impl HasReturnType for Not {
-    fn return_type(&self) -> ReturnValType {
-        ReturnValType::Boolean
+    fn return_type(&self) -> Vec<ReturnValType> {
+        vec![ReturnValType::Boolean]
     }
 }
 
 impl CanValidate for Not {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() != 2 {
-            return Err(format!(
-                "Expected exactly 2 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children(n, 2)?;
 
         v.expect_val(ReturnValType::Boolean);
 

@@ -24,7 +24,20 @@ fn main() {
     lookup.add_nodes();
     match lookup.crunch_top_level(&mut thread_pool) {
         Ok(_) => println!("lookups crunched"),
-        Err(e) => panic!("ERROR while crunching lookups\n{}", e),
+        Err(e) => {
+            let mut out = String::from("ERROR while crunching lookups\n");
+            if e.len() > 10 {
+                for i in 0..10 {
+                    out.push_str(&format!("{}\n", e[i]));
+                }
+                out.push_str("...\n");
+            } else {
+                for err in e {
+                    out.push_str(&format!("{}\n", err));
+                }
+            }
+            panic!("{}", out);
+        }
     }
 
     match lookup.validate_unique_names() {

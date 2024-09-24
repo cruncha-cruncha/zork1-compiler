@@ -5,7 +5,7 @@ use crate::{
 
 impl CanWriteOutput for IsIn {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.write("game.isInLocation(locals['currentRoom'], ", false)?;
+        formatter.write("(game.isInLocation(locals['cRoom'], ", false)?;
 
         self.container.write_output(formatter)?;
 
@@ -14,9 +14,9 @@ impl CanWriteOutput for IsIn {
         self.item.write_output(formatter)?;
 
         if self.nested {
-            formatter.write(", true)", false)?;
+            formatter.write(", true))", false)?;
         } else {
-            formatter.write(", false)", false)?;
+            formatter.write(", false))", false)?;
         }
 
         Ok(())

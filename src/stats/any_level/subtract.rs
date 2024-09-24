@@ -1,7 +1,7 @@
 use crate::{
     js::write_output::OutputNode,
     stats::{
-        helpers::{get_token_as_number, get_token_as_word},
+        helpers::{get_token_as_number, get_token_as_word, num_children},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::{LocalVar, Scope};
+use super::set_var::Scope;
 
 pub struct Subtract {
     pub minuend: OutputNode,
@@ -27,20 +27,14 @@ impl Subtract {
 }
 
 impl HasReturnType for Subtract {
-    fn return_type(&self) -> ReturnValType {
-        ReturnValType::Number
+    fn return_type(&self) -> Vec<ReturnValType> {
+        vec![ReturnValType::Number]
     }
 }
 
 impl CanValidate for Subtract {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() != 3 {
-            return Err(format!(
-                "Expected exactly 3 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children(n, 3)?;
 
         v.expect_val(ReturnValType::Number);
 
@@ -58,22 +52,16 @@ impl CanValidate for Subtract {
                 }
                 ZilNodeType::Token(TokenType::Word) => {
                     let word = get_token_as_word(&child).unwrap();
-                    if let Some(var_type) = v.has_local_var(&word) {
-                        match var_type {
-                            ReturnValType::Number | ReturnValType::VarName => {
-                                set_value(
-                                    i,
-                                    OutputNode::Variable(Scope::Local(LocalVar {
-                                        name: word.clone(),
-                                        return_type: var_type,
-                                    })),
-                                );
+                    if let Some(return_type) = v.has_local_var(&word) {
+                        match return_type {
+                            ReturnValType::Number => {
+                                set_value(i, OutputNode::Variable(Scope::Local(word)));
                             }
                             _ => {
                                 return Err(format!(
-                                    "Variable {} is not a numeric local variable\n{}",
+                                    "Variable {} is not a number\n{}",
                                     word,
-                                    format_file_location(&n.children[1])
+                                    format_file_location(&child)
                                 ));
                             }
                         }
@@ -81,7 +69,7 @@ impl CanValidate for Subtract {
                         set_value(i, OutputNode::Variable(Scope::Global(word)));
                     } else {
                         return Err(format!(
-                            "Variable {} not found in local or global symbol table\n{}",
+                            "Variable {} not found in locals or globals\n{}",
                             word,
                             format_file_location(&child)
                         ));
@@ -96,7 +84,7 @@ impl CanValidate for Subtract {
                 },
                 _ => {
                     return Err(format!(
-                        "Expected word, number or cluster, found {}\n{}",
+                        "Expected number, word, or cluster, found {}\n{}",
                         child.node_type,
                         format_file_location(&n)
                     ));

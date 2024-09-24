@@ -216,7 +216,7 @@ impl<'a> Iterator for TokenGenerator<'a> {
                 }
                 _ => {
                     let mut good_char = false;
-                    if c == '-' || c == ';' || c == '=' {
+                    if c == '-' || c == ';' {
                         good_char = true;
                     } else if c.is_ascii_alphabetic() {
                         if c.to_ascii_uppercase() == c {

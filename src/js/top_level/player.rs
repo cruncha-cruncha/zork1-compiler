@@ -27,13 +27,18 @@ impl CanWriteOutput for PlayerStats {
         formatter.outdent();
         formatter.writeln("},")?;
 
-        formatter.writeln("objects: [")?;
+        formatter.writeln("objects: {")?;
         formatter.indent();
-        for obj in info.objects.iter() {
-            formatter.writeln(&format!("'{}',", Formatter::safe_case(obj)))?;
+        for (key, vals) in info.objects.iter() {
+            formatter.write(&format!("{}: [", Formatter::safe_case(key)), true)?;
+            for val in vals.iter() {
+                formatter.write(&format!("'{}',", Formatter::safe_case(val)), false)?;
+            }
+            formatter.write("],", false)?;
+            formatter.newline()?;
         }
         formatter.outdent();
-        formatter.writeln("],")?;
+        formatter.writeln("},")?;
 
         formatter.writeln("hooks: {")?;
         formatter.indent();

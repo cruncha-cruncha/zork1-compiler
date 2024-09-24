@@ -44,8 +44,7 @@ Syntax
 
 - `<SYNTAX ... >`
 - defines an input command string
-- first word is the action (PRSA).
-- can work with up to two objects (PRSO and PRSI).
+- first word is the action, this needs to be known for defining handlers
 
 Synonym
 
@@ -84,20 +83,15 @@ Every room has a similar set of three hooks:
 - ACT-EXIT: fires when the player leaves this room
 - ACT-ALWAYS: fires after every command while the player is in this room
 
-Every object has six hooks:
+Every object has four hooks:
 
 - ACT-IN-ROOM: fires after every command while this object is in the same room as the player
 - ACT-IN-PLAYER: fires after every command while this object is in the player's inventory
 - ACT-ADD: fires when this object is added to the player's inventory
 - ACT-REMOVE: fires when this object is removed from the player's inventory
-- ACT-PRSO: fires if this object is successfully used as the PRSO in a command
-- ACT-PRSI: fires if this object is successfully used as the PRSI in a command
 
 ### Firing order
 
-- object ACT-PRSI
-- object ACT-PRSO
-- syntax action
 - object ACT-ADD
 - object ACT-REMOVE
 - room ACT-EXIT
@@ -111,7 +105,7 @@ Every object has six hooks:
 
 Object hooks generally fire for every object that was moved (including objects not explicitly moved by the player), and firing order is always respected. So if a theatre's (a room) ACT-ENTER hook removes a concert ticket (an object) from the players inventory, the concert ticket's ACT-REMOVE action will fire before the theatre's ACT-ALWAYS action.
 
-When a hook is inserted, it removes all upcoming hook calls of lower priority. This an opaque process which can lead to unexpected behaviour, so always test your hooks. Details of exactly when exactly hooks are inserted can muddled out of `./js-boilerplate/game.js`.
+When a hook is inserted, it removes all upcoming hook calls of lower priority. This an opaque process which can lead to unexpected behaviour, so always test your hooks. Details of exactly when exactly hooks are inserted can muddled out of `./js-boilerplate/engine.js`.
 
 ## Syntax
 

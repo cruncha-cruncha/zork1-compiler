@@ -84,13 +84,13 @@ fn build_tree_recursively<'a>(
 
         match t.kind {
             TokenType::LeftArrow => {
-                let mut child = ZilNode::new_no_token(ZilNodeType::Cluster);
+                let mut child = ZilNode::new(ZilNodeType::Cluster, t);
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightArrow) {
                     let msg = format!(
                         "Routine does not end with RightArrow\n{}",
-                        format_file_location(tokens)
+                        format_file_location(&child)
                     );
                     return (None, Some(ZilErr::origin(msg)));
                 } else if err.is_some() {
@@ -100,13 +100,13 @@ fn build_tree_recursively<'a>(
                 root.push_child(child);
             }
             TokenType::LeftParen => {
-                let mut child = ZilNode::new_no_token(ZilNodeType::Group);
+                let mut child = ZilNode::new(ZilNodeType::Group, t);
 
                 let (token_type, err) = build_tree_recursively(tokens, &mut child);
                 if token_type != Some(TokenType::RightParen) {
                     let msg = format!(
                         "Group does not end with RightParen\n{}",
-                        format_file_location(tokens)
+                        format_file_location(&child)
                     );
                     return (None, Some(ZilErr::origin(msg)));
                 } else if err.is_some() {

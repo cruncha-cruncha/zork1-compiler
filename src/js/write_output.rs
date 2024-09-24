@@ -83,7 +83,7 @@ impl CanWriteOutput for Scope {
                 formatter.write(&format!("'{}'", Formatter::safe_case(name)), false)
             }
             Scope::Local(ref local_var) => formatter.write(
-                &format!("locals['{}']", Formatter::safe_case(&local_var.name)),
+                &format!("locals['{}']", Formatter::safe_case(local_var)),
                 false,
             ),
             Scope::Global(ref name) => {
@@ -95,13 +95,7 @@ impl CanWriteOutput for Scope {
             Scope::Room(ref name) => {
                 formatter.write(&format!("rooms['{}']", Formatter::safe_case(name)), false)
             }
-            Scope::LOC(ref w) => w.write_output(formatter),
+            Scope::Writer(ref w) => w.write_output(formatter),
         }
     }
 }
-
-// PLAYER
-// CURRENT-ROOM
-// CMD-ACTION
-// CMD-PRSO
-// CMD-PRSI

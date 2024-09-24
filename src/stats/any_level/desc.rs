@@ -1,6 +1,6 @@
 use crate::{
     stats::{
-        helpers::get_token_as_word,
+        helpers::{get_token_as_word, num_children},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use super::set_var::{LocalVar, Scope};
+use super::set_var::Scope;
 
 pub struct Description {
     pub scope: Scope,
@@ -22,38 +22,28 @@ impl Description {
 }
 
 impl HasReturnType for Description {
-    fn return_type(&self) -> ReturnValType {
-        ReturnValType::None
+    fn return_type(&self) -> Vec<ReturnValType> {
+        vec![ReturnValType::None]
     }
 }
 
 impl CanValidate for Description {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() != 2 {
-            return Err(format!(
-                "Expected 2 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children(n, 2)?;
 
-        v.expect_val(ReturnValType::Location);
+        v.expect_vals(vec![ReturnValType::Inst, ReturnValType::RP]);
 
         match n.children[1].node_type {
             ZilNodeType::Token(TokenType::Word) => {
                 let word = get_token_as_word(&n.children[1]).unwrap();
-
-                if let Some(var_type) = v.has_local_var(&word) {
-                    match var_type {
-                        ReturnValType::Location => {
-                            self.scope = Scope::Local(LocalVar {
-                                name: word.to_string(),
-                                return_type: var_type,
-                            });
+                if let Some(return_type) = v.has_local_var(&word) {
+                    match return_type {
+                        ReturnValType::Inst => {
+                            self.scope = Scope::Local(word);
                         }
                         _ => {
                             return Err(format!(
-                                "Variable {} is not a local variable of Location type\n{}",
+                                "Variable {} doesn't have a description\n{}",
                                 word,
                                 format_file_location(&n.children[1])
                             ));
@@ -67,7 +57,7 @@ impl CanValidate for Description {
                     self.scope = Scope::Object(word);
                 } else {
                     return Err(format!(
-                        "Variable {} not found in room or object table\n{}",
+                        "Word {} is not player, and not found in locals, globals, rooms, or objects\n{}",
                         word,
                         format_file_location(&n.children[1])
                     ));
@@ -75,14 +65,14 @@ impl CanValidate for Description {
             }
             ZilNodeType::Cluster => match v.validate_cluster(&n.children[1]) {
                 Ok(_) => match v.take_last_writer() {
-                    Some(w) => self.scope = Scope::LOC(w),
+                    Some(w) => self.scope = Scope::Writer(w),
                     None => unreachable!(),
                 },
                 Err(e) => return Err(e),
             },
             _ => {
                 return Err(format!(
-                    "Expected number, found {}\n{}",
+                    "Expected word, or cluster, found {}\n{}",
                     n.children[1].node_type,
                     format_file_location(&n.children[1])
                 ));

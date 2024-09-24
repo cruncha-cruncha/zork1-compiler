@@ -1,6 +1,6 @@
 use crate::{
     stats::{
-        helpers::get_token_as_word,
+        helpers::{get_token_as_word, num_children_between},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -9,177 +9,130 @@ use crate::{
     },
 };
 
-use super::set_var::{LocalVar, Scope};
+use super::set_var::Scope;
 
-// if length 3: get val of variable in room, object, or player
-// if length 2: get val of local variable or global variable
+// if len 2: not allowed, use the local / global variable directly
+// if len 3: get IRP variable
+// if len 4: get variable on first object instance in IRP
+// IRP = object instance, or room, or player
 
 pub struct GetVar {
-    pub scope: Option<Scope>,
+    pub scope: Scope,
+    pub object: Option<String>,
     pub var: Scope,
 }
 
 impl GetVar {
     pub fn new() -> Self {
         Self {
-            scope: None,
+            scope: Scope::TBD,
+            object: None,
             var: Scope::TBD,
         }
     }
 }
 
 impl HasReturnType for GetVar {
-    fn return_type(&self) -> ReturnValType {
+    fn return_type(&self) -> Vec<ReturnValType> {
         // returns 0 if var doesn't exist
-        ReturnValType::Number
+        vec![ReturnValType::Number]
     }
 }
 
 impl CanValidate for GetVar {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() != 2 && n.children.len() != 3 {
-            return Err(format!(
-                "Expected 2 or 3 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children_between(n, 3, 4)?;
+
+        v.expect_vals(vec![ReturnValType::Inst, ReturnValType::RP]);
 
         let second_child = &n.children[1];
 
-        if n.children.len() == 2 {
-            let second_word = get_token_as_word(&second_child);
-            if second_word.is_none() {
-                return Err(format!(
-                    "Expected word, found {}\n{}",
-                    second_child.node_type,
-                    format_file_location(&n)
-                ));
-            }
-            let second_word = second_word.unwrap();
-
-            if let Some(var_type) = v.has_local_var(&second_word) {
-                match var_type {
-                    ReturnValType::Number | ReturnValType::VarName => {
-                        self.var = Scope::Local(LocalVar {
-                            name: second_word.clone(),
-                            return_type: var_type,
-                        });
-                    }
-                    _ => {
-                        return Err(format!(
-                            "Variable {} is not a numeric local variable\n{}",
-                            second_word,
-                            format_file_location(&second_child)
-                        ));
-                    }
-                }
-            } else if v.is_global(&second_word) {
-                self.var = Scope::Global(second_word.clone());
-            } else {
-                return Err(format!(
-                    "Variable {} not found in local or global symbol table\n{}",
-                    second_word,
-                    format_file_location(&second_child)
-                ));
-            }
-
-            return Ok(());
-        }
-
-        if n.children.len() == 3 {
-            let mut found_scope = false;
-
-            if second_child.node_type == ZilNodeType::Cluster {
-                v.expect_val(ReturnValType::Location);
-                match v.validate_cluster(&second_child) {
-                    Ok(_) => match v.take_last_writer() {
-                        Some(w) => self.scope = Some(Scope::LOC(w)),
-                        None => unreachable!(),
-                    },
-                    Err(e) => return Err(e),
-                }
-                found_scope = true;
-            }
-
-            if second_child.node_type == ZilNodeType::Token(TokenType::Word) {
-                let second_word = get_token_as_word(&second_child).unwrap();
-
-                if second_word == "PLAYER" {
-                    self.scope = Some(Scope::Player);
-                    found_scope = true;
-                }
-
-                if let Some(var_type) = v.has_local_var(&second_word) {
-                    match var_type {
-                        ReturnValType::Location => {
-                            self.scope = Some(Scope::Local(LocalVar {
-                                name: second_word.clone(),
-                                return_type: var_type,
-                            }));
+        match second_child.node_type {
+            ZilNodeType::Token(TokenType::Word) => {
+                let word = get_token_as_word(&second_child).unwrap();
+                if let Some(return_type) = v.has_local_var(&word) {
+                    match return_type {
+                        ReturnValType::Inst => {
+                            self.scope = Scope::Local(word);
                         }
                         _ => {
                             return Err(format!(
-                                "Variable {} is not player, a room, or an object\n{}",
-                                second_word,
+                                "Variable {} is not a location\n{}",
+                                word,
                                 format_file_location(&second_child)
                             ));
                         }
                     }
-                    found_scope = true;
-                }
-
-                if let Some(_object) = v.get_object(&second_word) {
-                    self.scope = Some(Scope::Object(second_word.clone()));
-                    found_scope = true;
-                }
-
-                if let Some(_room) = v.get_room(&second_word) {
-                    self.scope = Some(Scope::Room(second_word.clone()));
-                    found_scope = true;
+                } else if word == "PLAYER" {
+                    self.scope = Scope::Player;
+                } else if v.is_room(&word) {
+                    self.scope = Scope::Room(word);
+                } else {
+                    return Err(format!(
+                            "Word {} is not player, and not found in locals, globals, rooms, or objects\n{}",
+                            word,
+                            format_file_location(&second_child)
+                        ));
                 }
             }
-
-            if !found_scope {
+            ZilNodeType::Cluster => match v.validate_cluster(&second_child) {
+                Ok(_) => match v.take_last_writer() {
+                    Some(w) => self.scope = Scope::Writer(w),
+                    None => unreachable!(),
+                },
+                Err(e) => return Err(e),
+            },
+            _ => {
                 return Err(format!(
-                    "Expected word or cluster, found {}\n{}",
+                    "Expected word, or cluster, found {}\n{}",
                     second_child.node_type,
                     format_file_location(&second_child)
                 ));
             }
+        }
 
-            let third_word = get_token_as_word(&n.children[2]);
-            if third_word.is_none() {
-                return Err(format!(
-                    "Expected word, found {}\n{}",
-                    n.children[2].node_type,
-                    format_file_location(&n)
-                ));
-            }
-            let third_word = third_word.unwrap();
-
-            match v.has_local_var(&third_word) {
-                Some(rt) => match rt {
-                    ReturnValType::VarName | ReturnValType::Number => {
-                        self.var = Scope::Local(LocalVar {
-                            name: third_word.clone(),
-                            return_type: rt,
-                        });
-                    }
-                    _ => {
+        if n.children.len() == 4 {
+            let third_child = &n.children[2];
+            match third_child.node_type {
+                ZilNodeType::Token(TokenType::Word) => {
+                    let word = get_token_as_word(&third_child).unwrap();
+                    if v.is_object(&word) {
+                        self.object = Some(word);
+                    } else {
                         return Err(format!(
-                            "Variable {} is not a local numeric variable\n{}",
-                            third_word,
-                            format_file_location(&n.children[2])
+                            "Word {} not found in objects\n{}",
+                            word,
+                            format_file_location(&third_child)
                         ));
                     }
-                },
+                }
                 _ => {
-                    self.var = Scope::Bare(third_word.clone());
+                    return Err(format!(
+                        "Expected a word, found {}\n{}",
+                        third_child.node_type,
+                        format_file_location(&third_child)
+                    ));
                 }
             }
+        }
 
-            return Ok(());
+        let last_child = &n.children.last().unwrap();
+        let last_word = get_token_as_word(last_child)?;
+        if let Some(return_type) = v.has_local_var(&last_word) {
+            match return_type {
+                ReturnValType::Text => {
+                    self.var = Scope::Local(last_word);
+                }
+                _ => {
+                    return Err(format!(
+                        "Variable {} is not a number\n{}",
+                        last_word,
+                        format_file_location(last_child)
+                    ));
+                }
+            }
+        } else {
+            self.var = Scope::Bare(last_word.clone());
         }
 
         Ok(())
