@@ -16,22 +16,20 @@ impl CanWriteOutput for Tell {
         formatter.write("game.log(", true)?;
 
         for (i, node) in self.text.iter().enumerate() {
+            let return_type = self.text_types[i];
             match node {
                 OutputNode::Number(n) => formatter.write(&format!("{}.toString()", n), false)?,
                 OutputNode::Text(t) => formatter.write(&format!("\"{}\"", t), false)?,
-                OutputNode::Variable(Scope::Local(local_var)) => match local_var.return_type {
-                    ReturnValType::Text | ReturnValType::VarName => formatter.write(
-                        &format!("locals['{}']", Formatter::safe_case(&local_var.name)),
+                OutputNode::Variable(Scope::Local(local_var)) => {
+                    formatter.write(
+                        &format!("locals['{}']", Formatter::safe_case(local_var)),
                         false,
-                    )?,
-                    _ => formatter.write(
-                        &format!(
-                            "locals['{}'].toString()",
-                            Formatter::safe_case(&local_var.name)
-                        ),
-                        false,
-                    )?,
-                },
+                    )?;
+                    match return_type {
+                        ReturnValType::Text => (),
+                        _ => formatter.write(".toString()", false)?,
+                    }
+                }
                 OutputNode::Variable(Scope::Global(name)) => formatter.write(
                     &format!("globals['{}'].toString()", Formatter::safe_case(name)),
                     false,
@@ -56,7 +54,7 @@ impl CanWriteOutput for Tell {
             formatter.write("'\\n'", false)?;
         }
 
-        formatter.write(");", false)?;
+        formatter.write(")", false)?;
 
         Ok(())
     }

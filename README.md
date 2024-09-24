@@ -10,7 +10,7 @@ There are three steps:
 
 ## Concepts
 
-Aka top-level keywords in the zil language.
+Aka top-level keywords in the zil-like language.
 
 Player
 
@@ -27,12 +27,14 @@ Room
 
 Object
 
+- `<OBJECT ... >`
 - in the player, a room, or another object
 - has variables
 - can contain nested objects, and those objects can contain nested objects, and so on
 
 Globals
 
+- `<GLOBAL ... >`
 - aka global variables
 - no new variables can be added at game time (unlike player, object, or room variables which can exist before the game starts or be added in the process of playing the game)
 
@@ -40,24 +42,28 @@ All 'variables' can only store integer values. If you try to read a variable tha
 
 Syntax
 
+- `<SYNTAX ... >`
 - defines an input command string
-- first word is the action (PRSA).
-- can work with up to two objects (PRSO and PRSI).
+- first word is the action, this needs to be known for defining handlers
 
 Synonym
 
+- `<SYNONYM ... >`
 - used to define alternatives to any word in a syntax
 
 Buzz
 
+- `<BUZZ ... >`
 - used to ignore words when matching any syntax. These are effectively erased before being passed to the game-time parser.
 
 Directions
 
+- `<DIRECTIONS ... >`
 - directions which can be used with the special 'GO' command. Usually NORTH, SOUTH, EAST, and WEST, but can really be anything.
 
 Routines
 
+- `<ROUTINES ... >`
 - aka handlers, functions, algorithms, or code that does stuff
 - can define a set of local variables to use only within this routine. These, like other variables, can only hold integer values.
 - always has access to the player, current room, PRSA, PRSO, and PRSI. Can also read and modify any global variable
@@ -77,20 +83,15 @@ Every room has a similar set of three hooks:
 - ACT-EXIT: fires when the player leaves this room
 - ACT-ALWAYS: fires after every command while the player is in this room
 
-Every object has six hooks:
+Every object has four hooks:
 
 - ACT-IN-ROOM: fires after every command while this object is in the same room as the player
 - ACT-IN-PLAYER: fires after every command while this object is in the player's inventory
 - ACT-ADD: fires when this object is added to the player's inventory
 - ACT-REMOVE: fires when this object is removed from the player's inventory
-- ACT-PRSO: fires if this object is successfully used as the PRSO in a command
-- ACT-PRSI: fires if this object is successfully used as the PRSI in a command
 
 ### Firing order
 
-- object ACT-PRSI
-- object ACT-PRSO
-- syntax action
 - object ACT-ADD
 - object ACT-REMOVE
 - room ACT-EXIT
@@ -104,7 +105,7 @@ Every object has six hooks:
 
 Object hooks generally fire for every object that was moved (including objects not explicitly moved by the player), and firing order is always respected. So if a theatre's (a room) ACT-ENTER hook removes a concert ticket (an object) from the players inventory, the concert ticket's ACT-REMOVE action will fire before the theatre's ACT-ALWAYS action.
 
-When a hook is inserted, it removes all upcoming hook calls of lower priority. This an opaque process which can lead to unexpected behaviour, so always test your hooks. Details of exactly when exactly hooks are inserted can muddled out of `./js-boilerplate/game.js`.
+When a hook is inserted, it removes all upcoming hook calls of lower priority. This an opaque process which can lead to unexpected behaviour, so always test your hooks. Details of exactly when exactly hooks are inserted can muddled out of `./js-boilerplate/engine.js`.
 
 ## Syntax
 

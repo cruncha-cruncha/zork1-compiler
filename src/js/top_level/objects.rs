@@ -5,7 +5,10 @@ use crate::{
         formatter::Formatter,
         write_output::{CanWriteOutput, ToJs},
     },
-    stats::top_level::objects::{DescType, ObjectStats},
+    stats::{
+        helpers::DescType,
+        top_level::objects::{ObjectLocation, ObjectStats},
+    },
 };
 
 impl CanWriteOutput for ObjectStats {
@@ -26,20 +29,66 @@ impl CanWriteOutput for ObjectStats {
                 formatter.writeln(&format!("desc: {},", info.desc.as_ref().unwrap().to_js()))?;
             }
 
-            formatter.writeln("objects: [")?;
+            formatter.writeln("copies: {")?;
             formatter.indent();
-            for obj in info.objects.iter() {
-                formatter.writeln(&format!("'{}',", Formatter::safe_case(obj)))?;
-            }
-            formatter.outdent();
-            formatter.writeln("],")?;
 
-            if info.loc.is_some() {
-                formatter.writeln(&format!(
-                    "loc: '{}',",
-                    Formatter::safe_case(info.loc.as_ref().unwrap())
-                ))?;
+            for obj in info.copies.iter() {
+                formatter.writeln(&format!("{}: {{", Formatter::safe_case(&obj.id)))?;
+                formatter.indent();
+
+                formatter.writeln(&format!("isObject: '{}',", Formatter::safe_case(&obj.name)))?;
+
+                formatter.writeln(&format!("isInst: '{}',", Formatter::safe_case(&obj.id)))?;
+
+                match obj.loc {
+                    ObjectLocation::Player => {
+                        formatter.writeln("loc: { scope: 'player' },")?;
+                    }
+                    ObjectLocation::Room(ref name) => {
+                        formatter.writeln(&format!(
+                            "loc: {{ scope: 'room', name: '{}' }},",
+                            Formatter::safe_case(name)
+                        ))?;
+                    }
+                    ObjectLocation::Object(ref name, _index, ref id) => {
+                        let id = id.as_ref().unwrap();
+                        formatter.writeln(&format!(
+                            "loc: {{ scope: 'object', name: '{}', inst: '{}' }},",
+                            Formatter::safe_case(name),
+                            id
+                        ))?;
+                    }
+                }
+
+                formatter.writeln("vars: {")?;
+                formatter.indent();
+                for (var, val) in obj.vars.iter() {
+                    formatter.writeln(&format!("{}: {},", Formatter::safe_case(var), val))?;
+                }
+                formatter.outdent();
+                formatter.writeln("},")?;
+
+                formatter.writeln("objects: {")?;
+                formatter.indent();
+
+                for (key, vals) in obj.nested.iter() {
+                    formatter.write(&format!("{}: [", Formatter::safe_case(key)), true)?;
+                    for val in vals.iter() {
+                        formatter.write(&format!("'{}',", Formatter::safe_case(val)), false)?;
+                    }
+                    formatter.write("],", false)?;
+                    formatter.newline()?;
+                }
+
+                formatter.outdent();
+                formatter.writeln("},")?;
+
+                formatter.outdent();
+                formatter.writeln("},")?;
             }
+
+            formatter.outdent();
+            formatter.writeln("},")?;
 
             formatter.writeln("vars: {")?;
             formatter.indent();
@@ -73,18 +122,6 @@ impl CanWriteOutput for ObjectStats {
                 formatter.writeln(&format!(
                     "exitPlayer: '{}',",
                     Formatter::safe_case(info.actions.exit_player.as_ref().unwrap())
-                ))?;
-            }
-            if info.actions.prso.is_some() {
-                formatter.writeln(&format!(
-                    "prso: '{}',",
-                    Formatter::safe_case(info.actions.prso.as_ref().unwrap())
-                ))?;
-            }
-            if info.actions.prsi.is_some() {
-                formatter.writeln(&format!(
-                    "prsi: '{}',",
-                    Formatter::safe_case(info.actions.prsi.as_ref().unwrap())
                 ))?;
             }
             formatter.outdent();
@@ -164,7 +201,19 @@ impl ToJs for DescType {
     fn to_js(&self) -> String {
         match self {
             DescType::Routine(s) => format!("{{ routine: '{}' }}", Formatter::safe_case(s)),
-            DescType::Text(v) => format!("{{ text: \"{}\" }}", v),
+            DescType::Text(v, cr) => {
+                let mut out = String::new();
+                out.push_str(&format!("{{ text: \"{}", v));
+
+                if *cr {
+                    out.push_str(&format!("\\n"));
+                } else {
+                    out.push_str(&format!(""));
+                }
+
+                out.push_str(&format!("\" }}"));
+                out
+            }
         }
     }
 }

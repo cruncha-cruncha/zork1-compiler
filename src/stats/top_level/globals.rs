@@ -3,9 +3,12 @@ use std::collections::HashMap;
 use crate::{
     stats::{
         cross_ref::CrossRef,
-        helpers::{get_token_as_number, get_token_as_word},
+        helpers::{get_token_as_word, num_children, parse_token_as_number, ValidationResult},
     },
-    zil::{file_table::format_file_location, node::ZilNode},
+    zil::{
+        file_table::format_file_location,
+        node::{TokenType, ZilNode, ZilNodeType},
+    },
 };
 
 use crate::stats::{cross_ref::Codex, cross_ref::Populator};
@@ -44,51 +47,55 @@ impl Populator for GlobalStats {
         self.basis.push(node);
     }
 
-    fn crunch(&mut self) -> Result<(), String> {
+    fn crunch(&mut self) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
         for (i, node) in self.basis.iter().enumerate() {
-            if node.children.len() != 3 {
-                return Err(format!(
-                    "Possible global node doesn't have three children\n{}",
-                    format_file_location(&node)
-                ));
+            match num_children(node, 3) {
+                Ok(_) => {}
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
             }
 
-            let first_word = get_token_as_word(&node.children[0]).unwrap_or_default();
-            if first_word != "GLOBAL" {
-                unreachable!();
-            }
+            let second_word = match get_token_as_word(&node.children[1]) {
+                Ok(v) => v,
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
+            };
 
-            let second_word = get_token_as_word(&node.children[1]);
-            if second_word.is_none() {
-                return Err(format!(
-                    "Global node has non-word second child\n{}",
-                    format_file_location(&node)
-                ));
-            }
-
-            let second_word = second_word.unwrap();
             if self.all_globals.contains_key(&second_word) {
-                return Err(format!(
+                errors.push(format!(
                     "Global node defined twice:{}\n{}",
                     second_word,
                     format_file_location(&node)
                 ));
+                continue;
             }
 
-            let number = get_token_as_number(&node.children[2]);
-            if number.is_none() {
-                return Err(format!(
-                    "Global node has non-number third child\n{}",
-                    format_file_location(&node)
-                ));
-            }
+            let third_child = &node.children[2];
+            let val = match &third_child.node_type {
+                ZilNodeType::Token(TokenType::Number) => {
+                    parse_token_as_number(third_child).unwrap()
+                }
+                _ => {
+                    errors.push(format!(
+                        "Expected number or text, found {}\n{}",
+                        third_child.node_type,
+                        format_file_location(&third_child)
+                    ));
+                    continue;
+                }
+            };
 
             self.all_globals.insert(
                 second_word.clone(),
                 GlobalInfo {
                     index: i,
                     name: second_word,
-                    val: number.unwrap(),
+                    val: val,
                 },
             );
         }
@@ -96,10 +103,10 @@ impl Populator for GlobalStats {
         Ok(())
     }
 
-    fn validate(&self, _cross_ref: &CrossRef) -> Result<(), String> {
+    fn validate(&self, _cross_ref: &CrossRef) -> ValidationResult<()> {
         for key in self.all_globals.keys() {
             if CrossRef::name_is_illegal(key) {
-                return Err(format!("Illegal global name: {}", key));
+                return Err(vec![format!("Illegal global name: {}", key)]);
             }
         }
 
@@ -115,7 +122,7 @@ pub struct GlobalCodex<'a> {
 
 pub struct GlobalCodexValue<'a> {
     pub name: &'a String,
-    pub val: i32,
+    pub val: &'a i32,
 }
 
 impl<'a> Iterator for GlobalCodex<'a> {
@@ -131,7 +138,7 @@ impl<'a> Iterator for GlobalCodex<'a> {
 
             Some(GlobalCodexValue {
                 name: &info.name,
-                val: info.val,
+                val: &info.val,
             })
         }
     }
@@ -149,7 +156,7 @@ impl<'a> Codex<GlobalCodexValue<'a>> for GlobalCodex<'a> {
 
         return Some(GlobalCodexValue {
             name: &info.name,
-            val: info.val,
+            val: &info.val,
         });
     }
 }

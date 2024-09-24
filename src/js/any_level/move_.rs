@@ -13,7 +13,9 @@ impl CanWriteOutput for Move {
 
         formatter.write(", ", false)?;
 
-        self.destination.write_output(formatter)?;
+        if self.destination.is_some() {
+            self.destination.as_ref().unwrap().write_output(formatter)?;
+        }
 
         formatter.write(")", false)?;
 

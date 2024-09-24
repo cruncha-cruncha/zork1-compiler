@@ -1,23 +1,20 @@
-import { game } from "./game.js";
-import { routines } from "./routines.js";
-
 const getPriority = (hookType) => {
   // higher number = higher priority = called earlier
   // adding a hook of priority N will remove all hooks of priority N-1 or lower
   switch (hookType) {
-    // hooks 13, 12, and 11 are fired at most once per command
-    case "OBJ-ACT-PRSI":
+    case "BEFORE-ACTION":
       return 13;
-    case "OBJ-ACT-PRSO":
-      return 12;
+    case "GO-ACTION":
     case "SYNTAX-ACTION":
+      return 12;
+    case "AFTER-ACTION":
       return 11;
-    // hooks 10 and 9 are only ever fired by MOVE
+    // hooks 10 and 9 are only ever fired by <MOVE ... >
     case "OBJ-ACT-REMOVE":
       return 10;
     case "OBJ-ACT-ADD":
       return 9;
-    // hooks 8, 7, 6, and 5 are fired by GO or MOVE
+    // hooks 8, 7, 6, and 5 are fired by GO DIRECTION or <MOVE PLAYER ... >
     case "ROOM-ACT-EXIT":
       return 8;
     case "PLAYER-ACT-EXIT":
@@ -43,30 +40,36 @@ const getPriority = (hookType) => {
   }
 };
 
+// a giant closure
 export const newHooks = () => {
+  // the hooks to be called
+  // lower index = higher priority
   let buffer = [];
 
+  // fire the next hook in the buffer (starts from 0)
   function callNext() {
     if (buffer.length === 0) {
       return null;
     }
 
     let next = buffer.shift();
-    const routine = routines[next.routineName];
-    routine.func(next.currentRoom, ...game.getRoutineCommandArgs());
+    next.func(next.cRoom, next.cmds);
 
     return next;
   }
 
   return {
-    insert(hookType, routineName, currentRoom) {
+    // buffer a new hook to be called later
+    // respects priority
+    insert(hookType, func, cRoom, cmds) {
       const priority = getPriority(hookType);
 
       if (buffer.length === 0) {
         buffer.push({
           priority,
-          routineName,
-          currentRoom,
+          func,
+          cRoom,
+          cmds,
         });
         return;
       }
@@ -86,18 +89,20 @@ export const newHooks = () => {
 
       buffer.splice(low, buffer.length - low, {
         priority,
-        routineName,
-        currentRoom,
+        func,
+        cRoom,
+        cmds,
       });
     },
 
-    call(routineName, currentRoom) {
-      const routine = routines[routineName];
-      routine.func(currentRoom, ...game.getRoutineCommandArgs());
+    // aka immediately call this hook
+    callDescription(func, cRoom, cmds) {
+      func(cRoom, cmds);
     },
 
     callNext,
 
+    // empty the buffer
     callAll() {
       while (buffer.length > 0) {
         callNext();

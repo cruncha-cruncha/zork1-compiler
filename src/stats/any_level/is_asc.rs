@@ -1,7 +1,7 @@
 use crate::{
     js::write_output::OutputNode,
     stats::{
-        helpers::{get_token_as_number, get_token_as_word},
+        helpers::{get_token_as_number, get_token_as_word, num_children_more_than},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -10,7 +10,7 @@ use crate::{
     },
 };
 
-use super::set_var::{LocalVar, Scope};
+use super::set_var::Scope;
 
 // returns a boolean
 
@@ -25,21 +25,15 @@ impl IsAsc {
 }
 
 impl HasReturnType for IsAsc {
-    fn return_type(&self) -> ReturnValType {
+    fn return_type(&self) -> Vec<ReturnValType> {
         // values are in ascending order
-        ReturnValType::Boolean
+        vec![ReturnValType::Boolean]
     }
 }
 
 impl CanValidate for IsAsc {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() < 3 {
-            return Err(format!(
-                "Expected at least 3 children, found {}\n{}",
-                n.children.len(),
-                format_file_location(&n)
-            ));
-        }
+        num_children_more_than(n, 2)?;
 
         v.expect_val(ReturnValType::Number);
 
@@ -51,20 +45,16 @@ impl CanValidate for IsAsc {
                 }
                 ZilNodeType::Token(TokenType::Word) => {
                     let word = get_token_as_word(&child).unwrap();
-                    if let Some(var_type) = v.has_local_var(&word) {
-                        match var_type {
-                            ReturnValType::Number | ReturnValType::VarName => {
-                                self.values
-                                    .push(OutputNode::Variable(Scope::Local(LocalVar {
-                                        name: word.to_string(),
-                                        return_type: var_type,
-                                    })));
+                    if let Some(return_type) = v.has_local_var(&word) {
+                        match return_type {
+                            ReturnValType::Number => {
+                                self.values.push(OutputNode::Variable(Scope::Local(word)));
                             }
                             _ => {
                                 return Err(format!(
-                                    "Variable {} is not a numeric local variable\n{}",
+                                    "Variable {} is not a number\n{}",
                                     word,
-                                    format_file_location(&n.children[1])
+                                    format_file_location(&child)
                                 ));
                             }
                         }
@@ -72,7 +62,7 @@ impl CanValidate for IsAsc {
                         self.values.push(OutputNode::Variable(Scope::Global(word)));
                     } else {
                         return Err(format!(
-                            "Variable {} not found in local or global symbol table\n{}",
+                            "Variable {} not found in locals or globals\n{}",
                             word,
                             format_file_location(&child)
                         ));
@@ -87,7 +77,7 @@ impl CanValidate for IsAsc {
                 },
                 _ => {
                     return Err(format!(
-                        "Expected word, number, or cluster, found {}\n{}",
+                        "Expected number, word, or cluster, found {}\n{}",
                         child.node_type,
                         format_file_location(&n)
                     ));

@@ -7,8 +7,9 @@ use crate::zil::{
 };
 
 use super::{
-    helpers::get_token_as_word,
-    routine_tracker::Validator,
+    helpers::{parse_token_as_word, ValidationResult},
+    routine_root::RoutineRoot,
+    routine_tracker::{CanValidate, Validator},
     top_level::{
         buzzi::BuzzStats, directions::DirectionStats, globals::GlobalStats, objects::ObjectStats,
         player::PlayerStats, rooms::RoomStats, routines::RoutineStats, synonyms::SynonymStats,
@@ -19,8 +20,8 @@ use super::{
 
 pub trait Populator {
     fn add_node(&mut self, node: ZilNode);
-    fn crunch(&mut self) -> Result<(), String>;
-    fn validate(&self, cross_ref: &CrossRef) -> Result<(), String>;
+    fn crunch(&mut self) -> ValidationResult<()>;
+    fn validate(&self, cross_ref: &CrossRef) -> ValidationResult<()>;
 }
 
 pub trait Codex<T> {
@@ -60,7 +61,7 @@ impl CrossRef {
 
     pub fn name_is_illegal(name: &str) -> bool {
         match name {
-            "CURRENT-ROOM" | "CMD-ACTION" | "CMD-PRSO" | "CMD-PRSI" | "PLAYER" => true,
+            "C-ROOM" | "CMD" | "PLAYER" | "GO" | "ROUTINE" => true,
             _ => false,
         }
     }
@@ -74,7 +75,7 @@ impl CrossRef {
 
         for n in root.children.into_iter() {
             if n.node_type == ZilNodeType::Cluster {
-                match get_token_as_word(&n.children[0]) {
+                match parse_token_as_word(&n.children[0]) {
                     Some(name) => {
                         self.handle_named_cluster(n, name);
                     }
@@ -98,8 +99,8 @@ impl CrossRef {
         }
     }
 
-    pub fn crunch_top_level(&mut self, thread_pool: &mut Sigourney) -> Result<(), String> {
-        let mut receivers: Vec<mpsc::Receiver<Result<(), String>>> = Vec::with_capacity(10);
+    pub fn crunch_top_level(&mut self, thread_pool: &mut Sigourney) -> ValidationResult<()> {
+        let mut receivers: Vec<mpsc::Receiver<ValidationResult<()>>> = Vec::with_capacity(10);
 
         {
             // crunch all sub info
@@ -158,7 +159,32 @@ impl CrossRef {
         let mut validator = Validator::new(self);
 
         for routine in self.routines.as_codex() {
-            validator.validate_cluster(routine.node)?;
+            validator.push_stack();
+            let mut routine_root = RoutineRoot::from(&routine);
+
+            match routine_root.validate(&mut validator, routine.node) {
+                Ok(_) => {
+                    validator.roots.as_mut().unwrap().push(routine_root);
+                }
+                Err(e) => return Err(e),
+            }
+            validator.pop_stack();
+        }
+
+        for action in self.routines.iter_actions() {
+            for (i, handler) in action.handlers.iter().enumerate() {
+                validator.push_stack();
+                let node = action.nodes[i];
+                let mut routine_root = RoutineRoot::from_handler(handler);
+
+                match routine_root.validate(&mut validator, node) {
+                    Ok(_) => {
+                        validator.roots.as_mut().unwrap().push(routine_root);
+                    }
+                    Err(e) => return Err(e),
+                }
+                validator.pop_stack();
+            }
         }
 
         Ok(validator)
@@ -202,7 +228,7 @@ impl CrossRef {
             "BUZZ" => self.buzzi.add_node(root),
             "SYNONYM" => self.synonyms.add_node(root),
             "SYNTAX" => self.syntax.add_node(root),
-            _ => self.others.push(root),
+            _ => self.routines.add_node(root),
         }
     }
 }

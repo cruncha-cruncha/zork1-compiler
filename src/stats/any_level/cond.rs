@@ -1,6 +1,9 @@
 use crate::{
     js::write_output::OutputNode,
-    stats::routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
+    stats::{
+        helpers::num_children_more_than,
+        routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
+    },
     zil::{
         file_table::format_file_location,
         node::{ZilNode, ZilNodeType},
@@ -30,19 +33,14 @@ impl Cond {
 }
 
 impl HasReturnType for Cond {
-    fn return_type(&self) -> ReturnValType {
-        ReturnValType::None
+    fn return_type(&self) -> Vec<ReturnValType> {
+        vec![ReturnValType::None]
     }
 }
 
 impl CanValidate for Cond {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        if n.children.len() < 2 {
-            return Err(format!(
-                "COND node has less than two children\n{}",
-                format_file_location(&n)
-            ));
-        }
+        num_children_more_than(n, 1)?;
 
         for child in n.children.iter().skip(1) {
             let mut branch = Branch {
@@ -64,26 +62,30 @@ impl CanValidate for Cond {
                 ));
             }
 
-            v.expect_val(ReturnValType::Boolean);
-            v.validate_cluster(&child.children[0])?;
-            match v.take_last_writer() {
-                Some(w) => branch.condition = OutputNode::Writer(w),
-                None => unreachable!(),
-            }
+            for (i, gc) in child.children.iter().enumerate() {
+                if i == 0 {
+                    v.expect_val(ReturnValType::Boolean);
+                } else {
+                    v.expect_val(ReturnValType::Any);
+                }
 
-            v.expect_val(ReturnValType::Any);
-            for gc in child.children.iter().skip(1) {
                 match gc.node_type {
                     ZilNodeType::Cluster => match v.validate_cluster(&gc) {
                         Ok(_) => match v.take_last_writer() {
-                            Some(w) => branch.body.push(OutputNode::Writer(w)),
+                            Some(w) => {
+                                if i == 0 {
+                                    branch.condition = OutputNode::Writer(w);
+                                } else {
+                                    branch.body.push(OutputNode::Writer(w));
+                                }
+                            }
                             None => unreachable!(),
                         },
                         Err(e) => return Err(e),
                     },
                     _ => {
                         return Err(format!(
-                            "Child of COND node is not a cluster\n{}",
+                            "Child of COND group is not a cluster\n{}",
                             format_file_location(&gc)
                         ));
                     }

@@ -11,8 +11,6 @@ impl CanWriteOutput for Return {
 
         self.value.write_output(formatter)?;
 
-        formatter.write(";", false)?;
-
         Ok(())
     }
 }

@@ -5,9 +5,11 @@ use crate::{
 
 impl CanWriteOutput for Not {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.write("!", false)?;
+        formatter.write("(!", false)?;
 
         self.value.write_output(formatter)?;
+
+        formatter.write(")", false)?;
 
         Ok(())
     }

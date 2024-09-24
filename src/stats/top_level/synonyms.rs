@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     stats::{
         cross_ref::{Codex, Populator},
-        helpers::get_token_as_word,
+        helpers::{get_token_as_word, num_children_more_than, ValidationResult},
     },
     zil::{file_table::format_file_location, node::ZilNode},
 };
@@ -36,59 +36,67 @@ impl Populator for SynonymStats {
         self.basis.push(node);
     }
 
-    fn crunch(&mut self) -> Result<(), String> {
+    fn crunch(&mut self) -> ValidationResult<()> {
+        let mut errors: Vec<String> = Vec::new();
         for line in self.basis.iter() {
+            let mut synonym_errors: Vec<String> = Vec::new();
             let mut words: Vec<String> = Vec::new();
 
-            if line.children.len() < 3 {
-                return Err(format!(
-                    "Possible synonym node has less than three children\n{}",
-                    format_file_location(line)
-                ));
+            match num_children_more_than(line, 2) {
+                Ok(_) => {}
+                Err(e) => {
+                    errors.push(e);
+                    continue;
+                }
             }
 
-            let first_word = get_token_as_word(&line.children[0]).unwrap_or_default();
-            if first_word != "SYNONYM" {
-                unreachable!();
-            }
-
-            let second_word = get_token_as_word(&line.children[1]);
-            if second_word.is_none() {
-                return Err(format!(
-                    "Synonym node has non-word second child\n{}",
-                    format_file_location(&line)
-                ));
-            }
-
-            let second_word = second_word.unwrap();
-            if self.all_synonyms.contains_key(&second_word) {
-                return Err(format!(
-                    "Synonym node is not unique: already have synonyms for {}\n{}",
-                    second_word,
-                    format_file_location(&line)
-                ));
-            }
+            let second_word = match get_token_as_word(&line.children[1]) {
+                Ok(v) => Some(v),
+                Err(e) => {
+                    synonym_errors.push(e);
+                    None
+                }
+            };
 
             for c in line.children.iter().skip(2) {
-                let word = get_token_as_word(c);
+                let word = match get_token_as_word(c) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        synonym_errors.push(e);
+                        continue;
+                    }
+                };
 
-                if word.is_none() {
-                    return Err(format!(
-                        "Synonym node has non-word child\n{}",
-                        format_file_location(&c)
-                    ));
-                }
-
-                words.push(word.unwrap());
+                words.push(word);
             }
 
-            self.all_synonyms.insert(second_word, words);
+            if second_word.is_some() {
+                let second_word = second_word.as_ref().unwrap();
+                if self.all_synonyms.contains_key(second_word) {
+                    errors.push(format!(
+                        "Synonym node is not unique: already have synonyms for {}\n{}",
+                        second_word,
+                        format_file_location(&line)
+                    ));
+                }
+            }
+
+            if synonym_errors.len() > 0 {
+                errors.append(&mut synonym_errors);
+                continue;
+            }
+
+            self.all_synonyms.insert(second_word.unwrap(), words);
+        }
+
+        if errors.len() > 0 {
+            return Err(errors);
         }
 
         Ok(())
     }
 
-    fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> Result<(), String> {
+    fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> ValidationResult<()> {
         Ok(())
     }
 }

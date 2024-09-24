@@ -5,10 +5,14 @@ use crate::{
 
 impl CanWriteOutput for Location {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.write("game.getLocation(", false)?;
-
-        self.scope.write_output(formatter)?;
-
+        formatter.write("game.getParent(", false)?;
+        self.instance.write_output(formatter)?;
+        formatter.write(", ", false)?;
+        if self.nested {
+            formatter.write("true", false)?;
+        } else {
+            formatter.write("false", false)?;
+        }
         formatter.write(")", false)?;
 
         Ok(())
