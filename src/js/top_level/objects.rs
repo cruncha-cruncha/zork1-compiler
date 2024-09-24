@@ -90,7 +90,13 @@ impl CanWriteOutput for ObjectStats {
             formatter.outdent();
             formatter.writeln("},")?;
 
-            // don't write default vars, they're never used
+            formatter.writeln("vars: {")?;
+            formatter.indent();
+            for (var, val) in info.vars.iter() {
+                formatter.writeln(&format!("{}: {},", Formatter::safe_case(var), val))?;
+            }
+            formatter.outdent();
+            formatter.writeln("},")?;
 
             formatter.writeln("hooks: {")?;
             formatter.indent();
@@ -116,18 +122,6 @@ impl CanWriteOutput for ObjectStats {
                 formatter.writeln(&format!(
                     "exitPlayer: '{}',",
                     Formatter::safe_case(info.actions.exit_player.as_ref().unwrap())
-                ))?;
-            }
-            if info.actions.prso.is_some() {
-                formatter.writeln(&format!(
-                    "prso: '{}',",
-                    Formatter::safe_case(info.actions.prso.as_ref().unwrap())
-                ))?;
-            }
-            if info.actions.prsi.is_some() {
-                formatter.writeln(&format!(
-                    "prsi: '{}',",
-                    Formatter::safe_case(info.actions.prsi.as_ref().unwrap())
                 ))?;
             }
             formatter.outdent();

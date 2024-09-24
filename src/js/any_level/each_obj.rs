@@ -25,6 +25,7 @@ impl CanWriteOutput for EachObj {
 
         for node in self.body.iter() {
             node.write_output(formatter)?;
+            formatter.write(";", false)?;
         }
 
         formatter.outdent();

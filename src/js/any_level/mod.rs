@@ -1,12 +1,14 @@
 pub mod add;
 pub mod and;
+pub mod cmd;
 pub mod cond;
 pub mod copy_move;
 pub mod desc;
 pub mod divide;
 pub mod each_obj;
-pub mod each_var;
+pub mod each_val;
 pub mod get_var;
+pub mod inst;
 pub mod is_asc;
 pub mod is_des;
 pub mod is_equal;

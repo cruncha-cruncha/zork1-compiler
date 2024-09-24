@@ -8,7 +8,7 @@
     <title>Zil-Like</title>
     <link rel="icon" href="favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="./game.js" type="module"></script>
+    <script src="./engine.js" type="module"></script>
 </head>
 
 <body class="m-0 p-0 h-full">
@@ -27,7 +27,7 @@
     </div>
 
     <script type="module">
-        import { game } from './game.js';
+        import { game } from './engine.js';
         let logBuffer = [];
         let noOutputLogs = true;
 
@@ -89,17 +89,17 @@
             if (!result.handled) {
                 if (result.goDirection) {
                     logger("You can't go that way.\n");
-                } else if ((result.prso && !result.foundPrso) || (result.prsi && !result.foundPrsi)) {
+                } else if ((result.cmd.prso && !result.cmd.foundPrso) || (result.cmd.prsi && !result.cmd.foundPrsi)) {
                     logger("Couldn't find anything to do with that.\n");
                 } else {
                     logger("I don't understand that command.\n");
                 }
-            } else if (result.gameOver) {
-                // Do something
+            } else if (result.playerVars.health < 0) {
+                // do something
             }
 
             if (noOutputLogs) {
-                logger("Nothing happens.\n");
+                logger("Nothing happens\n");
             }
         }
     </script>

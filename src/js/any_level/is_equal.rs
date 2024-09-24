@@ -28,7 +28,7 @@ impl CanWriteOutput for IsEqual {
 
             formatter.write(")", false)?;
         } else {
-            formatter.write("game.isEqual(", false)?;
+            formatter.write("(game.isEqual(", false)?;
 
             for (i, val) in self.values.iter().enumerate() {
                 val.write_output(formatter)?;
@@ -38,7 +38,7 @@ impl CanWriteOutput for IsEqual {
                 }
             }
 
-            formatter.write(")", false)?;
+            formatter.write("))", false)?;
         }
 
         Ok(())

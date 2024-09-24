@@ -54,7 +54,7 @@ impl CanWriteOutput for Tell {
             formatter.write("'\\n'", false)?;
         }
 
-        formatter.write(");", false)?;
+        formatter.write(")", false)?;
 
         Ok(())
     }

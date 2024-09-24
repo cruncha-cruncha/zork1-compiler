@@ -49,8 +49,6 @@ impl CanWriteOutput for SetVar {
 
         self.value.write_output(formatter)?;
 
-        formatter.write(";", false)?;
-
         Ok(())
     }
 }

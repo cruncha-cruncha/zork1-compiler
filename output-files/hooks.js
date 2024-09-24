@@ -1,23 +1,19 @@
-import { game } from "./game.js";
-import { routines } from "./routines.js";
-
 const getPriority = (hookType) => {
   // higher number = higher priority = called earlier
   // adding a hook of priority N will remove all hooks of priority N-1 or lower
   switch (hookType) {
-    // hooks 13, 12, and 11 are fired at most once per command
-    case "OBJ-ACT-PRSI":
+    case "BEFORE-ACTION":
       return 13;
-    case "OBJ-ACT-PRSO":
-      return 12;
     case "SYNTAX-ACTION":
+      return 12;
+    case "AFTER-ACTION":
       return 11;
-    // hooks 10 and 9 are only ever fired by MOVE
+    // hooks 10 and 9 are only ever fired by <MOVE ... >
     case "OBJ-ACT-REMOVE":
       return 10;
     case "OBJ-ACT-ADD":
       return 9;
-    // hooks 8, 7, 6, and 5 are fired by GO or MOVE
+    // hooks 8, 7, 6, and 5 are fired by GO DIRECTION or <MOVE PLAYER ... >
     case "ROOM-ACT-EXIT":
       return 8;
     case "PLAYER-ACT-EXIT":
@@ -52,21 +48,24 @@ export const newHooks = () => {
     }
 
     let next = buffer.shift();
-    const routine = routines[next.rName];
-    routine.func(next.cRoom, ...game.getRoutineCommandArgs());
+    console.log("call next", next.func, next.cRoom, next.cmds);
+    next.func(next.cRoom, next.cmds);
 
     return next;
   }
 
   return {
-    insert(hookType, rName, cRoom) {
+    insert(hookType, func, cRoom, cmds) {
       const priority = getPriority(hookType);
+
+      // console.log(`inserting hook`, hookType, func, cRoom, cmds);
 
       if (buffer.length === 0) {
         buffer.push({
           priority,
-          rName,
+          func,
           cRoom,
+          cmds,
         });
         return;
       }
@@ -86,14 +85,15 @@ export const newHooks = () => {
 
       buffer.splice(low, buffer.length - low, {
         priority,
-        rName,
+        func,
         cRoom,
+        cmds,
       });
     },
 
-    callDescription(rName, cRoom, prso) {
-      const routine = routines[rName];
-      routine.func(cRoom, "", prso, "");
+    callDescription(func, cRoom, cmds) {
+      console.log("call description", func, cRoom, cmds);
+      func(cRoom, cmds);
     },
 
     callNext,

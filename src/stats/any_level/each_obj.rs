@@ -12,12 +12,13 @@ use crate::{
 
 use super::set_var::Scope;
 
-// starts a loop
-// the third child is a group of exactly one variable name
-// this variable gets the name of each object as we loop
-// cannot return early
-
-// can loop over: object (it's nested objects), player (my inventory), room (objects in room)
+// starts a loop, over object instances
+// option 1: EACH-OBJ IRP (obj) ...
+// option 2: EACH-OBJ OBJ (obj) ...
+// where:
+// IRP = an object instance, a room, or player
+// OBJ = an object
+// obj = developer-defined word, gets an object instance
 
 pub struct EachObj {
     pub scope: Scope,
@@ -54,7 +55,7 @@ impl CanValidate for EachObj {
                 if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
                         ReturnValType::Inst => {
-                            self.scope = Scope::Local(word.to_string());
+                            self.scope = Scope::Local(word);
                         }
                         _ => {
                             return Err(format!(
@@ -68,6 +69,8 @@ impl CanValidate for EachObj {
                     self.scope = Scope::Player;
                 } else if v.is_room(&word) {
                     self.scope = Scope::Room(word);
+                } else if v.is_object(&word) {
+                    self.scope = Scope::Object(word);
                 } else {
                     return Err(format!(
                         "Word {} is not player, and not found in locals, globals, rooms, or objects\n{}",

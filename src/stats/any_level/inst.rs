@@ -9,54 +9,60 @@ use crate::{
     },
 };
 
-// LOC INST
-// LOC INST N
+// INST IRP OBJ
+// INST IRP OBJ N
 
 use super::set_var::Scope;
 
-pub struct Location {
-    pub instance: Scope,
+pub struct Inst {
+    pub scope: Scope,
+    pub object_name: String,
     pub nested: bool,
 }
 
-impl Location {
+impl Inst {
     pub fn new() -> Self {
         Self {
-            instance: Scope::TBD,
+            scope: Scope::TBD,
+            object_name: String::new(),
             nested: false,
         }
     }
 }
 
-impl HasReturnType for Location {
+impl HasReturnType for Inst {
     fn return_type(&self) -> Vec<ReturnValType> {
-        vec![ReturnValType::Inst, ReturnValType::RP]
+        vec![ReturnValType::Inst]
     }
 }
 
-impl CanValidate for Location {
+impl CanValidate for Inst {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        num_children_between(n, 2, 3)?;
+        num_children_between(n, 3, 4)?;
 
-        v.expect_val(ReturnValType::Inst);
+        v.expect_vals(vec![ReturnValType::Inst, ReturnValType::RP]);
 
         match n.children[1].node_type {
             ZilNodeType::Token(TokenType::Word) => {
                 let word = get_token_as_word(&n.children[1]).unwrap();
-                if let Some(return_type) = v.has_local_var(&word) {
+                if word == "PLAYER" {
+                    self.scope = Scope::Player;
+                } else if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
-                        ReturnValType::Inst => self.instance = Scope::Local(word),
+                        ReturnValType::Inst => self.scope = Scope::Local(word),
                         _ => {
                             return Err(format!(
-                                "Variable {} is not an object\n{}",
+                                "Variable {} is not a room or object\n{}",
                                 word,
                                 format_file_location(&n.children[1])
                             ));
                         }
                     }
+                } else if v.is_room(&word) {
+                    self.scope = Scope::Room(word);
                 } else {
                     return Err(format!(
-                        "Word {} not found in locals\n{}",
+                        "Word {} is not player, nor room, and not found in locals\n{}",
                         word,
                         format_file_location(&n.children[1])
                     ));
@@ -65,7 +71,7 @@ impl CanValidate for Location {
             ZilNodeType::Cluster => match v.validate_cluster(&n.children[1]) {
                 Ok(_) => match v.take_last_writer() {
                     Some(w) => {
-                        self.instance = Scope::Writer(w);
+                        self.scope = Scope::Writer(w);
                     }
                     None => unreachable!(),
                 },
@@ -80,8 +86,30 @@ impl CanValidate for Location {
             }
         }
 
-        if n.children.len() == 3 {
-            let third_word = match get_token_as_word(&n.children[2]) {
+        match n.children[2].node_type {
+            ZilNodeType::Token(TokenType::Word) => {
+                let word = get_token_as_word(&n.children[2]).unwrap();
+                if v.is_object(&word) {
+                    self.object_name = word;
+                } else {
+                    return Err(format!(
+                        "Word {} is not an object\n{}",
+                        word,
+                        format_file_location(&n.children[2])
+                    ));
+                }
+            }
+            _ => {
+                return Err(format!(
+                    "Expected word, found {}\n{}",
+                    n.children[1].node_type,
+                    format_file_location(&n.children[2])
+                ));
+            }
+        }
+
+        if n.children.len() == 4 {
+            let third_word = match get_token_as_word(&n.children[3]) {
                 Ok(v) => v,
                 Err(e) => return Err(e),
             };
@@ -90,9 +118,9 @@ impl CanValidate for Location {
                 self.nested = true;
             } else {
                 return Err(format!(
-                    "Expected third word to be N, found {}\n{}",
+                    "Third word is not N {}\n{}",
                     third_word,
-                    format_file_location(&n.children[2])
+                    format_file_location(&n.children[3])
                 ));
             }
         }

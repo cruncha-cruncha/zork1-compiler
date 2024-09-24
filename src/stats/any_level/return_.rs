@@ -1,7 +1,7 @@
 use crate::{
     js::write_output::OutputNode,
     stats::{
-        helpers::{get_token_as_number, get_token_as_text, get_token_as_word, num_children},
+        helpers::{get_token_as_number, get_token_as_word, num_children},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -27,7 +27,7 @@ impl Return {
 
 impl HasReturnType for Return {
     fn return_type(&self) -> Vec<ReturnValType> {
-        vec![ReturnValType::Number]
+        vec![ReturnValType::None]
     }
 }
 
@@ -38,10 +38,6 @@ impl CanValidate for Return {
         v.expect_val(ReturnValType::Number);
 
         match n.children[1].node_type {
-            ZilNodeType::Token(TokenType::Text) => {
-                let text = get_token_as_text(&n.children[1]).unwrap();
-                self.value = OutputNode::Text(text);
-            }
             ZilNodeType::Token(TokenType::Number) => {
                 let num = get_token_as_number(&n.children[1]).unwrap();
                 self.value = OutputNode::Number(num);

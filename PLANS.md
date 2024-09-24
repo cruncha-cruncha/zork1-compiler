@@ -1,8 +1,7 @@
 # Map
 
-Underground should have three main areas: maze, treasure / puzzle, and monster. Monster can also show up in the treasure area, but is less likely to after initial two encounters. Have to go through the maze or monster area to get to the treasure. Maze rooms move around confusingly but predictably (based on the moon? player movement? idk).
+Underground should have three main areas: maze, treasure, and monster. Monster and cave-spiders can show up anywhere if the player isn't carrying light.
 
-- maze: 2 tunnels, 3 hollows, 1 gallery, 2 grottos;
 - treasure: 1 underground-lake, 2 passages, 1 cavern, 1 hall;
 - monster: 1 den, 4 caves, 2 passages, 1 cleft;
 
@@ -12,7 +11,7 @@ On player:
 cloak, axe, flint, cup, kettle, knife,
 
 In / near cabin:
-table, chairs, bed-frame, fireplace,
+table, chairs, bed-frame,
 door, key, window,
 bucket, book, nails,
 
@@ -25,8 +24,8 @@ spider, cave-spider, spider-web,
 monster,
 
 Forageable:  
-sticks, detritus, bullrushes, dried-grass,
-logs, sap, river-stones, bones, sand, water,
+sticks, detritus, bullrushes,
+logs, sap, river-stones, bones, water,
 
 Foreageable and edible:  
 berries, herbs, mushrooms, nuts, roots, ferns,
@@ -39,9 +38,8 @@ gold-lump, stone-door, coffin (and cursed-skull, magic-ring), obsidian shard, sw
 
 # Objectives
 
-enter cabin, light fire, cook meal, find gem, kill monster
-find treasure, find tools, write a note
-build boat and descend waterfall to finish game
+enter cabin, light fire, cook meal, find gem, kill monster, write a note,
+build a boat, descend waterfall to finish game
 
 # Mechnics
 
@@ -93,15 +91,17 @@ Can gain health by eating soup or drinking tea. Hearing an animal's story perman
 
 Food is important. The food number e = (total-things-eaten - (day x 2)). If, in the morning: e < -5, then you lose 20 health; e < -3, then you lose 10 health; e < 0 then you lose 2 health. If, in the morning: e > 6, then you lose (e + day) health.
 
-Sleep is also important. The sleep number z = (total-sleeps - day), and the nap (sleeps during the day) number k = (total-naps - day). If, at the start of night: z < -2, then the player loses 40 health, immediately falls asleep, and dreams nothing; z < -1 and n < 3, then the player loses 20 health, immediately falls asleep, and dreams nothing; z < -1 but n > 2 then the player loses 10 health; z < 0 then the player gets a warning. If, at the start of night: n > 5, the player loses 10 health.
+Sleep is also important. The sleep number z = (total-sleeps - day), and the nap (sleeps during this day) number is k. If, at the start of night: z < -2, then the player loses 40 health, immediately falls asleep, and dreams nothing; z < -1, then the player loses 20 health, immediately falls asleep, and dreams nothing; z < -1 then the player loses 10 health; z < 0, then the player gets a warning; z > 1, then the player gets a warning; z > 3, then the player loses 20 health. If, at the start of night: k > 5, the player loses 10 health but regains 1 sleep; k > 2, the player regains 1 sleep.
 
-The player dreams at night, but not during naps.
+The player may dream at night, but never during naps.
+
+The player can only hold seven things lol.
 
 # Combat
 
 Weapons have DAMAGE, tools have HEALTH. Most of the information in this sectino can be similarly applied to tools. Sharpening (using a wet river-stone) a weapon increases it's damage up to it's MAX-DAMAGE. Using a weapon might decrease it's damage. If damage reaches zero, the weapon is broken, cannot be used, and must be repaired (with sticks and wire, cooked over the fire). Not everything can be repaired.
 
-Actual damage is DAMAGE x (1 + ((health - (max-health / 2)) / max-health)) +/- (MAX-DAMAGE / 4).
+Actual damage is usually DAMAGE x (1 + ((health - (max-health / 2)) / max-health)) +/- (MAX-DAMAGE / 4), but may change based on the weapon and it's target.
 
 - ((health - (max-health / 2)) / max-health) is going to be a value from -0.5 to 0.5, and it means that the healthier you are, the better you wield a weapon.
 - DAMAGE x (1 + above) scales the base damage from 0.5 to 1.5
@@ -110,7 +110,7 @@ Actual damage is DAMAGE x (1 + ((health - (max-health / 2)) / max-health)) +/- (
 
 Negative damage hurts you. You can think of damage as always a high roll or a low roll, never a medium roll. Chance to high roll is 50%. Damage affects you or your opponents HEALTH. You can do more damage than MAX-DAMAGE; this value is more like max base damage. A full moon changes the actual damage calculation to DAMAGE +/- MAX-DAMAGE.
 
-I don't want the monster to one-encounter-KO, so the first encounter it should be surprised, and run away after one hit. Second encounter it should attack but let you run away. Third+ encounters it should be hard to run away from.
+I don't want the monster to one-encounter-KO, so the first encounter it should be surprised, and run away after one hit. After that, it won't run away, and will pursue you unless you're carrying light or you leave the underground.
 
 Obsidian shard is extremely sharp but not strong (has a lot of damage but loses it quickly). Once it breaks, it cannot be repaired.
 
@@ -131,25 +131,24 @@ The stone door can be:
 
 # Crafting
 
-Player can only sleep (or nap) if they have their cloak. Fire can be put out by peeing or putting [tea, soup, water] on it. Fire lasts (logs x hours) long, or (logs x hours / 2) long if cabin door or window is broken.
+Player can only sleep (or nap) if they have their cloak. Fire can be put out by peeing or putting [tea, soup, water] on it. Fire lasts (logs x 8) commands long, or (logs x 4) commands long if outside, or cabin door or window is broken.
 
-Eating mushrooms or roots raw will result in a mild sickness (-5 health). Other raw food gives you +5 health. Eating soup or tea gives you +20 health. Drinking soup with bone in it, or any tea, increases your max health (up to a global limit).
+Eating bone, mushrooms, or roots raw will result in a mild sickness (-5 health). Other raw food gives you +5 health. Eating soup or tea gives you +20 health. Drinking soup with bone in it, or any tea, increases your max health (up to a global limit).
 
-Soup: put anything edible + water in the kettle, cook over the fire
-Tea: put anything edible + water in the kettle, cook over the fire, pour into cup
-Fire: put [sticks, detritus, bullrushes, dried-grass, sap, boiled-sap] and logs in fireplace, then spark flint at fireplace.
-Strap: work dried-grass with dried-grass, or dried-grass with bone
+Soup: put anything edible + water in the kettle or bucket, cook over the fire
+Tea: put anything edible + water in the kettle or bucket, cook over the fire, pour into cup
+Fire: put [sticks, detritus, bullrushes, sap, book, book-page] and logs in fireplace, then spark flint at fireplace.
+Strap: work detritus with bone, or bullrush with bone. Must have 4 or more detritus / bullrush in the area.
 Rough-board: work log with axe (makes 4), or hit [chair, table, door, bed-frame]
 Boiled-sap: put sap in kettle, cook over fire
 Charcoal: after a fire goes out, but before a new fire has started.
 Book-page: hit book
 Note: work book-page with charcoal
-Torch: put both sap and [detritus, bullrushes, dried-grass] onto stick, strike flint at stick
+Torch: put both [sap, boiled-sap] and [detritus, bullrushes] onto stick, strike flint at stick
 Master-key: work bone with obsidian shard
 Boat: work boat-frame with at least 2 straps, at least 10 rough-boards, boiled-sap, and nails
 
-If you strike flint at [sticks, detritus, dried-grass] outside and it hasn't rained
-in two days, the forest burns down and you die. Otherwise, the fire will last one turn.
+If you strike flint at [sticks, detritus, book, book-page] outside and it hasn't rained in two days, the forest burns down and you die. Otherwise, the fire will last one turn.
 
 In order to rappel down the waterfall: work on pick-axe with straps, then keep in inventory.
 
@@ -167,3 +166,164 @@ We can have an infinite supply of charcoal, as long as it only counts as one obj
 # Config
 
 Would like a bash script to checkout main, cargo run, checkout gh-page, merge main, then push.
+
+# Commands
+
+- INST is an object instance
+- ROOM is the name of a room
+- PLAYER is the player
+- IRP is an object instance, a room, or the player
+- OBJ is the name of an object
+- VAR is the name of a variable, either existing or new
+- NUM is a number
+- BOOL is a boolean
+- any of these can be replaced with a (local or global) variable, or a routine, that returns the value
+
+## GET-VAR
+
+- GET-VAR IRP VAR
+- returns a variable. It's value will be 0 if variable doesn't exist
+
+## SET-VAR
+
+- SET-VAR VAR NUM
+- SET-VAR IRP VAR NUM
+- returns nothing
+
+## ADD, MULTIPLY
+
+- ADD NUM NUM...
+- returns a number
+
+## SUBTRACT, DIVIDE
+
+- SUBTRACT NUM NUM
+- accepts any combination of two variables or numbers
+- returns a number
+
+## IS-DES
+
+- IS-DES NUM NUM...
+- returns a boolean
+
+## IS-ASC
+
+- IS-ASC NUM NUM...
+- returns a boolean
+
+## IS-EQUAL
+
+- IS-EQUAL anything anything...
+- if all arguments are of type INST, they must be the same instance
+- can compare INST to OBJ
+- can compare player, but it's only equal to itself
+
+## IS-IN
+
+- IS-IN IRP IRP/OBJ
+- IS-IN IRP IRP/OBJ N
+- is IRP/OBJ inside the IRP? Accepts nested, which also changes the behaviour of comparing the object with itself
+
+## AND, OR
+
+- AND BOOL...
+- acccepts any number of boolean values (AND, OR, NOT, IS-DES, IS-ASC, IS-EQUAL)
+- returns a boolean
+
+## NOT
+
+- NOT BOOL
+- accepts a single boolean
+- returns a boolean
+
+## COND
+
+- COND ( BOOL anything... )...
+- can have as many groups as you want
+- can have as much stuff in the group as you want
+- first child of group must evaluate to a boolean
+- returns nothing
+
+## EACH-OBJ
+
+- EACH-OBJ IRP (VAR) anything...
+- loops through all the object instances in the top-level of IRP, assigning them to VAR
+- returns nothing
+- EACH-OBJ OBJ (VAR) anything...
+- loops through all the object instances of OBJ, assigning them to VAR
+- returns nothing
+
+## EACH-VAL
+
+- EACH-VAL IRP (VAR1 VAR2) anything...
+- loops through all variables in IRP, assigns the variable name to VAR1 (as TEXT) and the variable value to VAL2
+- EACH-VAL NUM (VAR1) anything...
+- loops from 0 up to (but not including) NUM, assigns the value to VAR1
+
+## MOVE
+
+- MOVE PLAYER ROOM
+- returns nothing
+- MOVE INST IRP
+- can fail, but will do so silently
+- returns nothing
+- MOVE INST
+- aka delete
+- returns nothing
+
+## COPY-MOVE
+
+- COPY-MOVE OBJECT IRP
+- returns nothing
+- COPY-MOVE INST IRP
+- returns nothing
+
+## LOC
+
+- LOC INST
+- get the location (parent) of INST
+- returns IRP
+- LOC INST N
+- N stands for 'nested'
+- goes all the way up the chain until it finds the room this object is in
+- if in player, returns the room the player is in
+- returns a room
+
+## INST
+
+- INST IRP OBJ
+- gets the first INST in this IRP which is of type OBJ.
+- if not found, returns an empty IRP. Can test with IS-EQUAL
+- returns an INST
+- INST IRP OBJ N
+- gets the first INST in this IRP, or any of it's children. which is of type OBJ
+- N stands for nested
+- returns an INST
+
+## RETURN
+
+- RETURN NUM
+- returns nothing
+
+## TELL
+
+- TELL NUM/TEXT...
+- TELL NUM/TEXT... CR
+- returns nothing
+
+## DESC
+
+- DESC IRP
+- returns nothing
+
+## RAND
+
+- RAND
+- accepts no arguments
+- returns a number from 0 to 99 (inclusive)
+
+## CMD
+
+- CMD NUM
+- get the NUM object instance from the syntax command
+- if the syntax command has one object but you ask for CMD 2, you get an empty IRP

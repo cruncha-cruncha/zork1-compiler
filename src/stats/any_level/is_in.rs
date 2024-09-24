@@ -102,6 +102,8 @@ impl CanValidate for IsIn {
                     }
                 } else if v.is_object(&word) {
                     self.item = Scope::Object(word);
+                } else if v.is_room(&word) {
+                    self.item = Scope::Room(word);
                 } else {
                     return Err(format!(
                         "Word {} not player, and not found in locals or rooms\n{}",
@@ -127,8 +129,20 @@ impl CanValidate for IsIn {
         }
 
         if n.children.len() == 4 {
-            // don't care what the fourth child is, presence is enough
-            self.nested = true;
+            let third_word = match get_token_as_word(&n.children[3]) {
+                Ok(v) => v,
+                Err(e) => return Err(e),
+            };
+
+            if third_word == "N" {
+                self.nested = true;
+            } else {
+                return Err(format!(
+                    "Third word is not N {}\n{}",
+                    third_word,
+                    format_file_location(&n.children[3])
+                ));
+            }
         }
 
         Ok(())

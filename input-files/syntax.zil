@@ -1,40 +1,40 @@
-<BUZZ A OF ALL SOME THE AGAIN>
+<BUZZ A OF MY ALL SOME THE AGAIN>
 
-<SYNTAX WHERE AM I = V-ROOM-DETAIL>
-<SYNTAX LOOK AROUND = V-DESC-OBJECTS-IN-ROOM>
-<SYNTAX INVENTORY = V-INVENTORY>
-<SYNTAX WEATHER = WEATHER-REPORT>
-<SYNTAX SLEEP = V-SLEEP>
+<SYNTAX WHERE AM I>
+<SYNTAX WHERE CAN I GO>
+<SYNTAX WHAT IS HERE>
+<SYNTAX WHAT CAN I DO>
+<SYNTAX LOOK AROUND>
+<SYNTAX INVENTORY>
+<SYNTAX WEATHER>
+<SYNTAX WEATHER REPORT>
+<SYNTAX SLEEP>
 
-<SYNTAX EXAMINE OBJECT = V-EXAMINE>
+<SYNTAX EXAMINE OBJECT>
 <SYNONYM EXAMINE INSPECT READ INVESTIGATE>
-<SYNTAX TAKE OBJECT = V-TAKE>
+<SYNTAX TAKE OBJECT>
 <SYNONYM TAKE GATHER GET>
-<SYNTAX EMPTY OBJECT = V-TAKE-OUT>
+<SYNTAX DROP OBJECT>
+<SYNTAX EMPTY OBJECT>
 <SYNONYM EMPTY UNPACK>
-<SYNTAX DROP OBJECT = V-DROP>
-<SYNTAX PUT OBJECT (CAN-CONTAIN) INTO OBJECT = V-PUT-IN>
-<SYNONYM PUT PLACE POUR>
-<SYNTAX FILL OBJECT (CAN-CONTAIN) WITH OBJECT = V-PUT-IN>
-<SYNTAX OPEN OBJECT = V-OPEN>
-<SYNTAX CLOSE OBJECT = V-CLOSE>
-<SYNTAX HIT OBJECT WITH OBJECT (MAX-DAMAGE) = V-HIT-WITH>
-<SYNTAX COOK OBJECT = V-COOK>
-<SYNONYM COOK BOIL ROAST>
-<SYNTAX EAT OBJECT (EDIBLE) = V-EAT>
+<SYNTAX ADD OBJECT TO OBJECT>
+<SYNTAX PUT OBJECT IN OBJECT>
+<SYNTAX FILL OBJECT WITH OBJECT>
+<SYNTAX POUR OBJECT ON OBJECT>
+<SYNTAX HIT OBJECT WITH OBJECT>
+<SYNTAX WORK OBJECT WITH OBJECT>
+
+<SYNTAX EAT OBJECT>
 <SYNONYM EAT TASTE LICK DRINK IMBIBE>
-<SYNTAX WORK OBJECT WITH OBJECT (MAX-HEALTH) = V-WORK-WITH>
+<SYNTAX OPEN OBJECT>
+<SYNTAX SPARK OBJECT AT OBJECT>
+<SYNTAX TALK TO OBJECT>
+<SYNTAX PEE ON OBJECT>
+<SYNTAX WRITE NOTE>
 
-<SYNTAX SPARK FLINT AT OBJECT = V-SPARK-AT>
-<SYNTAX TALK TO OBJECT = V-TALK-TO>
-<SYNTAX PEE ON OBJECT = V-PEE-ON>
-<SYNTAX WRITE NOTE = V-WRITE-NOTE>
-
-<SYNTAX WHERE CAN I GO = V-WHERE-TO-GO>
-<SYNTAX SWIM = V-SWIM>
-<SYNTAX DIVE IN = V-SWIM>
-<SYNTAX JUMP IN = V-JUMP>
-<SYNTAX JUMP DOWN = V-JUMP>
+<SYNTAX SWIM>
+<SYNTAX JUMP IN>
+<SYNTAX JUMP DOWN>
 
 ;"if DESC is a function, it can look for this global to optionally provide a detailed description"
 <GLOBAL DETAILED-DESC 0>
@@ -42,170 +42,195 @@
 ;"Explain more the first time we look around"
 <GLOBAL FIRST-LOOK-AROUND 1>
 
+;"Explain more the first time we desc room in detail"
+<GLOBAL FIRST-WHERE-AM-I 1>
+
+;"Explain more the first time we list objects in the room"
+<GLOBAL FIRST-WHAT-IS-HERE 1>
+
 ;"Explain more the first time we examine an object"
 <GLOBAL FIRST-EXAMINE 1>
 
 <ROUTINE V-DESC-ROOM ()
-      <DESC C-ROOM>
+    <DESC C-ROOM>
+>
+
+<WEATHER ()
+    <WEATHER-REPORT>
+>
+
+<LOOK ()
+    <COND (
+        <IS-EQUAL FIRST-LOOK-AROUND 1>
+        <TELL "LOOK AROUND runs two commands for us:" CR>
+    )>
+    <V-ROOM-DETAIL>
+    <COND (
+        <NOT <IS-EQUAL FIRST-LOOK-AROUND 1>>
+        <TELL "items:" CR>
+    )>
+    <V-DESC-OBJECTS-IN-ROOM>
+    <COND (
+        <IS-EQUAL FIRST-LOOK-AROUND 1>
+        <SET-VAR FIRST-LOOK-AROUND 0>
+    )>
+>
+
+<WHERE () 
+    <V-ROOM-DETAIL>
 >
 
 <ROUTINE V-ROOM-DETAIL () 
-      <SET-VAR DETAILED-DESC 1>
-      <DESC C-ROOM>
-      <SET-VAR DETAILED-DESC 0>
+    <COND (
+        <IS-EQUAL FIRST-WHERE-AM-I 1>
+        <SET-VAR FIRST-WHERE-AM-I 0>
+        <TELL "WHERE AM I describes the current room, and may go into more detail than
+        a regular description of the room." CR>
+    )>
+    <SET-VAR DETAILED-DESC 1>
+    <DESC C-ROOM>
+    <SET-VAR DETAILED-DESC 0>
+>
+
+<WHAT () 
+    <V-DESC-OBJECTS-IN-ROOM>
 >
 
 <ROUTINE V-DESC-OBJECTS-IN-ROOM (COUNT)
-      <COND (
-            <IS-EQUAL FIRST-LOOK-AROUND 1>
-            <SET-VAR FIRST-LOOK-AROUND 0>
-            <TELL "This command lists interactable objects in the immediate vicinity.
-            Interactions may not be obvious." CR>
-            <TELL "Objects nested inside other objects are not listed, but might show up
-            if you EXAMINE their container." CR>
-      )>
-      <EACH-OBJ C-ROOM (OBJ)
+    <COND (
+        <IS-EQUAL FIRST-WHAT-IS-HERE 1>
+        <SET-VAR FIRST-WHAT-IS-HERE 0>
+        <TELL "WHAT IS HERE lists interactable objects in the immediate vicinity.
+        Interactions may not be obvious." CR>
+        <TELL "Objects nested inside other objects are not listed,
+        but might show up if you EXAMINE their container." CR>
+    )>
+    
+    <EACH-OBJ C-ROOM (OBJ)
+        <SET-VAR COUNT <ADD COUNT 1>>
+        <DESC OBJ>
+        <TELL CR>
+    >
+    <COND (
+        <IS-EQUAL COUNT 0>
+        <TELL "This space appears to be empty." CR>
+    )>
+>
+
+<INVENTORY (COUNT)
+    <EACH-OBJ PLAYER (OBJ)
+        <SET-VAR COUNT <ADD COUNT 1>>
+        <DESC OBJ>
+        <TELL CR>
+    >
+>
+
+<EXAMINE (COUNT R)
+    <COND(
+        <IS-EQUAL FIRST-EXAMINE 1>
+        <SET-VAR FIRST-EXAMINE 0>
+        <TELL "The EXAMINE command will list items nested inside an object, and might also
+        tell you more about the object itself. If there's any interesting
+        items in this object, you can try to EMPTY it, then TAKE items off the ground." CR>
+    )>
+
+    <SET-VAR DETAILED-DESC 1>
+    <DESC  <CMD 1>>
+    <SET-VAR DETAILED-DESC 0> 
+    <TELL CR>
+
+    <EACH-OBJ <CMD 1> (OBJ) 
+        <SET-VAR COUNT <ADD COUNT 1>>
+    >
+
+    <COND (
+        <IS-EQUAL COUNT 0>
+        <TELL "nothing inside" CR>
+        <RETURN 1>
+    )>
+
+    <TELL "items inside:" CR>
+    <EACH-OBJ <CMD 1> (OBJ) 
+        <DESC OBJ>
+        <TELL CR>
+    >
+>
+
+<EAT ()
+    ;"TODO"
+    <COND (
+        <NOT <IS-EQUAL <GET-VAR <CMD 1> EDIBLE> 1>>
+        <TELL "You can't eat that." CR>
+    )>
+>
+
+<TAKE ()
+    <COND (
+        <IS-EQUAL <GET-VAR <CMD 1> NO-TAKE> 1>
+        <TELL "This can't be picked up" CR>
+    )(
+        <IS-EQUAL 1 1>
+        <MOVE <CMD 1> PLAYER>
+        <TELL "Picked up" CR>
+    )>
+>
+
+<EMPTY (COUNT)
+    <EACH-OBJ <CMD 1> (OBJ)
+        <COND (
+            <NOT <IS-EQUAL <GET-VAR OBJ NO-TAKE> 1>>
+            <MOVE OBJ C-ROOM>
             <SET-VAR COUNT <ADD COUNT 1>>
-            <DESC OBJ>
-            <TELL CR>
-      >
-      <COND (
-            <IS-EQUAL COUNT 0>
-            <TELL "This space appears to be empty." CR>
-      )>
+        )>
+    >
+    <COND (
+        <IS-DES COUNT 0>
+        <TELL "Emptied" CR>
+    )>
 >
 
-<ROUTINE V-INVENTORY (COUNT)
-      <EACH-OBJ PLAYER (OBJ)
-            <SET-VAR COUNT <ADD COUNT 1>>
-            <DESC OBJ>
-            <TELL CR>
-      >
-      <COND (
-            <IS-EQUAL COUNT 0>
-            <TELL "There's nothing in your inventory." CR>
-      )>
+<PEE ()
+    ;"if fire or torch, put out"
+    ;"else, print cool"
+    <COND (
+        <IS-EQUAL <CMD 1> FIRE>
+        <MOVE  <CMD 1>>
+        <TELL "The fire goes out." CR>
+    )(
+        <IS-EQUAL <CMD 1> TORCH>
+        <SET-VAR <CMD 1> LIT 0>
+        <TELL "The torch goes out." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "Cool." CR>
+    )>
 >
 
-<ROUTINE V-SPARK-AT ()
-      ;"do nothing, let the object's ACT-PRSO handle it"
+<WRITE (HAS-C HAS-P)
+    ;"must have charcoal and paper in player or room"
+    <COND (
+        <AND 
+            <OR <IS-IN C-ROOM CHARCOAL> <IS-IN PLAYER CHARCOAL>>
+            <OR <IS-IN C-ROOM BOOK-PAGE> <IS-IN PLAYER BOOK-PAGE>>
+        >
+        <COPY-MOVE NOTE C-ROOM>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "You need paper and charcoal." CR>
+    )>
 >
 
-<ROUTINE V-HIT-WITH ()
-      ;"do nothing, let the object's ACT-PRSO or ACT-PRSI handle it"
+<DROP ()
+    <COND (
+        <IS-IN PLAYER  <CMD 1>>
+        <MOVE <CMD 1> C-ROOM>
+    )>
 >
 
-<ROUTINE V-OPEN ()
-      ;"do nothing, let the object's ACT-PRSO handle it"
+<SWIM ()
+    <TELL "The water looks a little chilly, it would be better if we had a boat, or maybe built one?" CR>
 >
 
-<ROUTINE V-CLOSE ()
-      ;"do nothing, let the object's ACT-PRSO handle it"
->
-
-<ROUTINE V-EXAMINE (COUNT R)
-      <SET-VAR DETAILED-DESC 1>
-      <DESC PRSO>
-      <SET-VAR DETAILED-DESC 0> 
-      <TELL CR>
-
-      <COND(
-            <IS-EQUAL FIRST-EXAMINE 1>
-            <SET-VAR FIRST-EXAMINE 0>
-            <TELL "The EXAMINE command will list items nested inside the object, and might also
-            tell you more about the object itself. If there's any interesting
-            items in this object, you can EMPTY it to remove the nested items.
-            After that, can TAKE an item off the ground." CR>
-      )>
-
-      <TELL "and inside:" CR>
-      <EACH-OBJ PRSO (OBJ) 
-            <SET-VAR COUNT <ADD COUNT 1>>
-            <DESC OBJ>
-            <TELL CR>
-      >
-
-      <COND (
-            <IS-EQUAL COUNT 0>
-            <SET-VAR R <RAND>>
-            <COND (
-                  <IS-DES 10 R>
-                  <TELL "a whole lotta nuthin" CR>
-            )(
-                  <IS-DES 30 R>
-                  <TELL "zilch" CR>
-            )(
-                  <IS-DES 50 R>
-                  <TELL "nada" CR>
-            )(
-                  <IS-DES 100 R>
-                  <TELL "nothing" CR>
-            )>
-      )>
->
-
-<ROUTINE V-EAT ()
-      ;"do nothing, let the object's ACT-PRSO handle it"
->
-
-<ROUTINE V-PUT-IN ()
-      ;"do nothing, let the object's ACT-PRSO or ACT-PRSI handle it"
->
-
-<ROUTINE V-TALK-TO ()
-      ;"do nothing, let the object's ACT-PRSI handle it"
->
-
-<ROUTINE V-TAKE ()
-      <COND (
-            <IS-EQUAL <GET-VAR PRSO NO-TAKE> 1>
-            <TELL "This can't be picked up." CR>
-      )(
-            <IS-EQUAL 1 1>
-            <MOVE PRSO PLAYER>
-            <TELL "Picked up!" CR>
-      )>
->
-
-<ROUTINE V-TAKE-OUT ()
-      ;"do nothing, let the object's ACT-PRSO handle it"
->
-
-<ROUTINE V-PEE-ON ()
-      ;"do nothing, let the object's ACT-PRSO handle it"
->
-
-<ROUTINE V-COOK ()
-      ;"do nothing, let the object's ACT-PRSO handle it"
->
-
-<ROUTINE V-WRITE-NOTE ()
-      ;"must have charcoal and paper in player or room"
-      <TELL "// TODO" CR>
->
-
-<ROUTINE V-SLEEP ()
-;"if night, sleep until morning, increment TOTAL-SLEEPS, maybe dream"
-;"if day, sleep for 2 hours, increment TOTAL-NAPS"
-      <TELL "// TODO" CR>
->
-
-<ROUTINE V-DROP ()
-      <TELL "// TODO" CR>
->
-
-<ROUTINE V-WORK-WITH ()
-      ;"do nothing, let the object's ACT-PRSO or ACT-PRSI handle it"
->
-
-<ROUTINE V-SWIM ()
-      <TELL "The water looks a little chilly, it would be better if we had a boat, or maybe built one?" CR>
->
-
-<ROUTINE V-JUMP ()
-      <TELL "No thank you" CR>
->
-
-<ROUTINE V-WHERE-TO-GO ()
-      <TELL "There's only one way to find out. Directions to try are: UP DOWN IN OUT NORTH SOUTH EAST WEST." CR>
+<JUMP ()
+    <TELL "No thank you" CR>
 >

@@ -8,7 +8,8 @@ use crate::zil::{
 
 use super::{
     helpers::{parse_token_as_word, ValidationResult},
-    routine_tracker::Validator,
+    routine_root::RoutineRoot,
+    routine_tracker::{CanValidate, Validator},
     top_level::{
         buzzi::BuzzStats, directions::DirectionStats, globals::GlobalStats, objects::ObjectStats,
         player::PlayerStats, rooms::RoomStats, routines::RoutineStats, synonyms::SynonymStats,
@@ -60,7 +61,7 @@ impl CrossRef {
 
     pub fn name_is_illegal(name: &str) -> bool {
         match name {
-            "C-ROOM" | "CMD" | "PRSO" | "PRSI" | "PLAYER" | "GAME" => true,
+            "C-ROOM" | "CMD" | "PLAYER" | "GO" | "ROUTINE" => true,
             _ => false,
         }
     }
@@ -158,7 +159,32 @@ impl CrossRef {
         let mut validator = Validator::new(self);
 
         for routine in self.routines.as_codex() {
-            validator.validate_cluster(routine.node)?;
+            validator.push_stack();
+            let mut routine_root = RoutineRoot::from(&routine);
+
+            match routine_root.validate(&mut validator, routine.node) {
+                Ok(_) => {
+                    validator.roots.as_mut().unwrap().push(routine_root);
+                }
+                Err(e) => return Err(e),
+            }
+            validator.pop_stack();
+        }
+
+        for action in self.routines.iter_actions() {
+            for (i, handler) in action.handlers.iter().enumerate() {
+                validator.push_stack();
+                let node = action.nodes[i];
+                let mut routine_root = RoutineRoot::from_handler(handler);
+
+                match routine_root.validate(&mut validator, node) {
+                    Ok(_) => {
+                        validator.roots.as_mut().unwrap().push(routine_root);
+                    }
+                    Err(e) => return Err(e),
+                }
+                validator.pop_stack();
+            }
         }
 
         Ok(validator)
@@ -202,7 +228,7 @@ impl CrossRef {
             "BUZZ" => self.buzzi.add_node(root),
             "SYNONYM" => self.synonyms.add_node(root),
             "SYNTAX" => self.syntax.add_node(root),
-            _ => self.others.push(root),
+            _ => self.routines.add_node(root),
         }
     }
 }

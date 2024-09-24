@@ -13,42 +13,50 @@ use crate::{
 use super::set_var::Scope;
 
 // starts a loop
-// the third child is a group of exactly two variables
-// first variable gets the name
-// second variable gets the value
-// cannot return early
+// option 1: EACH-VAL IRP (name, val) ...
+// option 2: EACH-VAL VAR (val) ...
+// where:
+// IRP = an object instance, a room, or player
+// VAR = a global or local variable of type number
+// name = developer-defined word, gets the variable name as text
+// if option 1: val = developer-defined word, gets the variable value
+// if option 2: val = developer-defined word, gets values from 0 to VAR value
 
-// can loop over: object (it's vars), player (my vars), room (it's vars)
-
-pub struct EachVar {
+pub struct EachVal {
     pub scope: Scope,
-    pub name_var: String,
-    pub value_var: String,
+    pub iterate: bool,
+    pub first_var: String,
+    pub second_var: String,
     pub body: Vec<OutputNode>,
 }
 
-impl EachVar {
+impl EachVal {
     pub fn new() -> Self {
         Self {
             scope: Scope::TBD,
-            name_var: String::new(),
-            value_var: String::new(),
+            iterate: false,
+            first_var: String::new(),
+            second_var: String::new(),
             body: Vec::new(),
         }
     }
 }
 
-impl HasReturnType for EachVar {
+impl HasReturnType for EachVal {
     fn return_type(&self) -> Vec<ReturnValType> {
         vec![ReturnValType::None]
     }
 }
 
-impl CanValidate for EachVar {
+impl CanValidate for EachVal {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
         num_children_more_than(n, 2)?;
 
-        v.expect_vals(vec![ReturnValType::Inst, ReturnValType::RP]);
+        v.expect_vals(vec![
+            ReturnValType::Number,
+            ReturnValType::Inst,
+            ReturnValType::RP,
+        ]);
 
         let second_child = &n.children[1];
         match second_child.node_type {
@@ -57,7 +65,11 @@ impl CanValidate for EachVar {
                 if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
                         ReturnValType::Inst => {
-                            self.scope = Scope::Local(word.to_string());
+                            self.scope = Scope::Local(word);
+                        }
+                        ReturnValType::Number => {
+                            self.scope = Scope::Local(word);
+                            self.iterate = true;
                         }
                         _ => {
                             return Err(format!(
@@ -69,6 +81,9 @@ impl CanValidate for EachVar {
                     }
                 } else if word == "PLAYER" {
                     self.scope = Scope::Player;
+                } else if v.is_global(&word) {
+                    self.scope = Scope::Global(word);
+                    self.iterate = true;
                 } else if v.is_room(&word) {
                     self.scope = Scope::Room(word);
                 } else if v.is_object(&word) {
@@ -82,8 +97,13 @@ impl CanValidate for EachVar {
                 }
             }
             ZilNodeType::Cluster => match v.validate_cluster(&second_child) {
-                Ok(_) => match v.take_last_writer() {
-                    Some(w) => self.scope = Scope::Writer(w),
+                Ok(return_type) => match v.take_last_writer() {
+                    Some(w) => {
+                        self.scope = Scope::Writer(w);
+                        if return_type == ReturnValType::Number {
+                            self.iterate = true;
+                        }
+                    }
                     None => unreachable!(),
                 },
                 Err(e) => return Err(e),
@@ -98,7 +118,12 @@ impl CanValidate for EachVar {
         }
 
         let var_group = &n.children[2];
-        num_children(var_group, 2)?;
+        if self.iterate {
+            num_children(var_group, 1)?;
+        } else {
+            num_children(var_group, 2)?;
+        }
+
         if var_group.node_type != ZilNodeType::Group {
             return Err(format!(
                 "Expected group, found {}\n{}",
@@ -121,11 +146,11 @@ impl CanValidate for EachVar {
             match i {
                 0 => {
                     v.add_local_var(name.clone(), ReturnValType::Text);
-                    self.name_var = name;
+                    self.first_var = name;
                 }
                 1 => {
                     v.add_local_var(name.clone(), ReturnValType::Number);
-                    self.value_var = name;
+                    self.second_var = name;
                 }
                 _ => unreachable!(),
             }

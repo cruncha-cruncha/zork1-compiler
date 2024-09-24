@@ -1,10 +1,7 @@
 use std::collections::BTreeSet;
 
 use crate::{
-    js::{
-        formatter::Formatter,
-        write_output::{CanWriteOutput, OutputNode},
-    },
+    js::write_output::OutputNode,
     zil::{
         file_table::format_file_location,
         node::{ZilNode, ZilNodeType},
@@ -13,7 +10,7 @@ use crate::{
 
 use super::{
     routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
-    top_level::routines::RoutineCodexValue,
+    top_level::routines::{HandlerInfo, RoutineCodexValue},
 };
 
 pub struct RoutineRoot {
@@ -27,6 +24,15 @@ impl RoutineRoot {
         Self {
             name: codex_value.name.clone(),
             var_names: codex_value.var_names.clone(),
+            body: Vec::new(),
+        }
+    }
+
+    pub fn from_handler(value: &HandlerInfo) -> Self {
+        let name = value.get_key();
+        Self {
+            name,
+            var_names: value.var_names.clone(),
             body: Vec::new(),
         }
     }
@@ -55,7 +61,16 @@ impl CanValidate for RoutineRoot {
 
         v.expect_val(ReturnValType::Any);
 
-        for child in n.children.iter().skip(3) {
+        // action () ...
+        // ROUTINE name () ...
+        // action obj () ...
+        // action () obj ...
+        let skip = match n.children[2].node_type {
+            ZilNodeType::Group | ZilNodeType::Token(_) => 3,
+            _ => 2,
+        };
+
+        for child in n.children.iter().skip(skip) {
             match child.node_type {
                 ZilNodeType::Cluster => match v.validate_cluster(child) {
                     Ok(_) => match v.take_last_writer() {
@@ -90,19 +105,5 @@ impl HasReturnType for RoutineStub {
     fn return_type(&self) -> Vec<ReturnValType> {
         // returns 0 if no explicit return called
         vec![ReturnValType::Number]
-    }
-}
-
-impl CanWriteOutput for RoutineStub {
-    fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
-        formatter.write(
-            &format!(
-                "routines['{}'].func(locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi'])",
-                Formatter::safe_case(&self.name)
-            ),
-            false,
-        )?;
-
-        Ok(())
     }
 }

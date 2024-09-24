@@ -264,6 +264,10 @@ impl Populator for PlayerStats {
             }
         }
 
+        if errors.len() > 0 {
+            return Err(errors);
+        }
+
         Ok(())
     }
 }

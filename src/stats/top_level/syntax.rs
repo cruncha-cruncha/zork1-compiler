@@ -1,8 +1,6 @@
-use std::collections::HashSet;
-
 use crate::{
     stats::{
-        cross_ref::Codex,
+        cross_ref::{Codex, CrossRef},
         helpers::{get_token_as_word, num_children_more_than, ValidationResult},
     },
     zil::{
@@ -13,31 +11,22 @@ use crate::{
 
 use crate::stats::cross_ref::Populator;
 
-// PRSA = action
-// PRSO = direct object
-// PRSI = indirect object
-// so named because of hysterical raisins
-
 // first word is always the action
-// first OBJECT is always PRSO
-// second OBJECT is always PRSI
-
 // all commands are of the form:
-// <SYNTAX (PRSA) ... = (ROUTINE)>
-// <SYNTAX (PRSA) ... (PRSO) ... = (ROUTINE)>
-// <SYNTAX (PRSA) ... (PRSO) ... (PRSI) ... = (ROUTINE)>
+// <SYNTAX ACTION ... >
+// <SYNTAX ACTION ... OBJECT ... >
+// <SYNTAX ACTION ... OBJECT ... OBJECT ... >
+// etc.
 
 pub struct SyntaxStats {
     basis: Vec<ZilNode>,
     all_syntax: Vec<Vec<SyntaxItem>>,
-    all_routine_names: HashSet<String>,
 }
 
 #[derive(Clone, Debug)]
 pub enum SyntaxItem {
     Cmd(Cmd),
     Object(Object),
-    Action(Action),
 }
 
 #[derive(Clone, Debug)]
@@ -50,43 +39,20 @@ pub struct Object {
     pub restrictions: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Action {
-    pub routine: String,
-}
-
 impl SyntaxStats {
     pub fn new() -> SyntaxStats {
         SyntaxStats {
             basis: Vec::new(),
             all_syntax: Vec::new(),
-            all_routine_names: HashSet::new(),
         }
     }
 
-    pub fn as_iter(&self) -> SyntaxIter {
-        SyntaxIter {
+    pub fn as_codex(&self) -> SyntaxCodex {
+        SyntaxCodex {
             index: 0,
+            basis: &self.basis,
             all_syntax: &self.all_syntax,
         }
-    }
-
-    fn validate_routines<T>(&self, routines: &impl Codex<T>) -> ValidationResult<()> {
-        let mut errors: Vec<String> = Vec::new();
-        for v in self.all_routine_names.iter() {
-            if routines.lookup(&v).is_none() {
-                errors.push(format!(
-                    "Can't find definition for routine {} (in some syntax)",
-                    v
-                ));
-            }
-        }
-
-        if errors.len() > 0 {
-            return Err(errors);
-        }
-
-        Ok(())
     }
 }
 
@@ -100,9 +66,8 @@ impl Populator for SyntaxStats {
         for line in self.basis.iter() {
             let mut syntax_errors: Vec<String> = Vec::new();
             let mut steps: Vec<SyntaxItem> = Vec::new();
-            let mut obj_count = 0;
 
-            match num_children_more_than(line, 3) {
+            match num_children_more_than(line, 0) {
                 Ok(_) => {}
                 Err(e) => {
                     errors.push(e);
@@ -124,9 +89,10 @@ impl Populator for SyntaxStats {
                     format_file_location(&line)
                 ));
                 continue;
-            } else if second_word == "GO" {
+            } else if CrossRef::name_is_illegal(&second_word) {
                 errors.push(format!(
-                    "Syntax node's second child cannot be GO (this action is reserved)\n{}",
+                    "Syntax node's second child is illegal: {}\n{}",
+                    second_word,
                     format_file_location(&line)
                 ));
                 continue;
@@ -134,7 +100,7 @@ impl Populator for SyntaxStats {
 
             steps.push(SyntaxItem::Cmd(Cmd { name: second_word }));
 
-            for i in 2..line.children.len() - 2 {
+            for i in 2..line.children.len() {
                 let n = &line.children[i];
                 match n.node_type {
                     ZilNodeType::Token(TokenType::Word) => {
@@ -144,7 +110,6 @@ impl Populator for SyntaxStats {
                             steps.push(SyntaxItem::Object(Object {
                                 restrictions: Vec::new(),
                             }));
-                            obj_count += 1;
                         } else {
                             steps.push(SyntaxItem::Cmd(Cmd { name: word }));
                         }
@@ -178,7 +143,7 @@ impl Populator for SyntaxStats {
                     }
                     _ => {
                         syntax_errors.push(format!(
-                            "Syntax has child which is not word or cluster, is:{}\n{}",
+                            "Syntax has child which is not word or group, is:{}\n{}",
                             n.node_type,
                             format_file_location(&n)
                         ));
@@ -187,42 +152,12 @@ impl Populator for SyntaxStats {
                 }
             }
 
-            if obj_count > 2 {
-                syntax_errors.push(format!(
-                    "Syntax has too many variables (allowed at most two OBJECTs)\n{}",
-                    format_file_location(&line)
-                ));
-            }
-
-            let second_last_word =
-                get_token_as_word(&line.children[line.children.len() - 2]).unwrap_or_default();
-            if second_last_word != "=" {
-                syntax_errors.push(format!(
-                    "Syntax node's second-last child must be '='\n{}",
-                    format_file_location(&line)
-                ));
-            }
-
-            let last_word = match get_token_as_word(line.children.last().unwrap()) {
-                Ok(v) => Some(v),
-                Err(e) => {
-                    syntax_errors.push(e);
-                    None
-                }
-            };
-
             if syntax_errors.len() > 0 {
                 errors.append(&mut syntax_errors);
                 continue;
             }
 
-            let last_word = last_word.unwrap();
-            steps.push(SyntaxItem::Action(Action {
-                routine: last_word.clone(),
-            }));
-
             self.all_syntax.push(steps);
-            self.all_routine_names.insert(last_word);
         }
 
         if errors.len() > 0 {
@@ -232,19 +167,19 @@ impl Populator for SyntaxStats {
         Ok(())
     }
 
-    fn validate(&self, cross_ref: &crate::stats::cross_ref::CrossRef) -> ValidationResult<()> {
-        self.validate_routines(&cross_ref.routines.as_codex())?;
-
+    fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> ValidationResult<()> {
         Ok(())
     }
 }
 
-pub struct SyntaxIter<'a> {
+pub struct SyntaxCodex<'a> {
     index: usize,
+    #[allow(dead_code)]
+    basis: &'a Vec<ZilNode>,
     all_syntax: &'a Vec<Vec<SyntaxItem>>,
 }
 
-impl<'a> Iterator for SyntaxIter<'a> {
+impl<'a> Iterator for SyntaxCodex<'a> {
     type Item = &'a Vec<SyntaxItem>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.all_syntax.len() {
@@ -253,5 +188,22 @@ impl<'a> Iterator for SyntaxIter<'a> {
             self.index += 1;
             Some(&self.all_syntax[self.index - 1])
         }
+    }
+}
+
+impl<'a> Codex<&'a Vec<SyntaxItem>> for SyntaxCodex<'a> {
+    fn lookup(&self, word: &str) -> Option<&'a Vec<SyntaxItem>> {
+        for syntax in self.all_syntax.iter() {
+            match syntax.first().unwrap() {
+                SyntaxItem::Cmd(cmd) => {
+                    if cmd.name == word {
+                        return Some(syntax);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        return None;
     }
 }

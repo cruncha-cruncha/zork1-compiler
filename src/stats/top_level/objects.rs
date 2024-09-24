@@ -60,8 +60,6 @@ pub struct ObjectActions {
     pub in_player: Option<String>, // when this object is in player inventory, ditto
     pub enter_player: Option<String>, // when this object enters player inventory, ditto
     pub exit_player: Option<String>, // when this object leaves player inventory, ditto
-    pub prso: Option<String>,    // when this object is used as the PRSO
-    pub prsi: Option<String>,    // when this object is used as the PRSI
 }
 
 impl ObjectActions {
@@ -71,8 +69,6 @@ impl ObjectActions {
             in_player: None,
             enter_player: None,
             exit_player: None,
-            prso: None,
-            prsi: None,
         }
     }
 }
@@ -456,32 +452,6 @@ impl Populator for ObjectStats {
                             }
                         }
                     }
-                    "ACT-PRSO" => {
-                        if info.actions.prso.is_some() {
-                            object_errors.push(format!(
-                                "Duplicate prso action node\n{}",
-                                format_file_location(&c)
-                            ));
-                        } else {
-                            match Helpers::crunch_action(&c) {
-                                Ok(v) => info.actions.prso = Some(v),
-                                Err(mut e) => object_errors.append(&mut e),
-                            }
-                        }
-                    }
-                    "ACT-PRSI" => {
-                        if info.actions.prsi.is_some() {
-                            object_errors.push(format!(
-                                "Duplicate prsi action node\n{}",
-                                format_file_location(&c)
-                            ));
-                        } else {
-                            match Helpers::crunch_action(&c) {
-                                Ok(v) => info.actions.prsi = Some(v),
-                                Err(mut e) => object_errors.append(&mut e),
-                            }
-                        }
-                    }
                     _ => {
                         object_errors.push(format!(
                             "Object node has unknown group:{}\n{}",
@@ -561,6 +531,7 @@ impl Populator for ObjectStats {
                                 "Object {} has invalid copy location object name: {}",
                                 key, obj
                             ));
+                            continue;
                         }
                         let parent = parent.unwrap();
 
@@ -623,26 +594,6 @@ impl Populator for ObjectStats {
                 if routine_codex.lookup(action).is_none() {
                     errors.push(format!(
                         "Object {} has invalid remove-player action routine: {}",
-                        key, action
-                    ));
-                }
-            }
-
-            if info.actions.prso.is_some() {
-                let action = info.actions.prso.as_ref().unwrap();
-                if routine_codex.lookup(action).is_none() {
-                    errors.push(format!(
-                        "Object {} has invalid prso action routine: {}",
-                        key, action
-                    ));
-                }
-            }
-
-            if info.actions.prsi.is_some() {
-                let action = info.actions.prsi.as_ref().unwrap();
-                if routine_codex.lookup(action).is_none() {
-                    errors.push(format!(
-                        "Object {} has invalid prsi action routine: {}",
                         key, action
                     ));
                 }

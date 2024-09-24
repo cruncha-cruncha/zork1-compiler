@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     cross_ref::{Codex, CrossRef},
-    helpers::{get_token_as_word, parse_token_as_word},
+    helpers::parse_token_as_word,
     routine_root::{RoutineRoot, RoutineStub},
     top_level::{
         globals::GlobalCodex, objects::ObjectCodex, player::PlayerInfo, rooms::RoomCodex,
@@ -34,7 +34,7 @@ pub struct Validator<'a> {
     room_codex: RoomCodex<'a>,
     global_codex: GlobalCodex<'a>,
     stack: Vec<StackFrame>,
-    pub root: Option<Vec<RoutineRoot>>,
+    pub roots: Option<Vec<RoutineRoot>>,
     last_writer: Option<Box<dyn CanWriteOutput>>,
 }
 
@@ -62,8 +62,6 @@ impl<'a> Validator<'a> {
         let mut vars: HashMap<String, ReturnValType> = HashMap::new();
         vars.insert("C-ROOM".to_string(), ReturnValType::Inst);
         vars.insert("CMD".to_string(), ReturnValType::Text);
-        vars.insert("PRSO".to_string(), ReturnValType::Inst);
-        vars.insert("PRSI".to_string(), ReturnValType::Inst);
 
         let base_stack = StackFrame {
             vars,
@@ -79,11 +77,11 @@ impl<'a> Validator<'a> {
             global_codex: cross_ref.globals.as_codex(),
             last_writer: None,
             stack: vec![base_stack],
-            root: Some(Vec::new()),
+            roots: Some(Vec::new()),
         }
     }
 
-    fn push_stack(&mut self) {
+    pub fn push_stack(&mut self) {
         self.stack.push(StackFrame {
             vars: HashMap::new(),
             expect_vals: Vec::new(),
@@ -141,7 +139,7 @@ impl<'a> Validator<'a> {
         Vec::new()
     }
 
-    fn pop_stack(&mut self) {
+    pub fn pop_stack(&mut self) {
         self.stack.pop();
     }
 
@@ -231,20 +229,6 @@ impl<'a> Validator<'a> {
             }
         };
 
-        if name == "ROUTINE" && n.children.len() > 1 {
-            let second_word = get_token_as_word(&n.children[1]).unwrap_or_default();
-            let codex_value = self.routine_codex.lookup(&second_word).unwrap();
-            let mut routine_root = RoutineRoot::from(&codex_value);
-
-            match routine_root.validate(self, n) {
-                Ok(_) => {
-                    self.root.as_mut().unwrap().push(routine_root);
-                    return Ok(());
-                }
-                Err(e) => return Err(e),
-            }
-        }
-
         if self.routine_codex.lookup(&name).is_some() {
             if n.children.len() > 1 {
                 return Err(format!(
@@ -275,6 +259,17 @@ impl<'a> Validator<'a> {
             }
             "AND" => {
                 let mut v = super::any_level::and::And::new();
+                match v.validate(self, n) {
+                    Ok(_) => {
+                        self.set_return_type(v.return_type());
+                        self.last_writer = Some(Box::new(v));
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            "CMD" => {
+                let mut v = super::any_level::cmd::Cmd::new();
                 match v.validate(self, n) {
                     Ok(_) => {
                         self.set_return_type(v.return_type());
@@ -339,8 +334,8 @@ impl<'a> Validator<'a> {
                     Err(e) => return Err(e),
                 }
             }
-            "EACH-VAR" => {
-                let mut v = super::any_level::each_var::EachVar::new();
+            "EACH-VAL" => {
+                let mut v = super::any_level::each_val::EachVal::new();
                 match v.validate(self, n) {
                     Ok(_) => {
                         self.set_return_type(v.return_type());
@@ -352,6 +347,17 @@ impl<'a> Validator<'a> {
             }
             "GET-VAR" => {
                 let mut v = super::any_level::get_var::GetVar::new();
+                match v.validate(self, n) {
+                    Ok(_) => {
+                        self.set_return_type(v.return_type());
+                        self.last_writer = Some(Box::new(v));
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            "INST" => {
+                let mut v = super::any_level::inst::Inst::new();
                 match v.validate(self, n) {
                     Ok(_) => {
                         self.set_return_type(v.return_type());

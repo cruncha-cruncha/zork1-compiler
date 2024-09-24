@@ -11,7 +11,7 @@ impl CanWriteOutput for Description {
 
         self.scope.write_output(formatter)?;
 
-        formatter.write(");", false)?;
+        formatter.write(")", false)?;
 
         Ok(())
     }
