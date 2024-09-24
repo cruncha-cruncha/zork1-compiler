@@ -72,6 +72,8 @@
         game.setLogger(logger);
         game.start();
 
+        // TODO: list of commands the player has discovered so far?
+
         window.handleInput = function handleInput(event) {
             event.preventDefault();
 
@@ -89,7 +91,7 @@
             if (!result.handled) {
                 if (result.goDirection) {
                     logger("You can't go that way.\n");
-                } else if ((result.cmd.prso && !result.cmd.foundPrso) || (result.cmd.prsi && !result.cmd.foundPrsi)) {
+                } else if (result.syntax.cmds.length > 0) {
                     logger("Couldn't find anything to do with that.\n");
                 } else {
                     logger("I don't understand that command.\n");

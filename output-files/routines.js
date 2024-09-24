@@ -346,10 +346,10 @@ function btnRm2West(cRoom, cmd) {
     game.log("You appear to be in the same room, but something has changed.", '\n');
     if (globals['foundMagicRing'] === 0) {
       globals['foundMagicRing'] = 1;
-      game.copyMove(locals, objects['magicRing'], locals['cRoom']);
+      game.copyMove(objects['magicRing'], locals['cRoom']);
       game.log("And something shiny appeared on the ground.", '\n');
     } else if (Math.floor(Math.random() * 100) < 67) {
-      game.copyMove(locals, objects['obsidianShard'], locals['cRoom']);
+      game.copyMove(objects['obsidianShard'], locals['cRoom']);
       game.log("And something shiny appeared on the ground.", '\n');
     };
   } else if (1 === 1) {
@@ -821,7 +821,7 @@ function prsiWater(cRoom, cmd) {
     game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
   } else if (locals['cmd'] === "FILL") {
     if ((game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), objects['kettle'])) || (game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), objects['bucket'])) || (game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), objects['cup'])) || (game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), objects['treeHollow'])) || (game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), objects['boat']))) {
-      game.copyMove(locals, objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()));
+      game.copyMove(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()));
       game.log("You fill it with water.", '\n');
     };
   };
@@ -960,7 +960,7 @@ function cabinDoor_hit(cRoom, cmd) {
     if (((locals['cmd']?.[1] ?? getEmptyResource()).vars['health'] || 0) < 1) {
       for (let i of Array.from(Array(((locals['cmd']?.[1] ?? getEmptyResource()).vars['hasBoards'] || 0)).keys())) {
         locals['v'] = i;
-        game.copyMove(locals, objects['roughBoard'], locals['cRoom']);
+        game.copyMove(objects['roughBoard'], locals['cRoom']);
       };
       (locals['cmd']?.[1] ?? getEmptyResource()).vars['hasBoards'] = 0;
       game.log("It's broken into some ROUGH-BOARDs", '\n');
@@ -1018,7 +1018,7 @@ function table_hit(cRoom, cmd) {
     if (((locals['cmd']?.[1] ?? getEmptyResource()).vars['health'] || 0) < 1) {
       for (let i of Array.from(Array(((locals['cmd']?.[1] ?? getEmptyResource()).vars['hasBoards'] || 0)).keys())) {
         locals['v'] = i;
-        game.copyMove(locals, objects['roughBoard'], locals['cRoom']);
+        game.copyMove(objects['roughBoard'], locals['cRoom']);
       };
       (locals['cmd']?.[1] ?? getEmptyResource()).vars['hasBoards'] = 0;
       game.log("It's broken into some ROUGH-BOARDs", '\n');
@@ -1049,7 +1049,7 @@ function chair_hit(cRoom, cmd) {
     game.log("You hit the chair for ", locals['dmg'].toString(), " damage.", '\n');
     if (((locals['cmd']?.[1] ?? getEmptyResource()).vars['health'] || 0) < 1) {
       (locals['cmd']?.[1] ?? getEmptyResource()).vars['hasBoards'] = 0;
-      game.copyMove(locals, objects['roughBoard'], locals['cRoom']);
+      game.copyMove(objects['roughBoard'], locals['cRoom']);
       game.log("It's broken into a ROUGH-BOARD", '\n');
     };
   };
@@ -1061,7 +1061,7 @@ function cabinWindow_hit(cRoom, cmd) {
   if (!(((locals['cmd']?.[1] ?? getEmptyResource()).vars['isBroken'] || 0) === 1)) {
     game.log("You smash the window, taking 1 damage in the process.", '\n');
     player.vars['health'] = ((player.vars['health'] || 0) - 1);
-    game.copyMove(locals, objects['glassShard'], rooms['cabin']);
+    game.copyMove(objects['glassShard'], rooms['cabin']);
     game.move(locals, player, rooms['cabin']);
   };
   return 0;
@@ -1082,17 +1082,17 @@ function tree_hit(cRoom, cmd) {
     game.log("The tree takes ", locals['dmg'].toString(), " damage", '\n');
     if (((locals['cmd']?.[1] ?? getEmptyResource()).vars['health'] || 0) < 1) {
       game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), );
-      game.copyMove(locals, objects['log'], locals['cRoom']);
-      game.copyMove(locals, objects['log'], locals['cRoom']);
-      game.copyMove(locals, objects['log'], locals['cRoom']);
-      game.copyMove(locals, objects['log'], locals['cRoom']);
-      game.copyMove(locals, objects['stick'], locals['cRoom']);
-      game.copyMove(locals, objects['stick'], locals['cRoom']);
+      game.copyMove(objects['log'], locals['cRoom']);
+      game.copyMove(objects['log'], locals['cRoom']);
+      game.copyMove(objects['log'], locals['cRoom']);
+      game.copyMove(objects['log'], locals['cRoom']);
+      game.copyMove(objects['stick'], locals['cRoom']);
+      game.copyMove(objects['stick'], locals['cRoom']);
       game.log("You've chopped the tree into four LOGs and two STICKs", '\n');
     };
   };
   if ((((locals['cmd']?.[1] ?? getEmptyResource()).vars['health'] || 0) > 0) && ((((locals['cmd']?.[2] ?? getEmptyResource()).vars['maxDamage'] || 0) > 0) || (((locals['cmd']?.[2] ?? getEmptyResource()).vars['maxHealth'] || 0) > 0))) {
-    game.copyMove(locals, objects['sap'], player);
+    game.copyMove(objects['sap'], player);
     game.log("You pick up some tree SAP", '\n');
   };
   return 0;
@@ -1271,7 +1271,7 @@ function chair_work(cRoom, cmd) {
 function write(cRoom, cmd) {
   const locals = {cRoom, cmd, hasC: 0,hasP: 0};
   if (((game.isInLocation(locals['cRoom'], locals['cRoom'], objects['charcoal'], false)) || (game.isInLocation(locals['cRoom'], player, objects['charcoal'], false))) && ((game.isInLocation(locals['cRoom'], locals['cRoom'], objects['bookPage'], false)) || (game.isInLocation(locals['cRoom'], player, objects['bookPage'], false)))) {
-    game.copyMove(locals, objects['note'], locals['cRoom']);
+    game.copyMove(objects['note'], locals['cRoom']);
   } else if (1 === 1) {
     game.log("You need paper and charcoal.", '\n');
   };

@@ -1,6 +1,7 @@
+use std::fmt;
+
 use crate::stats::{
     cross_ref::Codex,
-    helpers::contains_same_elements,
     top_level::{
         buzzi::BuzzStats,
         directions::DirectionStats,
@@ -9,10 +10,7 @@ use crate::stats::{
     },
 };
 
-use super::{
-    formatter::Formatter,
-    write_output::{CanWriteOutput, ToJs},
-};
+use super::{formatter::Formatter, write_output::CanWriteOutput};
 
 pub struct ParseTree {
     branches: Vec<SyntaxStep>,
@@ -36,12 +34,8 @@ pub struct Cmd {
 
 #[derive(Clone, Debug)]
 pub struct Object {
-    pub restrictions: Vec<String>,
     pub children: Vec<SyntaxStep>,
 }
-
-// TODO: if player tries a command that starts with a known action but doesn't quite match the rest of the syntax,
-// suggest the syntax. Like if player tries 'SPREAD OVER BOARDS', suggest 'SPREAD OBJECT ON OBJECT'.
 
 impl ParseTree {
     pub fn new() -> ParseTree {
@@ -57,16 +51,18 @@ impl ParseTree {
         let mut branches: Vec<SyntaxStep> = Vec::new();
 
         for line in syntax_codex {
+            let mut is_ambiguous: Option<usize> = None;
+
             let first_word = match line.first() {
                 Some(SyntaxItem::Cmd(cmd)) => cmd.name.clone(),
                 _ => unreachable!(),
             };
 
-            let mut branch = match branches.iter_mut().find(|branch| match branch {
+            let branch_index = match branches.iter().position(|branch| match branch {
                 SyntaxStep::Cmd(cmd) => cmd.name == first_word,
                 _ => false,
             }) {
-                Some(branch) => branch,
+                Some(i) => i,
                 None => {
                     let new_branch = SyntaxStep::Cmd(Cmd {
                         name: first_word,
@@ -75,16 +71,36 @@ impl ParseTree {
                     });
 
                     branches.push(new_branch);
-                    branches.last_mut().unwrap()
+                    branches.len() - 1
                 }
             };
+            let mut branch = &mut branches[branch_index];
 
             for syntax_type in line.iter().skip(1) {
-                let index = branch.add_child(syntax_type);
+                let index = match branch.add_child(syntax_type) {
+                    Ok(index) => index,
+                    Err(index) => {
+                        if is_ambiguous.is_none() {
+                            is_ambiguous = Some(index);
+                        }
+                        index
+                    }
+                };
                 branch = &mut branch.get_children_mut()[index];
             }
 
             branch.add_end();
+
+            if is_ambiguous.is_some() {
+                print!("WARNING: Ambiguous syntax: '");
+                for (i, word) in line.iter().enumerate() {
+                    print!("{}", word);
+                    if i < line.len() - 1 {
+                        print!(" ");
+                    }
+                }
+                print!("' (discernable until word {})\n", is_ambiguous.unwrap() + 2);
+            }
         }
 
         self.branches = branches;
@@ -136,26 +152,15 @@ impl ParseTree {
         Ok(())
     }
 
-    fn write_output_objects(
+    fn write_output_object(
         &self,
         formatter: &mut Formatter,
-        objects: Vec<&Object>,
+        object: &Object,
         depth: usize,
     ) -> Result<(), std::io::Error> {
-        if objects.len() == 0 {
-            return Ok(());
-        }
-
-        let objects_str = objects
-            .iter()
-            .map(|obj| obj.to_js())
-            .collect::<Vec<String>>()
-            .join(", ");
-
         formatter.writeln(&format!(
-            "const {{ objectNum, objectVal }} = game.findObjectMatchingParsedWord(words[{}], [{}]);",
+            "const {{ objectVal }} = game.findObjectMatchingParsedWord(words[{}]);",
             depth - 1,
-            objects_str
         ))?;
 
         formatter.writeln(&format!(
@@ -163,13 +168,8 @@ impl ParseTree {
             depth - 1,
         ))?;
 
-        formatter.writeln("switch (objectNum) {")?;
-
-        for (i, object) in objects.iter().enumerate() {
-            formatter.writeln(&format!("case {}:", i + 1))?;
-            self.write_output_recursive(formatter, &object.children, depth)?;
-        }
-
+        formatter.writeln("if (objectVal) {")?;
+        self.write_output_recursive(formatter, &object.children, depth)?;
         formatter.writeln("}")?;
 
         Ok(())
@@ -211,8 +211,9 @@ impl ParseTree {
             self.write_output_end(formatter, depth + 1)?;
         }
 
-        let object_children = SyntaxStep::get_object_children(children);
-        self.write_output_objects(formatter, object_children, depth + 1)?;
+        if let Some(ref object) = SyntaxStep::has_object_child(children) {
+            self.write_output_object(formatter, object, depth + 1)?;
+        }
 
         formatter.writeln("return { prsa, cmds };")?;
         formatter.outdent();
@@ -258,11 +259,9 @@ impl CanWriteOutput for ParseTree {
 
         formatter
             .writeln("const words = rawString.split(\" \").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));")?;
-        formatter.writeln(
-            "if (words.length == 0) { return { prsa: '', cmds: [getEmptyResource()] }; }",
-        )?;
+        formatter.writeln("if (words.length == 0) { return { prsa: '', cmds: [{}] }; }")?;
         formatter.writeln("const prsa = translateAction(words[0]);")?;
-        formatter.writeln("let cmds = [getEmptyResource()];")?;
+        formatter.writeln("let cmds = [{}];")?;
         formatter.newline()?;
 
         formatter.writeln("if ((words.length == 2) && (words[0] == \"GO\")) {")?;
@@ -330,14 +329,16 @@ impl SyntaxStep {
             .collect()
     }
 
-    pub fn get_object_children(children: &Vec<SyntaxStep>) -> Vec<&Object> {
+    pub fn has_object_child(children: &Vec<SyntaxStep>) -> Option<&Object> {
         children
             .iter()
             .filter_map(|child| match child {
                 SyntaxStep::Object(obj) => Some(obj),
                 _ => None,
             })
-            .collect()
+            .collect::<Vec<&Object>>()
+            .first()
+            .copied()
     }
 
     pub fn has_end_child(children: &Vec<SyntaxStep>) -> bool {
@@ -360,7 +361,7 @@ impl SyntaxStep {
         children.push(SyntaxStep::End);
     }
 
-    pub fn add_child(&mut self, new_child: &SyntaxItem) -> usize {
+    pub fn add_child(&mut self, new_child: &SyntaxItem) -> Result<usize, usize> {
         let children = self.get_children_mut();
 
         for (i, c) in children.iter_mut().enumerate() {
@@ -368,15 +369,13 @@ impl SyntaxStep {
                 SyntaxStep::Cmd(cmd) => {
                     if let SyntaxItem::Cmd(ref new_cmd) = new_child {
                         if cmd.name == new_cmd.name {
-                            return i;
+                            return Ok(i);
                         }
                     }
                 }
-                SyntaxStep::Object(obj) => {
-                    if let SyntaxItem::Object(ref new_obj) = new_child {
-                        if contains_same_elements(&obj.restrictions, &new_obj.restrictions) {
-                            return i;
-                        }
+                SyntaxStep::Object(_) => {
+                    if let SyntaxItem::Object = new_child {
+                        return Err(i);
                     }
                 }
                 SyntaxStep::End => (),
@@ -389,15 +388,14 @@ impl SyntaxStep {
                 synonyms: Vec::new(),
                 children: Vec::new(),
             }),
-            SyntaxItem::Object(obj) => SyntaxStep::Object(Object {
-                restrictions: obj.restrictions.clone(),
+            SyntaxItem::Object => SyntaxStep::Object(Object {
                 children: Vec::new(),
             }),
         };
 
         children.push(new_child);
 
-        self.get_children_len() - 1
+        Ok(self.get_children_len() - 1)
     }
 }
 
@@ -409,24 +407,12 @@ impl Cmd {
     }
 }
 
-impl ToJs for Object {
-    fn to_js(&self) -> String {
-        let mut out = String::from("{");
-
-        out.push_str("withVars: [");
-
-        for (i, restriction) in self.restrictions.iter().enumerate() {
-            out.push_str(&format!("\"{}\"", Formatter::safe_case(restriction)));
-
-            if i < self.restrictions.len() - 1 {
-                out.push_str(", ");
-            }
+impl fmt::Display for SyntaxStep {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SyntaxStep::Cmd(cmd) => write!(f, "{}", cmd.name),
+            SyntaxStep::Object(_) => write!(f, "<object>"),
+            SyntaxStep::End => write!(f, "<end>"),
         }
-
-        out.push_str("]");
-
-        out.push_str("}");
-
-        out
     }
 }

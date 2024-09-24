@@ -4,6 +4,7 @@ const getPriority = (hookType) => {
   switch (hookType) {
     case "BEFORE-ACTION":
       return 13;
+    case "GO-ACTION":
     case "SYNTAX-ACTION":
       return 12;
     case "AFTER-ACTION":
@@ -39,26 +40,29 @@ const getPriority = (hookType) => {
   }
 };
 
+// a giant closure
 export const newHooks = () => {
+  // the hooks to be called
+  // lower index = higher priority
   let buffer = [];
 
+  // fire the next hook in the buffer (starts from 0)
   function callNext() {
     if (buffer.length === 0) {
       return null;
     }
 
     let next = buffer.shift();
-    console.log("call next", next.func, next.cRoom, next.cmds);
     next.func(next.cRoom, next.cmds);
 
     return next;
   }
 
   return {
+    // buffer a new hook to be called later
+    // respects priority
     insert(hookType, func, cRoom, cmds) {
       const priority = getPriority(hookType);
-
-      // console.log(`inserting hook`, hookType, func, cRoom, cmds);
 
       if (buffer.length === 0) {
         buffer.push({
@@ -91,13 +95,14 @@ export const newHooks = () => {
       });
     },
 
+    // aka immediately call this hook
     callDescription(func, cRoom, cmds) {
-      console.log("call description", func, cRoom, cmds);
       func(cRoom, cmds);
     },
 
     callNext,
 
+    // empty the buffer
     callAll() {
       while (buffer.length > 0) {
         callNext();

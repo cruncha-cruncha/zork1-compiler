@@ -1,15 +1,15 @@
 import { game, getEmptyResource } from './engine.js';
 
-export const buzz = ["AGAIN", "A", "THE", "SOME", "ALL", "MY", "OF"];
+export const buzz = ["OF", "THE", "SOME", "A", "MY", "ALL", "AGAIN"];
 
 export const directions = ["DOWN", "EAST", "NORTH", "SOUTH", "UP", "WEST"];
 
 export const parseInput = (rawString) => {
   if (!rawString || typeof rawString !== 'string') { return { prsa: '', cmds: [] }; }
   const words = rawString.split(" ").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));
-  if (words.length == 0) { return { prsa: '', cmds: [getEmptyResource()] }; }
+  if (words.length == 0) { return { prsa: '', cmds: [{}] }; }
   const prsa = translateAction(words[0]);
-  let cmds = [getEmptyResource()];
+  let cmds = [{}];
 
   if ((words.length == 2) && (words[0] == "GO")) {
     return { move: words[1], prsa, cmds: [] };
@@ -139,10 +139,9 @@ export const parseInput = (rawString) => {
   case "INVESTIGATE":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -158,10 +157,9 @@ export const parseInput = (rawString) => {
   case "GET":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -175,10 +173,9 @@ export const parseInput = (rawString) => {
   case "DROP":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -193,10 +190,9 @@ export const parseInput = (rawString) => {
   case "UNPACK":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -210,18 +206,16 @@ export const parseInput = (rawString) => {
   case "ADD":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         case "TO":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            switch (objectNum) {
-            case 1:
+            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -241,18 +235,16 @@ export const parseInput = (rawString) => {
   case "PUT":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         case "IN":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            switch (objectNum) {
-            case 1:
+            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -272,18 +264,16 @@ export const parseInput = (rawString) => {
   case "FILL":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         case "WITH":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            switch (objectNum) {
-            case 1:
+            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -303,18 +293,16 @@ export const parseInput = (rawString) => {
   case "POUR":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         case "ON":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            switch (objectNum) {
-            case 1:
+            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -334,18 +322,16 @@ export const parseInput = (rawString) => {
   case "HIT":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         case "WITH":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            switch (objectNum) {
-            case 1:
+            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -365,18 +351,16 @@ export const parseInput = (rawString) => {
   case "WORK":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         case "WITH":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            switch (objectNum) {
-            case 1:
+            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -400,10 +384,9 @@ export const parseInput = (rawString) => {
   case "IMBIBE":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -417,10 +400,9 @@ export const parseInput = (rawString) => {
   case "OPEN":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -434,18 +416,16 @@ export const parseInput = (rawString) => {
   case "SPARK":
     switch (words[1]) {
     default:
-      const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[1], [{withVars: []}]);
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      switch (objectNum) {
-      case 1:
+      if (objectVal) {
         switch (words[2]) {
         case "AT":
           switch (words[3]) {
           default:
-            const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[3], [{withVars: []}]);
+            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            switch (objectNum) {
-            case 1:
+            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -467,10 +447,9 @@ export const parseInput = (rawString) => {
     case "TO":
       switch (words[2]) {
       default:
-        const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[2], [{withVars: []}]);
+        const { objectVal } = game.findObjectMatchingParsedWord(words[2]);
         cmds.push({ word: words[2], val: objectVal });
-        switch (objectNum) {
-        case 1:
+        if (objectVal) {
           switch (words[3]) {
           default:
             if (words.length == 3) {
@@ -489,10 +468,9 @@ export const parseInput = (rawString) => {
     case "ON":
       switch (words[2]) {
       default:
-        const { objectNum, objectVal } = game.findObjectMatchingParsedWord(words[2], [{withVars: []}]);
+        const { objectVal } = game.findObjectMatchingParsedWord(words[2]);
         cmds.push({ word: words[2], val: objectVal });
-        switch (objectNum) {
-        case 1:
+        if (objectVal) {
           switch (words[3]) {
           default:
             if (words.length == 3) {

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::{
     stats::{
         cross_ref::{Codex, CrossRef},
@@ -26,17 +28,12 @@ pub struct SyntaxStats {
 #[derive(Clone, Debug)]
 pub enum SyntaxItem {
     Cmd(Cmd),
-    Object(Object),
+    Object,
 }
 
 #[derive(Clone, Debug)]
 pub struct Cmd {
     pub name: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct Object {
-    pub restrictions: Vec<String>,
 }
 
 impl SyntaxStats {
@@ -107,43 +104,14 @@ impl Populator for SyntaxStats {
                         let word = get_token_as_word(&n).unwrap();
 
                         if word == "OBJECT" {
-                            steps.push(SyntaxItem::Object(Object {
-                                restrictions: Vec::new(),
-                            }));
+                            steps.push(SyntaxItem::Object);
                         } else {
                             steps.push(SyntaxItem::Cmd(Cmd { name: word }));
                         }
                     }
-                    ZilNodeType::Group => {
-                        let step = match steps.last_mut().unwrap() {
-                            SyntaxItem::Object(obj) => obj,
-                            _ => {
-                                syntax_errors.push(format!(
-                                    "Syntax has group node, but previous word is not OBJECT\n{}",
-                                    format_file_location(&n)
-                                ));
-                                continue;
-                            }
-                        };
-
-                        let mut restrictions: Vec<String> = Vec::new();
-                        for c in n.children.iter() {
-                            let word = match get_token_as_word(c) {
-                                Ok(v) => Some(v),
-                                Err(e) => {
-                                    syntax_errors.push(e);
-                                    continue;
-                                }
-                            };
-
-                            restrictions.push(word.unwrap());
-                        }
-
-                        step.restrictions = restrictions;
-                    }
                     _ => {
                         syntax_errors.push(format!(
-                            "Syntax has child which is not word or group, is:{}\n{}",
+                            "Syntax has child which is not a word, is:{}\n{}",
                             n.node_type,
                             format_file_location(&n)
                         ));
@@ -168,7 +136,20 @@ impl Populator for SyntaxStats {
     }
 
     fn validate(&self, _cross_ref: &crate::stats::cross_ref::CrossRef) -> ValidationResult<()> {
+        // if A OBJECT B exists then A OBJECT C is not allowed
+        // but it's computationally expensive to check for this
+        // so check for it later in build_parser
+
         Ok(())
+    }
+}
+
+impl fmt::Display for SyntaxItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SyntaxItem::Cmd(cmd) => write!(f, "{}", cmd.name),
+            SyntaxItem::Object => write!(f, "<object>"),
+        }
     }
 }
 

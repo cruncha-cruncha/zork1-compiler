@@ -93,47 +93,47 @@ impl CanValidate for Move {
             }
         }
 
-        let second_word = get_token_as_word(&n.children[1]);
-        if second_word.is_ok() && second_word.as_ref().unwrap() == "PLAYER" {
-            // MOVE PLAYER ROOM
-            v.expect_val(ReturnValType::RP);
-            self.item = Scope::Player;
-            let third_child = &n.children[2];
+        if n.children.len() == 3 {
+            let second_word = get_token_as_word(&n.children[1]);
+            if second_word.is_ok() && second_word.as_ref().unwrap() == "PLAYER" {
+                // MOVE PLAYER ROOM
 
-            match third_child.node_type {
-                ZilNodeType::Token(TokenType::Word) => {
-                    let word = get_token_as_word(&third_child).unwrap();
-                    if v.is_room(&word) {
-                        self.destination = Some(Scope::Room(word));
-                    } else {
+                v.expect_val(ReturnValType::RP);
+                self.item = Scope::Player;
+                let third_child = &n.children[2];
+
+                match third_child.node_type {
+                    ZilNodeType::Token(TokenType::Word) => {
+                        let word = get_token_as_word(&third_child).unwrap();
+                        if v.is_room(&word) {
+                            self.destination = Some(Scope::Room(word));
+                        } else {
+                            return Err(format!(
+                                "Word {} not found in rooms\n{}",
+                                word,
+                                format_file_location(&n.children[1])
+                            ));
+                        }
+                    }
+                    ZilNodeType::Cluster => match v.validate_cluster(&third_child) {
+                        Ok(_) => match v.take_last_writer() {
+                            Some(w) => self.destination = Some(Scope::Writer(w)),
+                            None => unreachable!(),
+                        },
+                        Err(e) => return Err(e),
+                    },
+                    _ => {
                         return Err(format!(
-                            "Word {} not found in rooms\n{}",
-                            word,
-                            format_file_location(&n.children[1])
+                            "Expected a word or cluster, found {}\n{}",
+                            third_child.node_type,
+                            format_file_location(&third_child)
                         ));
                     }
                 }
-                ZilNodeType::Cluster => match v.validate_cluster(&third_child) {
-                    Ok(_) => match v.take_last_writer() {
-                        Some(w) => self.destination = Some(Scope::Writer(w)),
-                        None => unreachable!(),
-                    },
-                    Err(e) => return Err(e),
-                },
-                _ => {
-                    return Err(format!(
-                        "Expected a word or cluster, found {}\n{}",
-                        third_child.node_type,
-                        format_file_location(&third_child)
-                    ));
-                }
+                return Ok(());
             }
-            return Ok(());
-        }
 
-        if n.children.len() == 3 {
             // MOVE INST IRP
-
             let second_child = &n.children[1];
             let third_child = &n.children[2];
 

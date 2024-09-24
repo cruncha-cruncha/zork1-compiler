@@ -36,7 +36,7 @@ impl CopyMove {
 impl HasReturnType for CopyMove {
     fn return_type(&self) -> Vec<ReturnValType> {
         // if copy-move was successful
-        vec![ReturnValType::None]
+        vec![ReturnValType::Boolean]
     }
 }
 

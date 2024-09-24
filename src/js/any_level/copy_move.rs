@@ -7,7 +7,7 @@ impl CanWriteOutput for CopyMove {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.newline()?;
 
-        formatter.write("game.copyMove(locals, ", true)?;
+        formatter.write("game.copyMove(", true)?;
 
         self.item.write_output(formatter)?;
 

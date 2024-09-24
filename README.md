@@ -44,8 +44,7 @@ Syntax
 
 - `<SYNTAX ... >`
 - defines an input command string
-- first word is the action (PRSA).
-- can work with up to two objects (PRSO and PRSI).
+- first word is the action, this needs to be known for defining handlers
 
 Synonym
 

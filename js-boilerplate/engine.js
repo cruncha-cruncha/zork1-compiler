@@ -8,6 +8,11 @@ import { parseInput } from "./parser.js";
 import { routines, handlers } from "./routines.js";
 import { newHooks } from "./hooks.js";
 
+// instead of returning null, return an empty resource object
+// this allows chained operations to fail silently
+// for example <MOVE PLAYER <LOC <CMD 1>>> might not work:
+// - <CMD 1> might be undefined (syntax has no OBJECT)
+// - <LOC ...> might not be a room
 export const getEmptyResource = () => ({
   isEmpty: true,
   objects: [],
@@ -16,6 +21,7 @@ export const getEmptyResource = () => ({
   hooks: {},
 });
 
+// use a random 12 character string for object instance ids
 function gen_inst_id() {
   const characters = "abcdefghijklmnopqrstuvwxyz";
   let result = "";
@@ -25,18 +31,31 @@ function gen_inst_id() {
   return "inst_" + result;
 }
 
+// a giant closure that keeps track of everything
 const newGame = () => {
+  // aka text output, errors use console.error
+  // defaults to console.log, but can override by calling setLogger
   let logger = console.log;
+
+  // hooks is a priority queue, and the only way that a handler/routine can run
   const hooks = newHooks();
+
+  // current room the player is in
   let currentRoom = player.startRoom
     ? rooms[player.startRoom]
     : Object.values(rooms)[0];
+
+  // similar to but not quite the same as parser output
   let command = { prsa: "", cmds: [] };
 
+  // is safe to assume that all args are strings
   function log(...args) {
     logger(...args);
   }
 
+  // aka <DESC ... >
+  // handle (DESC ... ) of an object, object instance, room, or the player
+  // returns nothing
   function describe(fakePrso) {
     if (!fakePrso || typeof fakePrso !== "object") {
       return;
@@ -44,6 +63,7 @@ const newGame = () => {
 
     let desc = null;
     if ("isObject" in fakePrso && "isInst" in fakePrso) {
+      // if object instance, get description from the object
       desc = objects[fakePrso.isObject].desc;
     } else {
       desc = fakePrso.desc;
@@ -52,13 +72,13 @@ const newGame = () => {
     if ("text" in desc) {
       log(desc.text);
     } else if ("routine" in desc) {
-      hooks.callDescription(routines[desc.routine], currentRoom, [
-        getEmptyResource(),
-        ...command.cmds,
-      ]);
+      // is executed immediately
+      hooks.callDescription(routines[desc.routine], currentRoom, command.cmds);
     }
   }
 
+  // handle "GO <direction>" from the user
+  // returns a boolean
   function handleGo(direction) {
     let result = currentRoom.move[direction];
 
@@ -106,7 +126,7 @@ const newGame = () => {
       }
     } else if ("routine" in result) {
       hooks.insert(
-        "SYNTAX-ACTION",
+        "GO-ACTION",
         routines[result.routine],
         currentRoom,
         command.cmds
@@ -116,6 +136,12 @@ const newGame = () => {
     return true;
   }
 
+  // nested objects are stored like: object: { [objName]: [...instId] }
+  // for example object: { "chair": ["inst_1", "inst_3"], "table": ["inst_2"] }
+  // params: nestedObj is object, name is objName, inst is instId
+  // if called with name = "chair" and inst = "inst_1", would return { "chair": ["inst_3"], "table": ["inst_2"] }
+  // if called with name = "table" and inst = "inst_2", would return { "chair": ["inst_1", "inst_3"] }
+  // cannot and should not be called from outside this closure
   function filterRemoveObjectInstance(nestedObjs, name, inst) {
     const out = Object.keys(nestedObjs).reduce((acc, objName) => {
       let list = nestedObjs[objName];
@@ -133,6 +159,12 @@ const newGame = () => {
     return out;
   }
 
+  // aka <MOVE ... >
+  // move thing to destination, or delete thing if destination is undefined
+  // thing must be an object instance or the player
+  // destination must be an object instance, room, or the player
+  // need to pass locals here in case we move player to a new room, in which case the current room (C-ROOM) changes
+  // returns a boolean, indicating success
   function move(locals, thing, destination) {
     if (!thing || typeof thing !== "object") {
       return false;
@@ -185,6 +217,7 @@ const newGame = () => {
     }
 
     if ("isPlayer" in thing) {
+      // can only move a player into a room, not into an object or the player itself
       if ("isRoom" in destination && thing.loc !== destination.isRoom) {
         if (currentRoom.hooks.exit) {
           hooks.insert(
@@ -226,6 +259,7 @@ const newGame = () => {
         return true;
       }
     } else if ("isObject" in thing) {
+      // can move an object into a room, player, or another object
       let goodMove = false;
       const objHooks = objects[thing.isObject].hooks;
       const { scope = "", name = "", inst = "" } = thing.loc;
@@ -258,8 +292,7 @@ const newGame = () => {
         goodMove = true;
       } else if (
         "isRoom" in destination &&
-        scope !== "room" &&
-        name !== destination.isRoom
+        (scope !== "room" || name !== destination.isRoom)
       ) {
         if (scope == "player" && objHooks.exitPlayer) {
           hooks.insert(
@@ -276,9 +309,9 @@ const newGame = () => {
         goodMove = true;
       } else if (
         "isObject" in destination &&
-        scope !== "object" &&
-        name !== destination.isObject &&
-        inst !== destination.isInst
+        (scope !== "object" ||
+          name !== destination.isObject ||
+          inst !== destination.isInst)
       ) {
         if (scope == "player" && objHooks.exitPlayer) {
           hooks.insert(
@@ -321,6 +354,14 @@ const newGame = () => {
     return false;
   }
 
+  // aka <INST ... >
+  // get the first object instance of type objName in the scope
+  // params: scope is an object instance, a room, or the player.
+  // params: objName is a string, the name of the object
+  // params: nested is a boolean
+  // returns an instance or the emptyResource
+  // if nested is false, only search the scope, not nested objects
+  // if nested is true, search the scope and all nested objects, breadth-first
   function getInst(scope, objName, nested = true) {
     if (
       !scope ||
@@ -357,11 +398,14 @@ const newGame = () => {
     return getEmptyResource();
   }
 
+  // these functions are all exposed outside the closure
+  // but only 'setLogger', 'start', and 'handleRawInput' should be called by non-generated code
   return {
     log,
 
     describe,
 
+    // the player enters the game
     start() {
       if (currentRoom.hooks.enter) {
         hooks.insert(
@@ -389,19 +433,27 @@ const newGame = () => {
 
     handleGo,
 
+    // parse user text input, expects a string, returns an object (see details below)
     handleRawInput(input) {
       let handled = false;
       let result = parseInput(input);
       command = result;
+
+      // command.cmds should be a list of object instances that correspond to OBJECTs in the syntax
+      // starts at 1, not 0, because game developers don't need to understand the historical basis for zero-based indexing
+      // cmds[0] from the parser is always an empty object to faciliate this
+      // but cmds[i > 0] from the parser is a { word, val } object, and the engine only cares about val
       command.cmds = result.cmds.map((cmd) =>
         cmd.val ? cmd.val : getEmptyResource()
       );
 
       if ("move" in result) {
+        // user command is "GO <direction>"
         handled = handleGo(result.move);
       }
 
       if ("handle" in result) {
+        // user command matches a syntax (and all it's OBJECTs)
         handled = true;
 
         // srh = syntax routine handlers
@@ -442,6 +494,7 @@ const newGame = () => {
           }
         }
 
+        // run all queued hooks to ensure that future insertions of higher-priority hooks don't wipe these calls
         hooks.callAll();
       }
 
@@ -501,6 +554,7 @@ const newGame = () => {
         nested.push(...children);
       }
 
+      // run all queued hooks to ensure...
       hooks.callAll();
 
       if (currentRoom.hooks.always) {
@@ -520,13 +574,22 @@ const newGame = () => {
         );
       }
 
+      // run all queued hooks to ensure...
       hooks.callAll();
 
+      // handled: was any zil code run? Doesn't mean that logs were written
+      // syntax.prsa: the action (first word) of the command, after translated from synonyms
+      // syntax.cmds: an array of objects, one for each OBJECT in the cmd
+      // syntax.cmds[i].word: the actual word (a string) that was parsed, which should correspon to an object
+      // syntax.cmds[i].hasVal: did this word match an object?
+      // goDirection: if the command was "GO <direction>", this is the direction
+      // playerVars: an object with all the player variables (these are all numeric). Good for determining if the player is dead and the game should end
       return {
         handled,
         syntax: {
           prsa: result.prsa,
-          cmds: result.cmds.map((cmd) => ({
+          // first elem is always an emptyResource, can remove it
+          cmds: result.cmds.slice(1).map((cmd) => ({
             word: cmd.word,
             hasVal: !!cmd.val,
           })),
@@ -536,11 +599,10 @@ const newGame = () => {
       };
     },
 
-    getSyntaxCmd() {
-      const { cmds } = command;
-      return cmds.map((cmd) => (cmd.val ? cmd.val : getEmptyResource()));
-    },
-
+    // aka <EACH-VAL obj ... >
+    // get variables of an object instance, a room, or the player, and technically would work with an object too
+    // return an array of { name: string, val: number }
+    // variable values are always numeric (at least the ones returned from this function)
     getVariablesOf(obj) {
       if (!obj || !("vars" in obj)) {
         return [];
@@ -552,12 +614,17 @@ const newGame = () => {
       }));
     },
 
+    // aka <EACH-OBJ ... >
+    // get all object instances in an object instance (aka nested), a room, or the player
+    // OR get all instances of an object type
+    // does not return deeper nested objects
     getObjectsIn(something) {
       if (!something || typeof something !== "object") {
         return [];
       }
 
       if ("isObject" in something && !("isInst" in something)) {
+        // get all instances of an object type
         return Object.values(something.copies);
       }
 
@@ -570,15 +637,19 @@ const newGame = () => {
         .flat();
     },
 
-    findObjectMatchingParsedWord(word, params) {
+    // used by the parser when it encounters an OBJECT in the syntax
+    // must be able to find an object instance (of object type word) in the player or current room, but it can be nested
+    // should only be used by the parser, as it returns emptyObj (not emptyResource)
+    findObjectMatchingParsedWord(word) {
+      const emptyObj = { objectVal: null };
       if (!word) {
-        return getEmptyResource();
+        return emptyObj;
       }
 
       // matches is a string[]
       const matches = lookupObjectNamesBySynonym(word);
       if (!matches || matches.length === 0) {
-        return getEmptyResource();
+        return emptyObj;
       }
 
       // objects are accessible if in current room or player, or nested within
@@ -605,28 +676,25 @@ const newGame = () => {
         matches.includes(obj.isObject)
       );
 
-      for (let i = 0; i < params.length; i++) {
-        const param = params[i];
-
-        let goodObject = objectsMatching.find((obj) =>
-          param.withVars.every(
-            (varName) => varName in obj.vars && obj.vars[varName] !== 0
-          )
-        );
-
-        if (goodObject) {
-          return { objectNum: i + 1, objectVal: goodObject };
-        }
+      if (objectsMatching.length > 0) {
+        return { objectVal: objectsMatching[0] };
+      } else {
+        return emptyObj;
       }
-
-      return getEmptyResource();
     },
 
-    getParent(thing) {
+    // aka <LOC ... >
+    // get the parent of an object instance
+    // if !nested, returns an object instance, a room, or the player
+    // if !nested and passed a room or the player, returns the room or the player
+    // if nested, returns a room
+    getParent(thing, nested = false) {
       if (!thing || typeof thing !== "object") {
         console.error("Bad argument passed to engine.getParent", { thing });
         return getEmptyResource();
       }
+
+      // TODO: nested
 
       if ("isPlayer" in thing) {
         return player;
@@ -651,6 +719,10 @@ const newGame = () => {
       return player;
     },
 
+    // aka <IS-IN ... >
+    // container: an object instance, a room, or the player
+    // thing: an object instance, the player, OR an object
+    // returns a boolean
     isInLocation(cRoom, container, thing, nested) {
       // if thing == location && !nested -> return true
       // if thing == location && nested -> return false
@@ -734,10 +806,14 @@ const newGame = () => {
 
     move,
 
-    copyMove(locals, thing, destination) {
+    // create a new instance of an object
+    // thing can be an object instance or an object
+    // destination can be an object instance, a room, or the player
+    // returns a boolean
+    copyMove(thing, destination) {
       if (!thing || typeof thing !== "object") {
         console.error("Bad argument passed to engine.copyMove", { thing });
-        return getEmptyResource();
+        return false;
       }
 
       // does not copy nested objects
@@ -750,11 +826,16 @@ const newGame = () => {
         objects: {},
       };
 
-      return move(locals, copy, destination);
+      // we can't copy the player, which means the current room won't change, which means we can pass {} as locals
+      return move({}, copy, destination);
     },
 
     getInst,
 
+    // compare two or more values
+    // values can be: object instance, object, room, or the player
+    // objects and object instances can be compared, but otherwise values must be all of the same type if they have any hope of returning true
+    // returns a boolean
     isEqual(...args) {
       if (!args || !Array.isArray(args) || args.length < 2) {
         return false;
@@ -781,4 +862,5 @@ const newGame = () => {
   };
 };
 
+// create a game instance, so generated code can get access to it
 export const game = newGame();
