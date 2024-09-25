@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use crate::stats::helpers::{get_token_as_word, ValidationResult};
 use crate::zil::node::ZilNode;
@@ -7,14 +7,14 @@ use crate::stats::cross_ref::{CrossRef, Populator};
 
 pub struct BuzzStats {
     basis: Vec<ZilNode>,
-    all: HashSet<String>,
+    all: BTreeSet<String>,
 }
 
 impl BuzzStats {
     pub fn new() -> BuzzStats {
         BuzzStats {
             basis: Vec::new(),
-            all: HashSet::new(),
+            all: BTreeSet::new(),
         }
     }
 

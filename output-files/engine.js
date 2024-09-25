@@ -214,6 +214,8 @@ const newGame = () => {
           thing.isInst
         );
       }
+
+      return true;
     }
 
     if ("isPlayer" in thing) {

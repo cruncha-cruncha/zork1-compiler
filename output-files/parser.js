@@ -1,6 +1,6 @@
 import { game, getEmptyResource } from './engine.js';
 
-export const buzz = ["OF", "THE", "SOME", "A", "MY", "ALL", "AGAIN"];
+export const buzz = ["A", "AGAIN", "ALL", "MY", "OF", "SOME", "THE"];
 
 export const directions = ["DOWN", "EAST", "NORTH", "SOUTH", "UP", "WEST"];
 

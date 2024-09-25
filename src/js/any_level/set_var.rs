@@ -9,25 +9,8 @@ impl CanWriteOutput for SetVar {
 
         formatter.write("", true)?;
 
-        if self.object.is_some() {
-            formatter.write("game.getInst(", false)?;
-        }
-
         if self.scope.is_some() {
             self.scope.as_ref().unwrap().write_output(formatter)?;
-        }
-
-        if self.object.is_some() {
-            formatter.write(
-                &format!(
-                    ", '{}')",
-                    Formatter::safe_case(self.object.as_ref().unwrap())
-                ),
-                false,
-            )?;
-        }
-
-        if self.scope.is_some() {
             formatter.write(".vars[", false)?;
         }
 
