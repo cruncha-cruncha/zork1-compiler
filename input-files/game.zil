@@ -45,6 +45,9 @@
 ;<GLOBAL WIN-WRITE-NOTE 0> ;"is calculated at the end"
 <GLOBAL WIN-BUILD-BOAT 0>
 
+;"if the user used CHEAT"
+<GLOBAL WIN-CHEAT 0>
+
 ;"good for storing objects that can be cloned"
 <ROOM STORAGE>
 
@@ -764,6 +767,10 @@
       )(
             <IS-EQUAL 1 1>
             <TELL "You did not build a boat." CR>
+      )>
+      <COND (
+            <IS-EQUAL WIN-CHEAT 1>
+            <TELL "You cheated." CR>
       )>
 >
 

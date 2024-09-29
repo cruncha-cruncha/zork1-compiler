@@ -22,7 +22,7 @@ pub struct ParseTree {
 pub enum SyntaxStep {
     Cmd(Cmd),
     Object(Object),
-    End,
+    End(String),
 }
 
 #[derive(Clone, Debug)]
@@ -53,19 +53,29 @@ impl ParseTree {
         for line in syntax_codex {
             let mut is_ambiguous: Option<usize> = None;
 
-            let first_word = match line.first() {
-                Some(SyntaxItem::Cmd(cmd)) => cmd.name.clone(),
+            let action_word = match line.first() {
+                Some(SyntaxItem::Action(act)) => act.clone(),
+                _ => unreachable!(),
+            };
+
+            // if none, then the first word is OBJECT
+            let first_word = match &line[1] {
+                SyntaxItem::Cmd(cmd) => Some(cmd.clone()),
+                SyntaxItem::Object => None,
                 _ => unreachable!(),
             };
 
             let branch_index = match branches.iter().position(|branch| match branch {
-                SyntaxStep::Cmd(cmd) => cmd.name == first_word,
+                SyntaxStep::Cmd(cmd) => {
+                    first_word.is_some() && &cmd.name == first_word.as_ref().unwrap()
+                }
+                SyntaxStep::Object(_) => first_word.is_none(),
                 _ => false,
             }) {
                 Some(i) => i,
                 None => {
                     let new_branch = SyntaxStep::Cmd(Cmd {
-                        name: first_word,
+                        name: first_word.unwrap_or_default(),
                         synonyms: Vec::new(),
                         children: Vec::new(),
                     });
@@ -76,7 +86,7 @@ impl ParseTree {
             };
             let mut branch = &mut branches[branch_index];
 
-            for syntax_type in line.iter().skip(1) {
+            for syntax_type in line.iter().skip(2) {
                 let index = match branch.add_child(syntax_type) {
                     Ok(index) => index,
                     Err(index) => {
@@ -89,7 +99,10 @@ impl ParseTree {
                 branch = &mut branch.get_children_mut()[index];
             }
 
-            branch.add_end();
+            match branch.add_end(action_word) {
+                Ok(()) => (),
+                Err(()) => is_ambiguous = Some(line.len()),
+            }
 
             if is_ambiguous.is_some() {
                 print!("WARNING: Redundant syntax: '");
@@ -130,7 +143,7 @@ impl ParseTree {
                     }
                 }
                 SyntaxStep::Object(_) => (),
-                SyntaxStep::End => return,
+                SyntaxStep::End(_) => return,
             }
 
             Self::add_synonyms_recursive(synonyms, &mut child.get_children_mut().iter_mut());
@@ -178,12 +191,16 @@ impl ParseTree {
     fn write_output_end(
         &self,
         formatter: &mut Formatter,
+        action_word: String,
         depth: usize,
     ) -> Result<(), std::io::Error> {
         formatter.writeln(&format!("if (words.length == {}) {{", depth - 1))?;
         formatter.indent();
 
-        formatter.writeln("return {handle: '', prsa, cmds };")?;
+        formatter.writeln(&format!(
+            "return {{handle: '', prsa: '{}', cmds }};",
+            Formatter::safe_case(&action_word)
+        ))?;
 
         formatter.outdent();
         formatter.writeln("}")?;
@@ -207,15 +224,15 @@ impl ParseTree {
         formatter.writeln("default:")?;
         formatter.indent();
 
-        if SyntaxStep::has_end_child(children) {
-            self.write_output_end(formatter, depth + 1)?;
+        if let Some(action_word) = SyntaxStep::has_end_child(children) {
+            self.write_output_end(formatter, action_word, depth + 1)?;
         }
 
         if let Some(ref object) = SyntaxStep::has_object_child(children) {
             self.write_output_object(formatter, object, depth + 1)?;
         }
 
-        formatter.writeln("return { prsa, cmds };")?;
+        formatter.writeln("return { prsa: '', cmds };")?;
         formatter.outdent();
 
         formatter.writeln("}")?;
@@ -260,13 +277,12 @@ impl CanWriteOutput for ParseTree {
         formatter
             .writeln("const words = rawString.split(\" \").map(w => w.toUpperCase()).filter(w => !!w && !buzz.includes(w));")?;
         formatter.writeln("if (words.length == 0) { return { prsa: '', cmds: [{}] }; }")?;
-        formatter.writeln("const prsa = translateAction(words[0]);")?;
         formatter.writeln("let cmds = [{}];")?;
         formatter.newline()?;
 
         formatter.writeln("if ((words.length == 2) && (words[0] == \"GO\")) {")?;
         formatter.indent();
-        formatter.writeln("return { move: words[1], prsa, cmds: [] };")?;
+        formatter.writeln("return { move: words[1], prsa: 'GO', cmds: [] };")?;
         formatter.outdent();
         formatter.writeln("}")?;
         formatter.newline()?;
@@ -274,36 +290,6 @@ impl CanWriteOutput for ParseTree {
         formatter.outdent();
         self.write_output_recursive(formatter, &self.branches, 0)?;
 
-        formatter.writeln("}")?;
-
-        formatter.newline()?;
-        formatter.writeln("export const translateAction = (actionWord) => {")?;
-        formatter.indent();
-        formatter.writeln("switch (actionWord) {")?;
-        formatter.indent();
-
-        for branch in &self.branches {
-            match branch {
-                SyntaxStep::Cmd(cmd) => {
-                    for name in cmd.get_names() {
-                        formatter.writeln(&format!("case \"{}\":", name))?;
-                    }
-
-                    formatter.indent();
-                    formatter
-                        .writeln(&format!("return \"{}\";", Formatter::safe_case(&cmd.name)))?;
-                    formatter.outdent();
-                }
-                _ => unreachable!(),
-            }
-        }
-
-        formatter.writeln("default:")?;
-        formatter.indent();
-        formatter.writeln("return actionWord;")?;
-        formatter.outdent();
-        formatter.writeln("}")?;
-        formatter.outdent();
         formatter.writeln("}")?;
 
         Ok(())
@@ -315,7 +301,7 @@ impl SyntaxStep {
         match self {
             SyntaxStep::Cmd(cmd) => cmd.children.len(),
             SyntaxStep::Object(obj) => obj.children.len(),
-            SyntaxStep::End => 0,
+            SyntaxStep::End(_) => 0,
         }
     }
 
@@ -341,24 +327,40 @@ impl SyntaxStep {
             .copied()
     }
 
-    pub fn has_end_child(children: &Vec<SyntaxStep>) -> bool {
-        children.iter().any(|child| match child {
-            SyntaxStep::End => true,
-            _ => false,
-        })
+    pub fn has_end_child(children: &Vec<SyntaxStep>) -> Option<String> {
+        for child in children.iter() {
+            match child {
+                SyntaxStep::End(word) => return Some(word.clone()),
+                _ => (),
+            }
+        }
+        None
     }
 
     pub fn get_children_mut(&mut self) -> &mut Vec<SyntaxStep> {
         match self {
             SyntaxStep::Cmd(cmd) => &mut cmd.children,
             SyntaxStep::Object(obj) => &mut obj.children,
-            SyntaxStep::End => panic!(),
+            SyntaxStep::End(_) => panic!(),
         }
     }
 
-    pub fn add_end(&mut self) {
+    pub fn add_end(&mut self, action_word: String) -> Result<(), ()> {
         let children = self.get_children_mut();
-        children.push(SyntaxStep::End);
+        for child in children.iter() {
+            match child {
+                SyntaxStep::End(word) => {
+                    if word == &action_word {
+                        return Ok(());
+                    } else {
+                        return Err(());
+                    }
+                }
+                _ => (),
+            }
+        }
+        children.push(SyntaxStep::End(action_word));
+        Ok(())
     }
 
     pub fn add_child(&mut self, new_child: &SyntaxItem) -> Result<usize, usize> {
@@ -368,7 +370,7 @@ impl SyntaxStep {
             match c {
                 SyntaxStep::Cmd(cmd) => {
                     if let SyntaxItem::Cmd(ref new_cmd) = new_child {
-                        if cmd.name == new_cmd.name {
+                        if &cmd.name == new_cmd {
                             return Ok(i);
                         }
                     }
@@ -378,19 +380,20 @@ impl SyntaxStep {
                         return Err(i);
                     }
                 }
-                SyntaxStep::End => (),
+                SyntaxStep::End(_) => (),
             }
         }
 
         let new_child = match new_child {
             SyntaxItem::Cmd(cmd) => SyntaxStep::Cmd(Cmd {
-                name: cmd.name.clone(),
+                name: cmd.clone(),
                 synonyms: Vec::new(),
                 children: Vec::new(),
             }),
             SyntaxItem::Object => SyntaxStep::Object(Object {
                 children: Vec::new(),
             }),
+            SyntaxItem::Action(_) => unreachable!(),
         };
 
         children.push(new_child);
@@ -412,7 +415,7 @@ impl fmt::Display for SyntaxStep {
         match self {
             SyntaxStep::Cmd(cmd) => write!(f, "{}", cmd.name),
             SyntaxStep::Object(_) => write!(f, "<object>"),
-            SyntaxStep::End => write!(f, "<end>"),
+            SyntaxStep::End(act) => write!(f, "{}", act),
         }
     }
 }

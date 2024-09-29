@@ -15,9 +15,9 @@ use crate::stats::cross_ref::Populator;
 
 // first word is always the action
 // all commands are of the form:
-// <SYNTAX ACTION ... >
-// <SYNTAX ACTION ... OBJECT ... >
-// <SYNTAX ACTION ... OBJECT ... OBJECT ... >
+// <SYNTAX (ACTION) ... >
+// <SYNTAX (ACTION) ... OBJECT ... >
+// <SYNTAX (ACTION) ... OBJECT ... OBJECT ... >
 // etc.
 
 pub struct SyntaxStats {
@@ -27,13 +27,9 @@ pub struct SyntaxStats {
 
 #[derive(Clone, Debug)]
 pub enum SyntaxItem {
-    Cmd(Cmd),
+    Action(String),
+    Cmd(String),
     Object,
-}
-
-#[derive(Clone, Debug)]
-pub struct Cmd {
-    pub name: String,
 }
 
 impl SyntaxStats {
@@ -64,7 +60,7 @@ impl Populator for SyntaxStats {
             let mut syntax_errors: Vec<String> = Vec::new();
             let mut steps: Vec<SyntaxItem> = Vec::new();
 
-            match num_children_more_than(line, 0) {
+            match num_children_more_than(line, 2) {
                 Ok(_) => {}
                 Err(e) => {
                     errors.push(e);
@@ -72,7 +68,22 @@ impl Populator for SyntaxStats {
                 }
             }
 
-            let second_word = match get_token_as_word(&line.children[1]) {
+            let second_child = &line.children[1];
+            if second_child.node_type != ZilNodeType::Group {
+                errors.push(format!(
+                    "Syntax node's action child is not type group\n{}",
+                    format_file_location(&line)
+                ));
+                continue;
+            } else if second_child.children.len() != 1 {
+                errors.push(format!(
+                    "Syntax node's action group does not have exactly one child\n{}",
+                    format_file_location(&line)
+                ));
+                continue;
+            }
+
+            let action_word = match get_token_as_word(&second_child.children[0]) {
                 Ok(v) => v,
                 Err(e) => {
                     errors.push(e);
@@ -80,33 +91,32 @@ impl Populator for SyntaxStats {
                 }
             };
 
-            if second_word == "OBJECT" {
+            if action_word == "OBJECT" {
                 errors.push(format!(
-                    "Syntax node's second child cannot be OBJECT\n{}",
+                    "Syntax node's action word cannot be OBJECT\n{}",
                     format_file_location(&line)
                 ));
                 continue;
-            } else if CrossRef::name_is_illegal(&second_word) {
+            } else if CrossRef::name_is_illegal(&action_word) {
                 errors.push(format!(
-                    "Syntax node's second child is illegal: {}\n{}",
-                    second_word,
+                    "Syntax node's action word is illegal: {}\n{}",
+                    action_word,
                     format_file_location(&line)
                 ));
                 continue;
             }
 
-            steps.push(SyntaxItem::Cmd(Cmd { name: second_word }));
+            steps.push(SyntaxItem::Action(action_word));
 
             for i in 2..line.children.len() {
                 let n = &line.children[i];
                 match n.node_type {
                     ZilNodeType::Token(TokenType::Word) => {
                         let word = get_token_as_word(&n).unwrap();
-
                         if word == "OBJECT" {
                             steps.push(SyntaxItem::Object);
                         } else {
-                            steps.push(SyntaxItem::Cmd(Cmd { name: word }));
+                            steps.push(SyntaxItem::Cmd(word));
                         }
                     }
                     _ => {
@@ -147,7 +157,8 @@ impl Populator for SyntaxStats {
 impl fmt::Display for SyntaxItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SyntaxItem::Cmd(cmd) => write!(f, "{}", cmd.name),
+            SyntaxItem::Action(act) => write!(f, "{}", act),
+            SyntaxItem::Cmd(cmd) => write!(f, "{}", cmd),
             SyntaxItem::Object => write!(f, "<object>"),
         }
     }
@@ -172,12 +183,14 @@ impl<'a> Iterator for SyntaxCodex<'a> {
     }
 }
 
+// bad codex, as key:value is 1:n, not 1:1
+// but good enough
 impl<'a> Codex<&'a Vec<SyntaxItem>> for SyntaxCodex<'a> {
     fn lookup(&self, word: &str) -> Option<&'a Vec<SyntaxItem>> {
         for syntax in self.all_syntax.iter() {
             match syntax.first().unwrap() {
-                SyntaxItem::Cmd(cmd) => {
-                    if cmd.name == word {
+                SyntaxItem::Action(act) => {
+                    if act == word {
                         return Some(syntax);
                     }
                 }
