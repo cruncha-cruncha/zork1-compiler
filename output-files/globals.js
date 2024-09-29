@@ -54,6 +54,7 @@ export const globals = {
   winEnterCave: 0,
   winKillMonster: 0,
   winBuildBoat: 0,
+  winCheat: 0,
   detailedDesc: 0,
   firstLookAround: 1,
   firstWhereAmI: 1,

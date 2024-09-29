@@ -8,11 +8,10 @@ export const parseInput = (rawString) => {
   if (!rawString || typeof rawString !== 'string') { return { prsa: '', cmds: [] }; }
   const words = rawString.split(" ").map(w => w.toUpperCase()).filter(w => !!w && !buzz.includes(w));
   if (words.length == 0) { return { prsa: '', cmds: [{}] }; }
-  const prsa = translateAction(words[0]);
   let cmds = [{}];
 
   if ((words.length == 2) && (words[0] == "GO")) {
-    return { move: words[1], prsa, cmds: [] };
+    return { move: words[1], prsa: 'GO', cmds: [] };
   }
 
   switch (words[0]) {
@@ -24,12 +23,12 @@ export const parseInput = (rawString) => {
         switch (words[3]) {
         default:
           if (words.length == 3) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'where', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     case "CAN":
       switch (words[2]) {
@@ -39,34 +38,21 @@ export const parseInput = (rawString) => {
           switch (words[4]) {
           default:
             if (words.length == 4) {
-              return {handle: '', prsa, cmds };
+              return {handle: '', prsa: 'where', cmds };
             }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "WHAT":
     switch (words[1]) {
-    case "IS":
-      switch (words[2]) {
-      case "HERE":
-        switch (words[3]) {
-        default:
-          if (words.length == 3) {
-            return {handle: '', prsa, cmds };
-          }
-          return { prsa, cmds };
-        }
-      default:
-        return { prsa, cmds };
-      }
     case "CAN":
       switch (words[2]) {
       case "I":
@@ -75,26 +61,39 @@ export const parseInput = (rawString) => {
           switch (words[4]) {
           default:
             if (words.length == 4) {
-              return {handle: '', prsa, cmds };
+              return {handle: '', prsa: 'where', cmds };
             }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
+      }
+    case "IS":
+      switch (words[2]) {
+      case "HERE":
+        switch (words[3]) {
+        default:
+          if (words.length == 3) {
+            return {handle: '', prsa: 'what', cmds };
+          }
+          return { prsa: '', cmds };
+        }
+      default:
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "TIME":
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'time', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "LOOK":
     switch (words[1]) {
@@ -102,20 +101,20 @@ export const parseInput = (rawString) => {
       switch (words[2]) {
       default:
         if (words.length == 2) {
-          return {handle: '', prsa, cmds };
+          return {handle: '', prsa: 'look', cmds };
         }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "INVENTORY":
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'inventory', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "WEATHER":
     switch (words[1]) {
@@ -123,23 +122,23 @@ export const parseInput = (rawString) => {
       switch (words[2]) {
       default:
         if (words.length == 2) {
-          return {handle: '', prsa, cmds };
+          return {handle: '', prsa: 'weather', cmds };
         }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'weather', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "SLEEP":
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'sleep', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "CHEAT":
     switch (words[1]) {
@@ -149,19 +148,19 @@ export const parseInput = (rawString) => {
         switch (words[2]) {
         default:
           if (words.length == 2) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'cheat', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "DEBUG":
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'debug', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "EXAMINE":
   case "INSPECT":
@@ -174,11 +173,11 @@ export const parseInput = (rawString) => {
         switch (words[2]) {
         default:
           if (words.length == 2) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'examine', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "TAKE":
   case "GATHER":
@@ -190,11 +189,11 @@ export const parseInput = (rawString) => {
         switch (words[2]) {
         default:
           if (words.length == 2) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'take', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "DROP":
     switch (words[1]) {
@@ -204,11 +203,11 @@ export const parseInput = (rawString) => {
         switch (words[2]) {
         default:
           if (words.length == 2) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'drop', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "EMPTY":
   case "UNPACK":
@@ -219,11 +218,11 @@ export const parseInput = (rawString) => {
         switch (words[2]) {
         default:
           if (words.length == 2) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'empty', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "ADD":
     switch (words[1]) {
@@ -239,16 +238,16 @@ export const parseInput = (rawString) => {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
-                  return {handle: '', prsa, cmds };
+                  return {handle: '', prsa: 'add', cmds };
                 }
-                return { prsa, cmds };
+                return { prsa: '', cmds };
               }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "PUT":
     switch (words[1]) {
@@ -264,16 +263,16 @@ export const parseInput = (rawString) => {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
-                  return {handle: '', prsa, cmds };
+                  return {handle: '', prsa: 'add', cmds };
                 }
-                return { prsa, cmds };
+                return { prsa: '', cmds };
               }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "HIT":
   case "SMASH":
@@ -290,16 +289,16 @@ export const parseInput = (rawString) => {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
-                  return {handle: '', prsa, cmds };
+                  return {handle: '', prsa: 'hit', cmds };
                 }
-                return { prsa, cmds };
+                return { prsa: '', cmds };
               }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "WORK":
     switch (words[1]) {
@@ -315,16 +314,16 @@ export const parseInput = (rawString) => {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
-                  return {handle: '', prsa, cmds };
+                  return {handle: '', prsa: 'work', cmds };
                 }
-                return { prsa, cmds };
+                return { prsa: '', cmds };
               }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "EAT":
   case "TASTE":
@@ -338,11 +337,11 @@ export const parseInput = (rawString) => {
         switch (words[2]) {
         default:
           if (words.length == 2) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'eat', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "OPEN":
     switch (words[1]) {
@@ -352,11 +351,11 @@ export const parseInput = (rawString) => {
         switch (words[2]) {
         default:
           if (words.length == 2) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'open', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "SPARK":
     switch (words[1]) {
@@ -372,16 +371,16 @@ export const parseInput = (rawString) => {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
-                  return {handle: '', prsa, cmds };
+                  return {handle: '', prsa: 'spark', cmds };
                 }
-                return { prsa, cmds };
+                return { prsa: '', cmds };
               }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "TALK":
     switch (words[1]) {
@@ -393,14 +392,14 @@ export const parseInput = (rawString) => {
           switch (words[3]) {
           default:
             if (words.length == 3) {
-              return {handle: '', prsa, cmds };
+              return {handle: '', prsa: 'talk', cmds };
             }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "PEE":
     switch (words[1]) {
@@ -412,14 +411,14 @@ export const parseInput = (rawString) => {
           switch (words[3]) {
           default:
             if (words.length == 3) {
-              return {handle: '', prsa, cmds };
+              return {handle: '', prsa: 'pee', cmds };
             }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "WRITE":
     switch (words[1]) {
@@ -427,12 +426,12 @@ export const parseInput = (rawString) => {
       switch (words[2]) {
       default:
         if (words.length == 2) {
-          return {handle: '', prsa, cmds };
+          return {handle: '', prsa: 'write', cmds };
         }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "ENTER":
     switch (words[1]) {
@@ -440,12 +439,12 @@ export const parseInput = (rawString) => {
       switch (words[2]) {
       default:
         if (words.length == 2) {
-          return {handle: '', prsa, cmds };
+          return {handle: '', prsa: 'enter', cmds };
         }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "EXIT":
     switch (words[1]) {
@@ -453,20 +452,20 @@ export const parseInput = (rawString) => {
       switch (words[2]) {
       default:
         if (words.length == 2) {
-          return {handle: '', prsa, cmds };
+          return {handle: '', prsa: 'exit', cmds };
         }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "SWIM":
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'swim', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "JUMP":
     switch (words[1]) {
@@ -474,20 +473,20 @@ export const parseInput = (rawString) => {
       switch (words[2]) {
       default:
         if (words.length == 2) {
-          return {handle: '', prsa, cmds };
+          return {handle: '', prsa: 'jump', cmds };
         }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     case "DOWN":
       switch (words[2]) {
       default:
         if (words.length == 2) {
-          return {handle: '', prsa, cmds };
+          return {handle: '', prsa: 'jump', cmds };
         }
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "GREAT":
     switch (words[1]) {
@@ -497,15 +496,15 @@ export const parseInput = (rawString) => {
         switch (words[3]) {
         default:
           if (words.length == 3) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'great', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "EUNICE":
     switch (words[1]) {
@@ -515,15 +514,15 @@ export const parseInput = (rawString) => {
         switch (words[3]) {
         default:
           if (words.length == 3) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'eunice', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "SCHOOL":
     switch (words[1]) {
@@ -535,18 +534,18 @@ export const parseInput = (rawString) => {
           switch (words[4]) {
           default:
             if (words.length == 4) {
-              return {handle: '', prsa, cmds };
+              return {handle: '', prsa: 'school', cmds };
             }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "BUG":
     switch (words[1]) {
@@ -556,15 +555,15 @@ export const parseInput = (rawString) => {
         switch (words[3]) {
         default:
           if (words.length == 3) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'bug', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "EVER":
     switch (words[1]) {
@@ -574,15 +573,15 @@ export const parseInput = (rawString) => {
         switch (words[3]) {
         default:
           if (words.length == 3) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'ever', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "LISTENING":
     switch (words[1]) {
@@ -592,15 +591,15 @@ export const parseInput = (rawString) => {
         switch (words[3]) {
         default:
           if (words.length == 3) {
-            return {handle: '', prsa, cmds };
+            return {handle: '', prsa: 'listening', cmds };
           }
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "GROWING":
     switch (words[1]) {
@@ -612,126 +611,36 @@ export const parseInput = (rawString) => {
           switch (words[4]) {
           default:
             if (words.length == 4) {
-              return {handle: '', prsa, cmds };
+              return {handle: '', prsa: 'growing', cmds };
             }
-            return { prsa, cmds };
+            return { prsa: '', cmds };
           }
         default:
-          return { prsa, cmds };
+          return { prsa: '', cmds };
         }
       default:
-        return { prsa, cmds };
+        return { prsa: '', cmds };
       }
     default:
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "YES":
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'yes', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   case "NO":
     switch (words[1]) {
     default:
       if (words.length == 1) {
-        return {handle: '', prsa, cmds };
+        return {handle: '', prsa: 'no', cmds };
       }
-      return { prsa, cmds };
+      return { prsa: '', cmds };
     }
   default:
-    return { prsa, cmds };
+    return { prsa: '', cmds };
   }
 }
-
-export const translateAction = (actionWord) => {
-  switch (actionWord) {
-    case "WHERE":
-      return "where";
-    case "WHAT":
-      return "what";
-    case "TIME":
-      return "time";
-    case "LOOK":
-      return "look";
-    case "INVENTORY":
-      return "inventory";
-    case "WEATHER":
-      return "weather";
-    case "SLEEP":
-      return "sleep";
-    case "CHEAT":
-      return "cheat";
-    case "DEBUG":
-      return "debug";
-    case "EXAMINE":
-    case "INSPECT":
-    case "READ":
-    case "INVESTIGATE":
-      return "examine";
-    case "TAKE":
-    case "GATHER":
-    case "GET":
-      return "take";
-    case "DROP":
-      return "drop";
-    case "EMPTY":
-    case "UNPACK":
-      return "empty";
-    case "ADD":
-      return "add";
-    case "PUT":
-      return "put";
-    case "HIT":
-    case "SMASH":
-      return "hit";
-    case "WORK":
-      return "work";
-    case "EAT":
-    case "TASTE":
-    case "LICK":
-    case "DRINK":
-    case "IMBIBE":
-      return "eat";
-    case "OPEN":
-      return "open";
-    case "SPARK":
-      return "spark";
-    case "TALK":
-      return "talk";
-    case "PEE":
-      return "pee";
-    case "WRITE":
-      return "write";
-    case "ENTER":
-      return "enter";
-    case "EXIT":
-      return "exit";
-    case "SWIM":
-      return "swim";
-    case "JUMP":
-      return "jump";
-    case "GREAT":
-      return "great";
-    case "EUNICE":
-      return "eunice";
-    case "SCHOOL":
-      return "school";
-    case "BUG":
-      return "bug";
-    case "EVER":
-      return "ever";
-    case "LISTENING":
-      return "listening";
-    case "GROWING":
-      return "growing";
-    case "YES":
-      return "yes";
-    case "NO":
-      return "no";
-    default:
-      return actionWord;
-    }
-  }

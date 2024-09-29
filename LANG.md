@@ -193,10 +193,10 @@ The first child must be `GLOBAL`, the second child must be a word, and the third
 Syntax defines an input command the user can enter. It could look like:
 
 ```
-<SYNTAX RUN AWAY>
-<SYNTAX AM I GOING TO CRASH>
-<SYNTAX WEATHER REPORT>
-<SYNTAX EAT NEAREST OBJECT>
+<SYNTAX (WEATHER) WEATHER REPORT>
+<SYNTAX (RUN-FAR) RUN AWAY>
+<SYNTAX (WILL-CRASH) AM I GOING TO CRASH>
+<SYNTAX (EAT) EAT NEAREST OBJECT>
 ```
 
 ## `BUZZ`
@@ -207,7 +207,7 @@ When the user enters some text, it's passed as a string to the parser. The parse
 <BUZZ A OF MY ALL SOME THE AGAIN>
 ```
 
-So if the user enters the command `TAKE ALL OF THE APPLES`, it'll be split then buzzed into the array [`TAKE`, `APPLES`]. `BUZZ` is not applied to syntax, so `<SYNTAX TAKE THE OBJECT>` will never be matched.
+So if the user enters the command `TAKE ALL OF THE APPLES`, it'll be split then buzzed into the array [`TAKE`, `APPLES`]. `BUZZ` is not applied to syntax, so `<SYNTAX (TAKE) TAKE THE OBJECT>` will never be matched.
 
 If `BUZZ` is defined multiple times, it's treated as if there is only one definition, with a set of all words built from combining all the different definitions. It's easiest just to define it once.
 
@@ -216,10 +216,10 @@ If `BUZZ` is defined multiple times, it's treated as if there is only one defini
 In order to provide flexibility to the user, synonyms can be defined for any word. The synonyms apply to that word in any syntax.
 
 ```
-<SYNTAX WALK FAST>
+<SYNTAX (WALK) WALK FAST>
 <SYNONYMS WALK RUN AMBLE STRIDE>
 <SYNONYMS FAST FASTER>
-<SYNTAX HOW FAST AM I GOING>
+<SYNTAX (HOW-FAST) HOW FAST AM I GOING>
 ```
 
 Assuming that no words are buzzed, the above definitions match the following commands:
@@ -239,14 +239,11 @@ The order of syntax and synonym definitions don't matter: the second child in a 
 
 Commands can quickly become unwieldy between `SYNTAX`, `BUZZ`, and `SYNONYM`, but let's get back to `SYNTAX` for now.
 
-The second child of a syntax (`RUN`, `AM`, `WEATHER`, `GRAB`) is called the 'action'. If two or more syntaxes have the same action (start with the same word), they will execute the same action handler (some of the same code will run in response to the commands). This strict limitation (hopefully) keeps the number of possible commands small and action-oriented. In the demo game, the below two syntaxes are treated (for better or worse) the same.
+The second child of a syntax (`WEATHER`, `RUN-FAR`, `WILL-CRASH`, `EAT`) is called the 'action'. It must be a group with a single word. If two or more syntaxes have the same action (start with the same word group), they will execute the same action handler (some of the same code will run in response to the commands).
 
-```
-<SYNTAX WHERE AM I>
-<SYNTAX WHERE CAN I GO>
-```
+The demo game defines a very limited syntax because, at the time it was written, the action was the literal first word of any command.
 
-Because they both start with the same action `WHERE`. A valid command will run (fire/execute) it's corresponding action and object handlers. Handlers are similar to routines (next section). To define an action handler, write a top-level cluster starting with the action word. For example:
+A valid command will run (fire/execute) it's corresponding action and object handlers. Handlers are similar to routines (next section). To define an action handler, write a top-level cluster starting with the action word. For example:
 
 ```
 <WHERE ()
@@ -259,7 +256,7 @@ This is an action handler for any command that starts with `WHERE` (aka any synt
 Note that actions are always translated into their root form (synonym-wise) before coming out of the parser. So from the example earlier:
 
 ```
-<SYNTAX WALK FAST>
+<SYNTAX (WALK) WALK FAST>
 <SYNONYMS WALK RUN AMBLE STRIDE>
 ```
 
@@ -268,7 +265,7 @@ If the user enters command `RUN FAST`, the action coming out the parser would be
 What about object handlers? Earlier, we saw this example:
 
 ```
-<SYNTAX EAT NEAREST OBJECT>
+<SYNTAX (EAT) EAT NEAREST OBJECT>
 ```
 
 `OBJECT` has special meaning in a syntax. It will match any object in the player or current room (nested at any depth), based on the object's `AKA` (see earlier). So if there's candy in the current room, and the user enters command `EAT NEAREST CANDY`, this syntax will match. If there's no candy in the player or in the room, the syntax will not match, and the action handler won't execute. The parser looks for instances first in the player, then in the current room.
@@ -291,7 +288,7 @@ Maybe `EAT` doesn't have an action handler, and instead this command is handled 
 
 If `EAT` does have an action handler, the `EAT CANDY ()` object handler will execute before the action handler. An `EAT () CANDY` object handler will execute _after_ the action handler: the position of the group dictates whether an object handler is executed before or after the action handler.
 
-Each syntax can have one action handler, and two object handlers (one before and one after) for every object, if the syntax has at least one `OBJECT`. So if there are 20 objects (not instances, actual objects) in the game, and a `<SYNTAX KICK OBJECT AT OBJECT USING OBJECT>`, there is potentially one action handler and 40 object handlers.
+Each syntax can have one action handler, and two object handlers (one before and one after) for every object, if the syntax has at least one `OBJECT`. So if there are 20 objects (not instances, actual objects) in the game, and a `<SYNTAX (KICK) KICK OBJECT AT OBJECT USING OBJECT>`, there is potentially one action handler and 40 object handlers.
 
 # an Aside on Limitations of the Parser
 
@@ -302,7 +299,7 @@ If the parser encounters an `OBJECT` but can't find a suitable instance in the i
 For example, consider:
 
 ```
-<SYNTAX TAKE OBJECT>
+<SYNTAX (TAKE) TAKE OBJECT>
 <OBJECT BOOK>
 
 <TAKE ()
@@ -331,26 +328,12 @@ If the user tries to `TAKE BOOK` and there aren't any around, the game will log 
 Consider now:
 
 ```
-<SYNTAX NEST OBJECT IN OBJECT>
+<SYNTAX (NEST) NEST OBJECT IN OBJECT>
 ```
 
 And the player enters command `NEST DOLL IN DOLL`. If there's a `DOLL` around, `CMD` 1 and 2 will both get the same instance. This is because the parser's object-finder is essentially stateless; it doesn't keep track of previously-found object instances. We can work around this in zil code: if expecting 2+ objects, go looking for 2+ objects in the `PLAYER` and `C-ROOM`.
 
 ## Limitation 3
-
-Consider:
-
-```
-<SYNTAX TAKE ALL OBJECT FROM OBJECT>
-<SYNTAX TAKE ALL OBJECT AND PUT IN OBJECT>
-<SYNTAX TAKE OUT THE TRASH>
-```
-
-Here the first syntax will always match before the second; the parser works from left-to-right, and `OBJECT` essentially matches anything. The compiler will generate a warning about redundant syntax.
-
-The third syntax is perfectly valid, but will be handled by the same functions that handle the first syntax (because they both start with action `TAKE`), even though their semantic intentions are different. Checking if `<CMD 1>` is empty (null) might not work to differentiate (see above). In general, it's best to design a syntax so that each unique first word corresponds to a single intent.
-
-## Limitation 4
 
 This one is actually a feature. An object handler will be called at most once per command (or twice if you count before and after as the same handler). So if the user commands `NEST DOLL IN DOLL IN DOLL`, then `<NEST DOLL ()>` will be called once, and `<NEST () DOLL>` will be called once.
 
@@ -538,15 +521,15 @@ Suppose there's a room called `LIBRARY`. If it has a description routine, it sho
 The demo game defines
 
 ```
-<SYNTAX HIT OBJECT>
-<SYNTAX ADD OBJECT TO OBJECT>
-<SYNTAX PUT OBJECT IN OBJECT>
-<SYNTAX TAKE OBJECT>
+<SYNTAX (HIT) HIT OBJECT>
+<SYNTAX (ADD-TO) ADD OBJECT TO OBJECT>
+<SYNTAX (ADD-TO) PUT OBJECT IN OBJECT>
+<SYNTAX (TAKE) TAKE OBJECT>
 ```
 
 The action handler for `HIT` is small; it cleans up a previous command, and that's it. So by convention, if an object is hittable and will take damage, it must define it's own object handler (like `<HIT RABBIT ()>`). If an object can be used to hit but might damage itself in the process, it defines an object handler like `<HIT () SWORD>`. If both handlers TELL something, the logs will come out in a sensible order. This is similar to the concept of in/direct objects (PRSI and PRSO) in the original ZIL language.
 
-By contrast, `ADD` and `PUT` are distinct commands but should really do the same thing in-game. It would be annoying to define `<ADD name ()>` and `<PUT name ()>` for every object, so instead both commands are sent to one large routine:
+By contrast, `ADD` and `PUT` are distinct commands but should really do the same thing in-game. Historically, the first word in a syntax was the action, and it would have been annoying to define `<ADD name ()>` and `<PUT name ()>` for every object, so instead both commands were sent to one large routine:
 
 ```
 <ADD () <ADD-TO>>
@@ -554,7 +537,7 @@ By contrast, `ADD` and `PUT` are distinct commands but should really do the same
 <ROUTINE ADD-TO () ... >
 ```
 
-And in actual fact, the routine got so large that `<ADD-TO>` now calls `<ADD-TO-STONE>` or `<ADD-TO-FIRE>` if required, just so the code is split into manageable chunks for debugging.
+And in actual fact, the routine got so large that it called `<ADD-TO-STONE>` or `<ADD-TO-FIRE>` if required, just so the code was split into manageable chunks for debugging. Now that's not a problem, but the old code remains.
 
 The last syntax, `TAKE`, is a hybrid implementation. The action handler looks for an `OWN-TAKE` variable in `<CMD 1>` with a value of 1, and exits early (`<RETURN 0>`) if found, hoping that an object handler is defined. If not found, the action handler proceeds to do some generic action handling.
 

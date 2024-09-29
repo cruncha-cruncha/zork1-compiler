@@ -119,7 +119,6 @@ export const routines = {
   vDescRoom: vDescRoom,
   vRoomDetail: vRoomDetail,
   vDescObjectsInRoom: vDescObjectsInRoom,
-  addTo: addTo,
   addToFire: addToFire,
   addToStone: addToStone,
 };
@@ -234,6 +233,9 @@ export const handlers = {
       crow: {
         before: crow_hit,
       },
+      cursedSkull: {
+        before: cursedSkull_hit,
+      },
       frog: {
         before: frog_hit,
       },
@@ -318,11 +320,6 @@ export const handlers = {
   },
   pee: {
     func: pee,
-    objHandlers: {
-    },
-  },
-  put: {
-    func: put,
     objHandlers: {
     },
   },
@@ -988,6 +985,13 @@ function descCursedSkull(cRoom, cmd) {
 function cursedSkullInPlayer(cRoom, cmd) {
   const locals = {cRoom, cmd, af: 0};
   for (let object of game.getObjectsIn(player)) {
+    locals['obj'] = object;
+    if ((locals['obj'].vars['maxDamage'] || 0) > 0) {
+      locals['obj'].vars['damage'] = 0;
+      locals['af'] = 1;
+    };
+  };
+  for (let object of game.getObjectsIn(locals['cRoom'])) {
     locals['obj'] = object;
     if ((locals['obj'].vars['maxDamage'] || 0) > 0) {
       locals['obj'].vars['damage'] = 0;
@@ -2519,6 +2523,9 @@ function recap(cRoom, cmd) {
   } else if (1 === 1) {
     game.log("You did not build a boat.", '\n');
   };
+  if (globals['winCheat'] === 1) {
+    game.log("You cheated.", '\n');
+  };
   return 0;
 }
 
@@ -2609,82 +2616,6 @@ function vDescObjectsInRoom(cRoom, cmd) {
   };
   if (locals['count'] === 0) {
     game.log("This space appears to be empty.", '\n');
-  };
-  return 0;
-}
-
-function addTo(cRoom, cmd) {
-  const locals = {cRoom, cmd, };
-  if (game.isEqual(objects['fire'], (locals['cmd']?.[1] ?? getEmptyResource()))) {
-    game.log("You burn yourself, and take 2 damage.", '\n');
-    player.vars['health'] = ((player.vars['health'] || 0) - 2);
-  } else if (((locals['cmd']?.[1] ?? getEmptyResource()).vars['noTake'] || 0) === 1) {
-    game.log("Nice try", '\n');
-  } else if ((game.isEqual(objects['riverStone'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['riverStone'], (locals['cmd']?.[2] ?? getEmptyResource())))) {
-    routines['addToStone'](locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi']);
-  } else if ((game.isEqual(objects['detritus'], (locals['cmd']?.[2] ?? getEmptyResource()))) && (!(game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource())))) && ((game.isInLocation(locals['cRoom'], player, (locals['cmd']?.[2] ?? getEmptyResource()), false)) || (game.isInLocation(locals['cRoom'], locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), false)))) {
-    game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
-    game.log("Added", '\n');
-  } else if (game.isEqual(objects['water'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
-    if (game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()))) {
-      game.log("The water gets wetter.", '\n');
-    } else if (1 === 1) {
-      game.log("splash", '\n');
-      game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
-    };
-  } else if (game.isEqual(objects['fire'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
-    routines['addToFire'](locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi']);
-  } else if ((game.isEqual(objects['kettle'], (locals['cmd']?.[2] ?? getEmptyResource()))) || (game.isEqual(objects['bucket'], (locals['cmd']?.[2] ?? getEmptyResource()))) || (game.isEqual(objects['cup'], (locals['cmd']?.[2] ?? getEmptyResource())))) {
-    if (game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[3] ?? getEmptyResource()))) {
-      game.log("Where is that?", '\n');
-    } else if ((game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['sap'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (((locals['cmd']?.[1] ?? getEmptyResource()).vars['isEdible'] || 0) === 1)) {
-      if ((game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()))) && (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['water'], false))) {
-      } else if (1 === 1) {
-        game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
-      };
-      game.log("Added.", '\n');
-    } else if (1 === 1) {
-      game.log("You can't put that in there", '\n');
-    };
-  } else if (game.isEqual(objects['stick'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
-    if ((game.isEqual(objects['sap'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['boiledSap'], (locals['cmd']?.[1] ?? getEmptyResource())))) {
-      if ((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['sap'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['boiledSap'], false))) {
-        game.log("This stick already has some sticky stuff on it.", '\n');
-        return 0;
-      };
-      game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
-    } else if ((game.isEqual(objects['detritus'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['bulrush'], (locals['cmd']?.[1] ?? getEmptyResource())))) {
-      if ((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['detritus'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['bulrush'], false))) {
-        game.log("This stick already has some tinder.", '\n');
-        return 0;
-      };
-      game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
-    } else if (1 === 1) {
-      game.log("To make a torch, add SAP or BOILED-SAP, then DETRITUS or BULRUSH.", '\n');
-      return 0;
-    };
-    if (!((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['sap'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['boiledSap'], false)))) {
-      game.log("Now add some SAP or BOILED-SAP", '\n');
-    } else if (!((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['detritus'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['bulrush'], false)))) {
-      game.log("Now add some DETRITUS or BULRUSH", '\n');
-    } else if (1 === 1) {
-      game.log("You've made yourself a TORCH. SPARK FLINT AT TORCH to light it.", '\n');
-      game.copyMove(objects['torch'], player);
-      game.move(locals, (locals['cmd']?.[2] ?? getEmptyResource()), );
-    };
-  } else if (game.isEqual(objects['pickAxe'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
-    if (game.isEqual(objects['strap'], (locals['cmd']?.[1] ?? getEmptyResource()))) {
-      if (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['strap'], false)) {
-        game.log("Already has a strap on it", '\n');
-      } else if (1 === 1) {
-        game.log("You tie the strap to the pick-axe.", '\n');
-        game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
-      };
-    } else if (1 === 1) {
-      game.log("You can tie a strap to the pick-axe using ADD, but that's about it", '\n');
-    };
-  } else if (1 === 1) {
-    game.log("Can't put that in there", '\n');
   };
   return 0;
 }
@@ -2785,7 +2716,77 @@ function addToStone(cRoom, cmd) {
 
 function add(cRoom, cmd) {
   const locals = {cRoom, cmd, };
-  routines['addTo'](locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi']);
+  if (game.isEqual(objects['fire'], (locals['cmd']?.[1] ?? getEmptyResource()))) {
+    game.log("You burn yourself, and take 2 damage.", '\n');
+    player.vars['health'] = ((player.vars['health'] || 0) - 2);
+  } else if (((locals['cmd']?.[1] ?? getEmptyResource()).vars['noTake'] || 0) === 1) {
+    game.log("Nice try", '\n');
+  } else if ((game.isEqual(objects['riverStone'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['riverStone'], (locals['cmd']?.[2] ?? getEmptyResource())))) {
+    routines['addToStone'](locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi']);
+  } else if ((game.isEqual(objects['detritus'], (locals['cmd']?.[2] ?? getEmptyResource()))) && (!(game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource())))) && ((game.isInLocation(locals['cRoom'], player, (locals['cmd']?.[2] ?? getEmptyResource()), false)) || (game.isInLocation(locals['cRoom'], locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), false)))) {
+    game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
+    game.log("Added", '\n');
+  } else if (game.isEqual(objects['water'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
+    if (game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()))) {
+      game.log("The water gets wetter.", '\n');
+    } else if (1 === 1) {
+      game.log("splash", '\n');
+      game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
+    };
+  } else if (game.isEqual(objects['fire'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
+    routines['addToFire'](locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi']);
+  } else if ((game.isEqual(objects['kettle'], (locals['cmd']?.[2] ?? getEmptyResource()))) || (game.isEqual(objects['bucket'], (locals['cmd']?.[2] ?? getEmptyResource()))) || (game.isEqual(objects['cup'], (locals['cmd']?.[2] ?? getEmptyResource())))) {
+    if (game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[3] ?? getEmptyResource()))) {
+      game.log("Where is that?", '\n');
+    } else if ((game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['sap'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (((locals['cmd']?.[1] ?? getEmptyResource()).vars['isEdible'] || 0) === 1)) {
+      if ((game.isEqual(objects['water'], (locals['cmd']?.[1] ?? getEmptyResource()))) && (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['water'], false))) {
+      } else if (1 === 1) {
+        game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
+      };
+      game.log("Added.", '\n');
+    } else if (1 === 1) {
+      game.log("You can't put that in there", '\n');
+    };
+  } else if (game.isEqual(objects['stick'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
+    if ((game.isEqual(objects['sap'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['boiledSap'], (locals['cmd']?.[1] ?? getEmptyResource())))) {
+      if ((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['sap'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['boiledSap'], false))) {
+        game.log("This stick already has some sticky stuff on it.", '\n');
+        return 0;
+      };
+      game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
+    } else if ((game.isEqual(objects['detritus'], (locals['cmd']?.[1] ?? getEmptyResource()))) || (game.isEqual(objects['bulrush'], (locals['cmd']?.[1] ?? getEmptyResource())))) {
+      if ((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['detritus'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['bulrush'], false))) {
+        game.log("This stick already has some tinder.", '\n');
+        return 0;
+      };
+      game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
+    } else if (1 === 1) {
+      game.log("To make a torch, add SAP or BOILED-SAP, then DETRITUS or BULRUSH.", '\n');
+      return 0;
+    };
+    if (!((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['sap'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['boiledSap'], false)))) {
+      game.log("Now add some SAP or BOILED-SAP", '\n');
+    } else if (!((game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['detritus'], false)) || (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['bulrush'], false)))) {
+      game.log("Now add some DETRITUS or BULRUSH", '\n');
+    } else if (1 === 1) {
+      game.log("You've made yourself a TORCH. SPARK FLINT AT TORCH to light it.", '\n');
+      game.copyMove(objects['torch'], player);
+      game.move(locals, (locals['cmd']?.[2] ?? getEmptyResource()), );
+    };
+  } else if (game.isEqual(objects['pickAxe'], (locals['cmd']?.[2] ?? getEmptyResource()))) {
+    if (game.isEqual(objects['strap'], (locals['cmd']?.[1] ?? getEmptyResource()))) {
+      if (game.isInLocation(locals['cRoom'], (locals['cmd']?.[2] ?? getEmptyResource()), objects['strap'], false)) {
+        game.log("Already has a strap on it", '\n');
+      } else if (1 === 1) {
+        game.log("You tie the strap to the pick-axe.", '\n');
+        game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource()));
+      };
+    } else if (1 === 1) {
+      game.log("You can tie a strap to the pick-axe using ADD, but that's about it", '\n');
+    };
+  } else if (1 === 1) {
+    game.log("Can't put that in there", '\n');
+  };
   return 0;
 }
 
@@ -2802,6 +2803,7 @@ function bug(cRoom, cmd) {
 
 function cheat(cRoom, cmd) {
   const locals = {cRoom, cmd, };
+  globals['winCheat'] = 1;
   if (!(game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource())))) {
     game.copyMove((locals['cmd']?.[1] ?? getEmptyResource()), player);
     return 1;
@@ -2972,9 +2974,6 @@ function eat(cRoom, cmd) {
       game.log('\n');
     };
     player.vars['health'] = ((player.vars['health'] || 0) + 40);
-    if ((player.vars['health'] || 0) > (player.vars['maxHealth'] || 0)) {
-      player.vars['health'] = (player.vars['maxHealth'] || 0);
-    };
     if ((((locals['cmd']?.[1] ?? getEmptyResource()).vars['hasMushroom'] || 0) === 1) && (!(game.isInLocation(locals['cRoom'], rooms['forest3'], objects['treeHollow'], false))) && ((game.isInLocation(locals['cRoom'], game.getInst(rooms['forest3'], 'treeHollow', false), objects['gem'], false)) || (game.isInLocation(locals['cRoom'], game.getInst(rooms['storage'], 'treeHollow', false), objects['gem'], false)))) {
       game.log("You have a vision of a sparkling gem, hidden in the hollow of a tree, east of the forest lake.", '\n');
       game.move(locals, game.getInst(rooms['storage'], 'treeHollow', false), rooms['forest3']);
@@ -2991,12 +2990,15 @@ function eat(cRoom, cmd) {
     };
   } else if (1 === 1) {
     game.move(locals, (locals['cmd']?.[1] ?? getEmptyResource()), );
-    game.log("You gain 5 health.");
+    game.log("You gain 10 health.");
     if (globals['winCookMeal'] === 0) {
       game.log(" Cook some soup for a heartier meal.");
     };
     game.log('\n');
-    player.vars['health'] = ((player.vars['health'] || 0) + 5);
+    player.vars['health'] = ((player.vars['health'] || 0) + 10);
+  };
+  if ((player.vars['health'] || 0) > (player.vars['maxHealth'] || 0)) {
+    player.vars['health'] = (player.vars['maxHealth'] || 0);
   };
   return 0;
 }
@@ -3421,6 +3423,13 @@ function rock_hit(cRoom, cmd) {
     game.log("You found a lump of GOLD.", '\n');
     game.copyMove(objects['goldLump'], locals['cRoom']);
   };
+  return 0;
+}
+
+function cursedSkull_hit(cRoom, cmd) {
+  const locals = {cRoom, cmd, };
+  game.log("The skull splits into three pieces, and spirit rises up.", '\n');
+  player.vars['health'] = 0;
   return 0;
 }
 
@@ -3863,12 +3872,6 @@ function pee(cRoom, cmd) {
   } else if (1 === 1) {
     game.log("Cool.", '\n');
   };
-  return 0;
-}
-
-function put(cRoom, cmd) {
-  const locals = {cRoom, cmd, };
-  routines['addTo'](locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi']);
   return 0;
 }
 
