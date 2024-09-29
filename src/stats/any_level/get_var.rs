@@ -49,7 +49,7 @@ impl CanValidate for GetVar {
                 let word = get_token_as_word(&second_child).unwrap();
                 if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
-                        ReturnValType::Inst => {
+                        ReturnValType::Inst | ReturnValType::RP => {
                             self.scope = Scope::Local(word);
                         }
                         _ => {

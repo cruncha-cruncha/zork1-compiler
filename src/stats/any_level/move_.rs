@@ -190,7 +190,7 @@ impl CanValidate for Move {
                         self.destination = Some(Scope::Room(word));
                     } else if let Some(return_type) = v.has_local_var(&word) {
                         match return_type {
-                            ReturnValType::Inst => {
+                            ReturnValType::Inst | ReturnValType::RP => {
                                 self.destination = Some(Scope::Local(word));
                             }
                             _ => {

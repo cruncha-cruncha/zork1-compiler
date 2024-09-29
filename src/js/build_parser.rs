@@ -92,7 +92,7 @@ impl ParseTree {
             branch.add_end();
 
             if is_ambiguous.is_some() {
-                print!("WARNING: Ambiguous syntax: '");
+                print!("WARNING: Redundant syntax: '");
                 for (i, word) in line.iter().enumerate() {
                     print!("{}", word);
                     if i < line.len() - 1 {
@@ -168,9 +168,9 @@ impl ParseTree {
             depth - 1,
         ))?;
 
-        formatter.writeln("if (objectVal) {")?;
+        // formatter.writeln("if (objectVal) {")?;
         self.write_output_recursive(formatter, &object.children, depth)?;
-        formatter.writeln("}")?;
+        // formatter.writeln("}")?;
 
         Ok(())
     }
@@ -258,7 +258,7 @@ impl CanWriteOutput for ParseTree {
         )?;
 
         formatter
-            .writeln("const words = rawString.split(\" \").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));")?;
+            .writeln("const words = rawString.split(\" \").map(w => w.toUpperCase()).filter(w => !!w && !buzz.includes(w));")?;
         formatter.writeln("if (words.length == 0) { return { prsa: '', cmds: [{}] }; }")?;
         formatter.writeln("const prsa = translateAction(words[0]);")?;
         formatter.writeln("let cmds = [{}];")?;

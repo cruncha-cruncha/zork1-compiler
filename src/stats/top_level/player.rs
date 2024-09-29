@@ -124,7 +124,7 @@ impl Populator for PlayerStats {
         for c in node.children.iter().skip(1) {
             if c.node_type != ZilNodeType::Group {
                 return Err(vec![format!(
-                    "Expected group, found \n{}",
+                    "Expected group\n{}",
                     format_file_location(&c)
                 )]);
             }

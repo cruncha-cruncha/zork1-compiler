@@ -96,11 +96,11 @@
                     logger("You can't go that way.\n");
                 } else if (result.syntax.cmds.length > 0) {
                     logger("Couldn't find anything to do with that.\n");
+                } else if (result.playerVars.health <= 0) {
+                    logger("There's nothing more to be done.\n");
                 } else {
                     logger("I don't understand that command.\n");
                 }
-            } else if (result.playerVars.health < 0) {
-                // do something
             }
 
             if (noOutputLogs) {

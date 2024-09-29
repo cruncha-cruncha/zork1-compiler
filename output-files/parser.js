@@ -6,7 +6,7 @@ export const directions = ["DOWN", "EAST", "NORTH", "SOUTH", "UP", "WEST"];
 
 export const parseInput = (rawString) => {
   if (!rawString || typeof rawString !== 'string') { return { prsa: '', cmds: [] }; }
-  const words = rawString.split(" ").map(w => w.toUpperCase()).filter(w => !buzz.includes(w));
+  const words = rawString.split(" ").map(w => w.toUpperCase()).filter(w => !!w && !buzz.includes(w));
   if (words.length == 0) { return { prsa: '', cmds: [{}] }; }
   const prsa = translateAction(words[0]);
   let cmds = [{}];
@@ -88,6 +88,14 @@ export const parseInput = (rawString) => {
     default:
       return { prsa, cmds };
     }
+  case "TIME":
+    switch (words[1]) {
+    default:
+      if (words.length == 1) {
+        return {handle: '', prsa, cmds };
+      }
+      return { prsa, cmds };
+    }
   case "LOOK":
     switch (words[1]) {
     case "AROUND":
@@ -133,6 +141,28 @@ export const parseInput = (rawString) => {
       }
       return { prsa, cmds };
     }
+  case "CHEAT":
+    switch (words[1]) {
+    default:
+      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
+      cmds.push({ word: words[1], val: objectVal });
+        switch (words[2]) {
+        default:
+          if (words.length == 2) {
+            return {handle: '', prsa, cmds };
+          }
+          return { prsa, cmds };
+        }
+      return { prsa, cmds };
+    }
+  case "DEBUG":
+    switch (words[1]) {
+    default:
+      if (words.length == 1) {
+        return {handle: '', prsa, cmds };
+      }
+      return { prsa, cmds };
+    }
   case "EXAMINE":
   case "INSPECT":
   case "READ":
@@ -141,7 +171,6 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -149,7 +178,6 @@ export const parseInput = (rawString) => {
           }
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "TAKE":
@@ -159,7 +187,6 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -167,7 +194,6 @@ export const parseInput = (rawString) => {
           }
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "DROP":
@@ -175,7 +201,6 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -183,7 +208,6 @@ export const parseInput = (rawString) => {
           }
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "EMPTY":
@@ -192,7 +216,6 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -200,7 +223,6 @@ export const parseInput = (rawString) => {
           }
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "ADD":
@@ -208,14 +230,12 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         case "TO":
           switch (words[3]) {
           default:
             const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -223,13 +243,11 @@ export const parseInput = (rawString) => {
                 }
                 return { prsa, cmds };
               }
-            }
             return { prsa, cmds };
           }
         default:
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "PUT":
@@ -237,14 +255,12 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         case "IN":
           switch (words[3]) {
           default:
             const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -252,86 +268,25 @@ export const parseInput = (rawString) => {
                 }
                 return { prsa, cmds };
               }
-            }
             return { prsa, cmds };
           }
         default:
           return { prsa, cmds };
         }
-      }
-      return { prsa, cmds };
-    }
-  case "FILL":
-    switch (words[1]) {
-    default:
-      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
-      cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
-        switch (words[2]) {
-        case "WITH":
-          switch (words[3]) {
-          default:
-            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
-            cmds.push({ word: words[3], val: objectVal });
-            if (objectVal) {
-              switch (words[4]) {
-              default:
-                if (words.length == 4) {
-                  return {handle: '', prsa, cmds };
-                }
-                return { prsa, cmds };
-              }
-            }
-            return { prsa, cmds };
-          }
-        default:
-          return { prsa, cmds };
-        }
-      }
-      return { prsa, cmds };
-    }
-  case "POUR":
-    switch (words[1]) {
-    default:
-      const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
-      cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
-        switch (words[2]) {
-        case "ON":
-          switch (words[3]) {
-          default:
-            const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
-            cmds.push({ word: words[3], val: objectVal });
-            if (objectVal) {
-              switch (words[4]) {
-              default:
-                if (words.length == 4) {
-                  return {handle: '', prsa, cmds };
-                }
-                return { prsa, cmds };
-              }
-            }
-            return { prsa, cmds };
-          }
-        default:
-          return { prsa, cmds };
-        }
-      }
       return { prsa, cmds };
     }
   case "HIT":
+  case "SMASH":
     switch (words[1]) {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         case "WITH":
           switch (words[3]) {
           default:
             const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -339,13 +294,11 @@ export const parseInput = (rawString) => {
                 }
                 return { prsa, cmds };
               }
-            }
             return { prsa, cmds };
           }
         default:
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "WORK":
@@ -353,14 +306,12 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         case "WITH":
           switch (words[3]) {
           default:
             const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -368,13 +319,11 @@ export const parseInput = (rawString) => {
                 }
                 return { prsa, cmds };
               }
-            }
             return { prsa, cmds };
           }
         default:
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "EAT":
@@ -386,7 +335,6 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -394,7 +342,6 @@ export const parseInput = (rawString) => {
           }
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "OPEN":
@@ -402,7 +349,6 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         default:
           if (words.length == 2) {
@@ -410,7 +356,6 @@ export const parseInput = (rawString) => {
           }
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "SPARK":
@@ -418,14 +363,12 @@ export const parseInput = (rawString) => {
     default:
       const { objectVal } = game.findObjectMatchingParsedWord(words[1]);
       cmds.push({ word: words[1], val: objectVal });
-      if (objectVal) {
         switch (words[2]) {
         case "AT":
           switch (words[3]) {
           default:
             const { objectVal } = game.findObjectMatchingParsedWord(words[3]);
             cmds.push({ word: words[3], val: objectVal });
-            if (objectVal) {
               switch (words[4]) {
               default:
                 if (words.length == 4) {
@@ -433,13 +376,11 @@ export const parseInput = (rawString) => {
                 }
                 return { prsa, cmds };
               }
-            }
             return { prsa, cmds };
           }
         default:
           return { prsa, cmds };
         }
-      }
       return { prsa, cmds };
     }
   case "TALK":
@@ -449,7 +390,6 @@ export const parseInput = (rawString) => {
       default:
         const { objectVal } = game.findObjectMatchingParsedWord(words[2]);
         cmds.push({ word: words[2], val: objectVal });
-        if (objectVal) {
           switch (words[3]) {
           default:
             if (words.length == 3) {
@@ -457,7 +397,6 @@ export const parseInput = (rawString) => {
             }
             return { prsa, cmds };
           }
-        }
         return { prsa, cmds };
       }
     default:
@@ -470,7 +409,6 @@ export const parseInput = (rawString) => {
       default:
         const { objectVal } = game.findObjectMatchingParsedWord(words[2]);
         cmds.push({ word: words[2], val: objectVal });
-        if (objectVal) {
           switch (words[3]) {
           default:
             if (words.length == 3) {
@@ -478,7 +416,6 @@ export const parseInput = (rawString) => {
             }
             return { prsa, cmds };
           }
-        }
         return { prsa, cmds };
       }
     default:
@@ -487,6 +424,32 @@ export const parseInput = (rawString) => {
   case "WRITE":
     switch (words[1]) {
     case "NOTE":
+      switch (words[2]) {
+      default:
+        if (words.length == 2) {
+          return {handle: '', prsa, cmds };
+        }
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "ENTER":
+    switch (words[1]) {
+    case "CABIN":
+      switch (words[2]) {
+      default:
+        if (words.length == 2) {
+          return {handle: '', prsa, cmds };
+        }
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "EXIT":
+    switch (words[1]) {
+    case "CABIN":
       switch (words[2]) {
       default:
         if (words.length == 2) {
@@ -526,6 +489,158 @@ export const parseInput = (rawString) => {
     default:
       return { prsa, cmds };
     }
+  case "GREAT":
+    switch (words[1]) {
+    case "BALL":
+      switch (words[2]) {
+      case "FIRE":
+        switch (words[3]) {
+        default:
+          if (words.length == 3) {
+            return {handle: '', prsa, cmds };
+          }
+          return { prsa, cmds };
+        }
+      default:
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "EUNICE":
+    switch (words[1]) {
+    case "BROKE":
+      switch (words[2]) {
+      case "HEART":
+        switch (words[3]) {
+        default:
+          if (words.length == 3) {
+            return {handle: '', prsa, cmds };
+          }
+          return { prsa, cmds };
+        }
+      default:
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "SCHOOL":
+    switch (words[1]) {
+    case "IS":
+      switch (words[2]) {
+      case "FOR":
+        switch (words[3]) {
+        case "ME":
+          switch (words[4]) {
+          default:
+            if (words.length == 4) {
+              return {handle: '', prsa, cmds };
+            }
+            return { prsa, cmds };
+          }
+        default:
+          return { prsa, cmds };
+        }
+      default:
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "BUG":
+    switch (words[1]) {
+    case "THAT":
+      switch (words[2]) {
+      case "BIG":
+        switch (words[3]) {
+        default:
+          if (words.length == 3) {
+            return {handle: '', prsa, cmds };
+          }
+          return { prsa, cmds };
+        }
+      default:
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "EVER":
+    switch (words[1]) {
+    case "PLAY":
+      switch (words[2]) {
+      case "LOTTERY":
+        switch (words[3]) {
+        default:
+          if (words.length == 3) {
+            return {handle: '', prsa, cmds };
+          }
+          return { prsa, cmds };
+        }
+      default:
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "LISTENING":
+    switch (words[1]) {
+    case "TO":
+      switch (words[2]) {
+      case "RIVER":
+        switch (words[3]) {
+        default:
+          if (words.length == 3) {
+            return {handle: '', prsa, cmds };
+          }
+          return { prsa, cmds };
+        }
+      default:
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "GROWING":
+    switch (words[1]) {
+    case "UP":
+      switch (words[2]) {
+      case "BACK":
+        switch (words[3]) {
+        case "HOME":
+          switch (words[4]) {
+          default:
+            if (words.length == 4) {
+              return {handle: '', prsa, cmds };
+            }
+            return { prsa, cmds };
+          }
+        default:
+          return { prsa, cmds };
+        }
+      default:
+        return { prsa, cmds };
+      }
+    default:
+      return { prsa, cmds };
+    }
+  case "YES":
+    switch (words[1]) {
+    default:
+      if (words.length == 1) {
+        return {handle: '', prsa, cmds };
+      }
+      return { prsa, cmds };
+    }
+  case "NO":
+    switch (words[1]) {
+    default:
+      if (words.length == 1) {
+        return {handle: '', prsa, cmds };
+      }
+      return { prsa, cmds };
+    }
   default:
     return { prsa, cmds };
   }
@@ -537,6 +652,8 @@ export const translateAction = (actionWord) => {
       return "where";
     case "WHAT":
       return "what";
+    case "TIME":
+      return "time";
     case "LOOK":
       return "look";
     case "INVENTORY":
@@ -545,6 +662,10 @@ export const translateAction = (actionWord) => {
       return "weather";
     case "SLEEP":
       return "sleep";
+    case "CHEAT":
+      return "cheat";
+    case "DEBUG":
+      return "debug";
     case "EXAMINE":
     case "INSPECT":
     case "READ":
@@ -563,11 +684,8 @@ export const translateAction = (actionWord) => {
       return "add";
     case "PUT":
       return "put";
-    case "FILL":
-      return "fill";
-    case "POUR":
-      return "pour";
     case "HIT":
+    case "SMASH":
       return "hit";
     case "WORK":
       return "work";
@@ -587,10 +705,32 @@ export const translateAction = (actionWord) => {
       return "pee";
     case "WRITE":
       return "write";
+    case "ENTER":
+      return "enter";
+    case "EXIT":
+      return "exit";
     case "SWIM":
       return "swim";
     case "JUMP":
       return "jump";
+    case "GREAT":
+      return "great";
+    case "EUNICE":
+      return "eunice";
+    case "SCHOOL":
+      return "school";
+    case "BUG":
+      return "bug";
+    case "EVER":
+      return "ever";
+    case "LISTENING":
+      return "listening";
+    case "GROWING":
+      return "growing";
+    case "YES":
+      return "yes";
+    case "NO":
+      return "no";
     default:
       return actionWord;
     }

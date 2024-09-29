@@ -1,46 +1,63 @@
 # Demo Game
 
-The demo game is unfinished, but these are all my plans for it:
+The demo game isn't fully tested, but these are all my plans for it. Spoilers.
 
 ## Map
 
-Underground has three main areas: maze, treasure, and monster. Monster and cave-spiders can show up anywhere underground if the player isn't carrying light.
+The map is divided into above- and below- ground. Above-ground has forests, a lake, fields, a cliff, and cave entrances. The lake will always have water. Deep forest will always have a tree. Other items spawn somewhat randomly. Below-ground has three main areas: maze, treasure, and den.
+
+## Commands
+
+The main commands are:
+
+- `INVENTORY`
+- `LOOK AROUND`
+- `GO direction`
+- `EXAMINE object`
+- `TAKE object`
+- `DROP object`
+- `EMPTY object`
+- `OPEN object`, only used for doors
+- `ADD object TO object`
+- `HIT object WITH object`
+- `WORK object WITH object`
+- `SPARK object AT object`
+- `TALK TO object`
+- `EAT object`
+- `SLEEP`
+
+There's also `TIME` and `WEATHER`. If you want a peek under the hood, try `DEBUG`. If you're impatient, try `CHEAT`. You can only interact with objects you're carrying or objects in the room.
 
 ## Objects
 
-On player:
-cloak, axe, flint, cup, kettle, knife,
+Above-ground
 
-In / near cabin:
-table, chairs, bed-frame,
-door, key, window,
-bucket, book, nails,
+- On player: cloak, axe, flint, cup, kettle, knife,
+- In / near cabin: table, chairs, bed-frame, door, key, window, bucket, book, nails,
+- Animals: owl, crow, fish, frog, beetle, rabbit, snake, bear,
+- Forageable: stick, detritus, bullrush, log, sap, river-stone, water,
+- Foreageable and edible: berries, herbs, mushroom, nuts, root, fern,
+- Others: boat-frame, tree-hollow (and gem)
 
-Others:
-boat-frame, tree-hollow (and gem), glass shard
+Below-ground
 
-Animals:  
-owl, crow, fish, frog, beetle, rabbit, snake, bat, bear,  
-spider, cave-spider, spider-web,  
-monster,
+- Animals: cave-spider, child-monster, parent-monster, bat,
+- Forageable: bones,
+- Others: magic-ring, gold-lump, stone-door, coffin (and cursed-skull), obsidian shard, sword, pick-axe, rocks
 
-Forageable:  
-sticks, detritus, bullrushes,
-logs, sap, river-stones, bones, water,
+Craftable
 
-Foreageable and edible:  
-berries, herbs, mushrooms, nuts, roots, ferns,
+- book-page, soup, tea, fire, strap, rough-board, boiled-sap, charcoal, torch, note, master-key
 
-Craftable:
-book-page, soup, tea, fire, straps, rough-board, boiled-sap, charcoal, torch, note, master-key
+## Monster Behaviour
 
-Below ground:
-gold-lump, stone-door, coffin (and cursed-skull, magic-ring), obsidian shard, sword, pick-axe, wire, rocks
+Cave-spiders can show up anywhere underground, but only if there's light in the room (from a lit torch, fire, or the gem). The child monster never leaves it's den, doesn't care about light, and runs away to if the parent monster shows up. The parent monster roams all over the underground, but:
 
-## Objectives
+- has to be light in the room for it's first encounter, it won't be lethal, and the monster will run away immediately
+- if after first encounter, underground, and light in room, monster might show up but will always run away immediately
+- if after first encounter, underground, and not light in room, the monster might show up and will always attack
 
-enter cabin, light fire, cook meal, find gem, kill monster, write a note,
-build a boat, descend waterfall to finish game
+Both monsters will re-generate health when you're not around. The parent monster's max-health increases after every encounter.
 
 ## Mechnics
 
@@ -52,16 +69,13 @@ Can get into the cabin by:
 
 Book in the cabin talks about a crow, a gem, an underground monster, and a boat-frame.
 
-Monster stalks the undergound, will try to kill you on sight. What does it eat? Gem allows you to see in the dark (so does torch, but it only lasts a couple rounds). Gem can be found in the tree-hollow.
+Several rooms underground have holes which you'll fall into if you're not carrying light or the room isn't lit. The gem emits light, and can be found in the tree-hollow. Talking to the crow gives you the location of the tree-hollow. Crow can be found by:
 
-Talking to the crow gives you the location of the tree-hollow.
-Crow can be found by:
-
-- taking the broken glass outside (will take damage), then waiting a bit (it's shiny)
+- breaking the cabin window (shiny glass)
 - killing the owl / fish / frog / rabbit / snake / bear, then waiting a bit
 - low random chance
 
-Tree-hollow can also be found by drinking mushroom tea or soup. Drinking mushroom tea / soup also has the side-effect that tools and weapons can never be broken. Talking to most animals, they will tell you a story from their life.
+Talking to most animals, they will tell you a story from their life.
 
 - owl: the heartbreak of it's first love
 - fish: why it dropped out of school
@@ -71,28 +85,27 @@ Tree-hollow can also be found by drinking mushroom tea or soup. Drinking mushroo
 - bat: terrifying migration in the sunshine
 - crow: growing up with it's brothers and sisters
 
-If you come across the bear, it will ask you if you know a random animal story.
+To talk to the fish, you have to put something edible in the water first, and even then you have to be persistent. If you come across the bear, it will ask you if you know a random animal story.
 
-- If you don't, it will take away a random animal buff (you're so frightened you forget it). If you haven't heard any animal stories, the bear will attack (but leave once you start fighting back).
-- If you do know the random story, the bear will tell you the location of the crow's tree-hollow
+- If you don't, but tell the truth, the bear will leave you alone
+- If you don't, but lie, the bear will attack
+- If you do, the bear will tell you the location of the crow's tree-hollow
 
-If come across the bear and have the gem, the bear won't attack. It will ask what your plans are and if you've built a boat yet, maybe providing pointers on how to go about it.
+If come across the bear and have the gem, the bear won't attack..
 
-To talk to / kill the fish, you have to put something edible in the water first, and even then the fish only sticks around for two turns.
+Invoking an animal's story permanently grants you buffs:
 
-Can gain health by eating soup or drinking tea. Hearing an animal's story permanently grants you buffs:
-
-- owl: increases max attack damage of some weapons and tools
+- owl: increases max attack damage of most weapons
 - fish: improve chance to high-roll attack from 50% to 75%
-- frog: increases max player health (beyond global limit)
-- rabbit: decreases enemy attack damage (aka the damage of the weapons they use)
-- snake: decreases max enemy health (makes all enemies a little less healthy)
+- frog: increases max player health (beyond usual limit)
+- rabbit: decreases enemy attack damage (aka the damage they can deal to you per turn)
+- snake: decreases max enemy health (makes both monsters a little less healthy)
 - bat: tells you the secret to open the stone door
-- crow: weapons and tools always stay sharp (aka max damage)
+- crow: weapons and tools always stay sharp (aka never dull on hit)
 
-Food is important. The food number e = (total-things-eaten - (day x 2)). If, in the morning: e < -5, then you lose 20 health; e < -3, then you lose 10 health; e < 0 then you lose 2 health. If, in the morning: e > 6, then you lose (e + day) health.
+Most food gives you health, soup gives you a lot of health, and tea also increases you max-health. The food number e = (total-things-eaten - (day x 2)). If, in the morning: e > 6, then you lose (e + day) health.
 
-Sleep is also important. The sleep number z = (total-sleeps - day), and the nap (sleeps during this day) number is k. If, at the start of night: z < -2, then the player loses 40 health, immediately falls asleep, and dreams nothing; z < -1, then the player loses 20 health, immediately falls asleep, and dreams nothing; z < -1 then the player loses 10 health; z < 0, then the player gets a warning; z > 1, then the player gets a warning; z > 3, then the player loses 20 health. If, at the start of night: k > 5, the player loses 10 health but regains 1 sleep; k > 2, the player regains 1 sleep.
+Sleep is also important. The sleep number z = (total-sleeps - day), and the nap (sleeps during this day) number is k. If, at the start of night: z < -2, then the player loses 40 health, immediately falls asleep, and dreams nothing; z < -1, then the player loses 20 health, immediately falls asleep, and dreams nothing; z < -1 then the player loses 10 health; z < 0, then the player gets a warning; z > 1, then the player gets a warning; z > 3, then the player loses 20 health. If, at the start of night: k > 5, the player loses 10 health but regains 1 sleep; k > 2, the player regains 1 sleep. Player can only sleep (or nap) if they have their cloak.
 
 The player may dream at night, but never during naps.
 
@@ -100,7 +113,7 @@ The player can only hold seven things lol.
 
 ## Combat
 
-Weapons have DAMAGE, tools have HEALTH. Most of the information in this sectino can be similarly applied to tools. Sharpening (using a wet river-stone) a weapon increases it's damage up to it's MAX-DAMAGE. Using a weapon might decrease it's damage. If damage reaches zero, the weapon is broken, cannot be used, and must be repaired (with sticks and wire, cooked over the fire). Not everything can be repaired.
+Weapons have DAMAGE and MAX-DAMAGE. Sharpening (using a wet river-stone) a weapon increases it's damage up to it's MAX-DAMAGE. Using a weapon might decrease it's damage (to a minimum of '0').
 
 Actual damage is usually DAMAGE x (1 + ((health - (max-health / 2)) / max-health)) +/- (MAX-DAMAGE / 4), but may change based on the weapon and it's target.
 
@@ -111,44 +124,37 @@ Actual damage is usually DAMAGE x (1 + ((health - (max-health / 2)) / max-health
 
 Negative damage hurts you. You can think of damage as always a high roll or a low roll, never a medium roll. Chance to high roll is 50%. Damage affects you or your opponents HEALTH. You can do more damage than MAX-DAMAGE; this value is more like max base damage. A full moon changes the actual damage calculation to DAMAGE +/- MAX-DAMAGE.
 
-I don't want the monster to one-encounter-KO, so the first encounter it should be surprised, and run away after one hit. After that, it won't run away, and will pursue you unless you're carrying light or you leave the underground.
+Obsidian shard is extremely sharp but not strong (has a lot of damage but loses it quickly). It cannot be sharpened.
 
-Obsidian shard is extremely sharp but not strong (has a lot of damage but loses it quickly). Once it breaks, it cannot be repaired.
+There is a sword in the below-ground. If you have the magic-ring, you can pick up and wield the sword no problem. If not magic-ring or cursed-skull, picking up the sword will result in it immediately disintegrating. Examining the sword reveals something about this danger. Cursed-skull immediately dulls all your weapons if you pick it up (even if you've talked to the crow). If the player breaks it, they die.
 
-The gold-lump can be found if you hit enough rocks. It does nothing, but you can't carry it and the boat at the same time. Hitting rocks with anything other than the pick-axe will damage them severely. The pick-axe is just lying in a room in the underground.
-
-The obsidian shard is glinting in the underground lake, but only if you're wearing the magic-ring or have drank mushroom tea / soup. You simply empty the water, then take it. Can empty even if you don't see it glimmering.
-
-There is a sword in the underground. If you have the magic-ring, you can pick up and wield the sword no problem. If not, picking up the sword will result in it immediately disintegrating (0 DAMAGE), unless you've drank mushroom tea / soup or talked to the crow, in which case it will go to 1 DAMAGE. Examining the sword reveals something about this danger.
-
-Both cursed-skull and magic-ring can be found in the coffin. Cursed-skull immediately dulls all your weapons if you pick it up (even if you've talked to the crow). If the player breaks it, they die.
-
-The coffin is in the underground hall. The hall can only be accessed by a stone door.
-The stone door can be:
+The treasure area of below-ground has a lake, a cavern, and a crypt. The crypt has the sword, and a coffin with the cursed-skull in it. The crypt can be accessed by opening a stone door. The stone door can be:
 
 - broken down
 - opened with the master-key
 - will open for you if you've talked to the bat
 
+There's a secret entrance to the crypt behind the waterfall that flows over the cliff, but it's only accessible if you've crafted the right tool (work on pick-axe with a strap).
+
 ## Crafting
 
-Player can only sleep (or nap) if they have their cloak. Fire can be put out by peeing or putting [tea, soup, water] on it. Fire lasts (logs x 8) commands long, or (logs x 4) commands long if outside, or cabin door or window is broken.
+The gold-lump can be found if you hit enough rocks. It does nothing. The pick-axe is just lying in a room below-ground. It never goes dull.
 
-Eating bone, mushrooms, or roots raw will result in a mild sickness (-5 health). Other raw food gives you +5 health. Eating soup or tea gives you +20 health. Drinking soup with bone in it, or any tea, increases your max health (up to a global limit).
+Fire can be put out by putting water on it. Fire lasts (logs x 8) commands long, or (logs x 4) commands long if outside, or cabin door or window is broken. Fire leaves behind some charcoal. Starting a fire consumes all charcoal.
+
+Eating raw food gives you +10 health. Eating bone, mushrooms, or roots raw only give you +5, and might instead result in a mild sickness (-5 health). Eating soup or tea gives you +40 health. Drinking tea also increases your max health (up to some limit).
 
 Soup: put anything edible + water in the kettle or bucket, cook over the fire
 Tea: put anything edible + water in the kettle or bucket, cook over the fire, pour into cup
-Fire: put [sticks, detritus, bullrushes, sap, book, book-page] and logs in fireplace, then spark flint at fireplace.
-Strap: work detritus with bone, or bullrush with bone. Must have 4 or more detritus / bullrush in the area.
+Fire: spark flint at [sticks, detritus, bullrushes, sap, book, book-page], then add logs
+Strap: work detritus with bone
 Rough-board: work log with axe (makes 4), or hit [chair, table, door, bed-frame]
 Boiled-sap: put sap in kettle, cook over fire
 Charcoal: after a fire goes out, but before a new fire has started.
-Book-page: hit book
+Book-page: hit or empty book
 Note: work book-page with charcoal
-Torch: put both [sap, boiled-sap] and [detritus, bullrushes] onto stick, strike flint at stick
+Torch: put both [sap, boiled-sap] and [detritus, bullrushes] onto a stick, strike flint to light
 Master-key: work bone with obsidian shard
 Boat: work boat-frame with at least 2 straps, at least 10 rough-boards, boiled-sap, and nails
 
-If you strike flint at [sticks, detritus, book, book-page] outside and it hasn't rained in two days, the forest burns down and you die. Otherwise, the fire will last one turn.
-
-In order to rappel down the waterfall: work on pick-axe with straps, then keep in inventory.
+If there's a fire outside and it hasn't rained in two days, the forest burns down and you die.

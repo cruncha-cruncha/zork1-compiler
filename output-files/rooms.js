@@ -1,7 +1,7 @@
 export const rooms = {
   cabin: {
     isRoom: 'cabin',
-    desc: { text: "You're inside a log cabin. It's rustic, but has a lovely fireplace.\n" },
+    desc: { routine: 'descCabin' },
     objects: {
       bedFrame: ['inst_9',],
       book: ['inst_4',],
@@ -21,6 +21,7 @@ export const rooms = {
       WEST: { room: 'cabinExterior' },
     },
     hooks: {
+      enter: 'cabinEnter',
     },
   },
   cabinExterior: {
@@ -29,7 +30,7 @@ export const rooms = {
     objects: {
       cabinDoor: ['inst_1',],
       cabinWindow: ['inst_2',],
-      detritus: ['inst_46',],
+      detritus: ['inst_41',],
     },
     vars: {
       aboveGround: 1,
@@ -42,13 +43,14 @@ export const rooms = {
       WEST: { room: 'forest3' },
     },
     hooks: {
+      enter: 'cabinExteriorEnter',
     },
   },
   longHall1: {
     isRoom: 'longHall1',
     desc: { text: "You're at the south end of a large hall.\n" },
     objects: {
-      rock: ['inst_15','inst_16','inst_17','inst_18','inst_19','inst_20','inst_21','inst_22','inst_23','inst_24',],
+      rock: ['inst_17','inst_18','inst_19','inst_20',],
     },
     vars: {
     },
@@ -57,6 +59,7 @@ export const rooms = {
       UP: { room: 'caveEntrance1' },
     },
     hooks: {
+      enter: 'longHall1Enter',
     },
   },
   longHall2: {
@@ -105,7 +108,7 @@ export const rooms = {
   },
   grotto2: {
     isRoom: 'grotto2',
-    desc: { text: "You're in a small grotto.\n" },
+    desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
     objects: {
     },
     vars: {
@@ -114,11 +117,12 @@ export const rooms = {
       WEST: { room: 'longHall2' },
     },
     hooks: {
+      enter: 'enterHoleRm',
     },
   },
   grotto3: {
     isRoom: 'grotto3',
-    desc: { text: "You're in a small grotto.\n" },
+    desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
     objects: {
     },
     vars: {
@@ -127,6 +131,7 @@ export const rooms = {
       EAST: { room: 'longHall3' },
     },
     hooks: {
+      enter: 'enterHoleRm',
     },
   },
   corridor1: {
@@ -137,8 +142,9 @@ export const rooms = {
     vars: {
     },
     move: {
-      EAST: { room: 'hole1' },
+      EAST: { room: 'grotto5' },
       NORTH: { room: 'corridor2' },
+      SOUTH: { room: 'grotto4' },
       WEST: { room: 'longHall3' },
     },
     hooks: {
@@ -152,7 +158,7 @@ export const rooms = {
     vars: {
     },
     move: {
-      EAST: { room: 'grotto5' },
+      EAST: { room: 'grotto6' },
       NORTH: { room: 'corridor3' },
       SOUTH: { room: 'corridor1' },
     },
@@ -170,7 +176,7 @@ export const rooms = {
       EAST: { room: 'longHall4' },
       NORTH: { room: 'corridor4' },
       SOUTH: { room: 'corridor2' },
-      WEST: { room: 'hole2' },
+      WEST: { room: 'grotto7' },
     },
     hooks: {
     },
@@ -183,14 +189,29 @@ export const rooms = {
     vars: {
     },
     move: {
+      NORTH: { room: 'grotto9' },
       SOUTH: { room: 'corridor3' },
-      WEST: { room: 'grotto7' },
+      WEST: { room: 'grotto8' },
     },
     hooks: {
     },
   },
-  hole1: {
-    isRoom: 'hole1',
+  grotto4: {
+    isRoom: 'grotto4',
+    desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      NORTH: { room: 'corridor1' },
+    },
+    hooks: {
+      enter: 'enterHoleRm',
+    },
+  },
+  grotto5: {
+    isRoom: 'grotto5',
     desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
     objects: {
     },
@@ -200,12 +221,25 @@ export const rooms = {
       WEST: { room: 'corridor1' },
     },
     hooks: {
-      exit: 'exitHoleRm',
+      enter: 'enterHoleRm',
     },
   },
-  grotto5: {
-    isRoom: 'grotto5',
+  grotto6: {
+    isRoom: 'grotto6',
     desc: { text: "You're in a small grotto.\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      WEST: { room: 'longHall2' },
+    },
+    hooks: {
+    },
+  },
+  grotto7: {
+    isRoom: 'grotto7',
+    desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
     objects: {
     },
     vars: {
@@ -214,24 +248,11 @@ export const rooms = {
       WEST: { room: 'corridor2' },
     },
     hooks: {
+      enter: 'enterHoleRm',
     },
   },
-  hole2: {
-    isRoom: 'hole2',
-    desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
-    objects: {
-    },
-    vars: {
-    },
-    move: {
-      EAST: { room: 'corridor3' },
-    },
-    hooks: {
-      exit: 'exitHoleRm',
-    },
-  },
-  grotto7: {
-    isRoom: 'grotto7',
+  grotto8: {
+    isRoom: 'grotto8',
     desc: { text: "You're in a small grotto.\n" },
     objects: {
     },
@@ -239,16 +260,16 @@ export const rooms = {
     },
     move: {
       EAST: { room: 'corridor4' },
-      WEST: { room: 'subGrotto7' },
+      WEST: { room: 'subGrotto8' },
     },
     hooks: {
     },
   },
-  subGrotto7: {
-    isRoom: 'subGrotto7',
+  subGrotto8: {
+    isRoom: 'subGrotto8',
     desc: { text: "You're in a smaller grotto.\n" },
     objects: {
-      obsidianShard: ['inst_45',],
+      obsidianShard: ['inst_38',],
     },
     vars: {
     },
@@ -258,9 +279,23 @@ export const rooms = {
     hooks: {
     },
   },
+  grotto9: {
+    isRoom: 'grotto9',
+    desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      SOUTH: { room: 'corridor4' },
+    },
+    hooks: {
+      enter: 'enterHoleRm',
+    },
+  },
   longHall4: {
     isRoom: 'longHall4',
-    desc: { text: "You're in a large hall." },
+    desc: { text: "You're in a large hall.\n" },
     objects: {
     },
     vars: {
@@ -268,36 +303,24 @@ export const rooms = {
     move: {
       EAST: { room: 'longHall5' },
       NORTH: { room: 'grotto10' },
-      SOUTH: { room: 'grotto9' },
-      WEST: { room: 'corridor3' },
+      SOUTH: { room: 'grotto11' },
+      WEST: { room: 'longHall5' },
     },
     hooks: {
     },
   },
   longHall5: {
     isRoom: 'longHall5',
-    desc: { text: "You're in a large hall." },
+    desc: { text: "You're in a large hall.\n" },
     objects: {
     },
     vars: {
     },
     move: {
+      EAST: { room: 'longHall4' },
       NORTH: { room: 'grotto12' },
-      SOUTH: { room: 'hole3' },
+      SOUTH: { room: 'grotto13' },
       WEST: { room: 'longHall4' },
-    },
-    hooks: {
-    },
-  },
-  grotto9: {
-    isRoom: 'grotto9',
-    desc: { text: "You're in a small grotto.\n" },
-    objects: {
-    },
-    vars: {
-    },
-    move: {
-      NORTH: { room: 'longHall4' },
     },
     hooks: {
     },
@@ -310,24 +333,23 @@ export const rooms = {
     vars: {
     },
     move: {
-      NORTH: { room: 'mazeRest1' },
       SOUTH: { room: 'longHall4' },
     },
     hooks: {
     },
   },
-  hole3: {
-    isRoom: 'hole3',
-    desc: { text: "You're in a small grotto. There's a massive hole in the ground.\n" },
+  grotto11: {
+    isRoom: 'grotto11',
+    desc: { text: "You're in a small grotto.\n" },
     objects: {
     },
     vars: {
     },
     move: {
-      NORTH: { room: 'longHall5' },
+      NORTH: { room: 'longHall4' },
+      WEST: { room: 'corridor3' },
     },
     hooks: {
-      exit: 'exitHoleRm',
     },
   },
   grotto12: {
@@ -338,21 +360,35 @@ export const rooms = {
     vars: {
     },
     move: {
+      NORTH: { room: 'mazeRest1' },
       SOUTH: { room: 'longHall5' },
+    },
+    hooks: {
+    },
+  },
+  grotto13: {
+    isRoom: 'grotto13',
+    desc: { text: "You're in a small grotto.\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      NORTH: { room: 'longHall5' },
     },
     hooks: {
     },
   },
   mazeRest1: {
     isRoom: 'mazeRest1',
-    desc: { text: "You're in a lovely rocky cave.\n" },
+    desc: { routine: 'descMazeRest1' },
     objects: {
     },
     vars: {
     },
     move: {
       NORTH: { room: 'btnRm1' },
-      SOUTH: { room: 'grotto10' },
+      SOUTH: { room: 'grotto12' },
       UP: { room: 'passage1' },
     },
     hooks: {
@@ -378,6 +414,85 @@ export const rooms = {
   },
   mazeRest2: {
     isRoom: 'mazeRest2',
+    desc: { text: "You're in a lovely cave, with a huge pile of rocks.\n" },
+    objects: {
+      rockPile: ['inst_12',],
+    },
+    vars: {
+    },
+    move: {
+      NORTH: { room: 'mazeGridPink' },
+      SOUTH: { room: 'btnRm1' },
+    },
+    hooks: {
+    },
+  },
+  mazeGridRed: {
+    isRoom: 'mazeGridRed',
+    desc: { text: "a red room\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      EAST: { room: 'mazeGridBlue' },
+      NORTH: { room: 'mazeGridBlue' },
+      SOUTH: { room: 'mazeGridBlue' },
+      WEST: { room: 'mazeGridBlue' },
+    },
+    hooks: {
+    },
+  },
+  mazeGridBlue: {
+    isRoom: 'mazeGridBlue',
+    desc: { text: "a blue room\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      EAST: { room: 'mazeGridRed' },
+      NORTH: { room: 'mazeGridRed' },
+      SOUTH: { room: 'mazeGridPink' },
+      WEST: { room: 'mazeGridRed' },
+    },
+    hooks: {
+    },
+  },
+  mazeGridPink: {
+    isRoom: 'mazeGridPink',
+    desc: { text: "a red room\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      EAST: { room: 'mazeGridBlue' },
+      NORTH: { room: 'mazeGridBlue' },
+      SOUTH: { room: 'mazeGridBlue' },
+      WEST: { room: 'mazeGridTeal' },
+    },
+    hooks: {
+    },
+  },
+  mazeGridTeal: {
+    isRoom: 'mazeGridTeal',
+    desc: { text: "a blue room\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      EAST: { room: 'mazeGridRed' },
+      NORTH: { room: 'mazeRest3' },
+      SOUTH: { room: 'mazeGridRed' },
+      WEST: { room: 'mazeGridRed' },
+    },
+    hooks: {
+    },
+  },
+  mazeRest3: {
+    isRoom: 'mazeRest3',
     desc: { text: "You're in a lovely rocky cave.\n" },
     objects: {
     },
@@ -385,7 +500,7 @@ export const rooms = {
     },
     move: {
       NORTH: { room: 'btnRm2' },
-      SOUTH: { room: 'btnRm1' },
+      SOUTH: { room: 'mazeRest2' },
     },
     hooks: {
     },
@@ -396,7 +511,6 @@ export const rooms = {
     objects: {
     },
     vars: {
-      start: 0,
       step: 0,
     },
     move: {
@@ -407,78 +521,11 @@ export const rooms = {
     hooks: {
     },
   },
-  passage1: {
-    isRoom: 'passage1',
-    desc: { text: "A passageway in the rock\n" },
-    objects: {
-    },
-    vars: {
-    },
-    move: {
-      DOWN: { room: 'mazeRest1' },
-      EAST: { room: 'cavern1' },
-      UP: { room: 'caveEntrance2' },
-      WEST: { room: 'den1' },
-    },
-    hooks: {
-    },
-  },
-  cavern1: {
-    isRoom: 'cavern1',
-    desc: { text: "A massive cavern\n" },
-    objects: {
-      bones: ['inst_39',],
-      pickAxe: ['inst_13',],
-      rock: ['inst_25','inst_26',],
-      stoneDoor: ['inst_42',],
-      sword: ['inst_14',],
-      wire: ['inst_12',],
-    },
-    vars: {
-    },
-    move: {
-      NORTH: { routine: 'cavern1North' },
-      SOUTH: { room: 'caveLake' },
-      WEST: { room: 'passage1' },
-    },
-    hooks: {
-    },
-  },
-  crypt: {
-    isRoom: 'crypt',
-    desc: { text: "a crypt\n" },
-    objects: {
-      coffin: ['inst_43',],
-      rock: ['inst_32',],
-    },
-    vars: {
-    },
-    move: {
-      SOUTH: { room: 'cavern1' },
-    },
-    hooks: {
-    },
-  },
-  caveLake: {
-    isRoom: 'caveLake',
-    desc: { text: "an underground lake" },
-    objects: {
-      bones: ['inst_40',],
-      rock: ['inst_29','inst_30','inst_31',],
-    },
-    vars: {
-    },
-    move: {
-      NORTH: { room: 'cavern1' },
-    },
-    hooks: {
-    },
-  },
   den1: {
     isRoom: 'den1',
-    desc: { text: "the den of a monster" },
+    desc: { text: "You're in a monster's den\n" },
     objects: {
-      bones: ['inst_34','inst_35','inst_36',],
+      bones: ['inst_27','inst_28','inst_29',],
     },
     vars: {
     },
@@ -492,10 +539,10 @@ export const rooms = {
   },
   den2: {
     isRoom: 'den2',
-    desc: { text: "the den of a monster" },
+    desc: { text: "You're in a monster's den\n" },
     objects: {
-      bones: ['inst_37',],
-      rock: ['inst_27',],
+      bones: ['inst_30',],
+      rock: ['inst_22',],
     },
     vars: {
     },
@@ -508,10 +555,10 @@ export const rooms = {
   },
   den3: {
     isRoom: 'den3',
-    desc: { text: "the den of a monster" },
+    desc: { text: "You're in a monster's den\n" },
     objects: {
-      bones: ['inst_38',],
-      rock: ['inst_28',],
+      bones: ['inst_31',],
+      rock: ['inst_23',],
     },
     vars: {
     },
@@ -524,7 +571,7 @@ export const rooms = {
   },
   den4: {
     isRoom: 'den4',
-    desc: { text: "the den of a monster" },
+    desc: { text: "You're in a monster's den\n" },
     objects: {
     },
     vars: {
@@ -534,6 +581,92 @@ export const rooms = {
       WEST: { room: 'den3' },
     },
     hooks: {
+    },
+  },
+  passage1: {
+    isRoom: 'passage1',
+    desc: { text: "You're in a series of tunnels.\n" },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      DOWN: { room: 'mazeRest1' },
+      EAST: { room: 'cavern1' },
+      UP: { room: 'caveEntrance2' },
+      WEST: { room: 'den1' },
+    },
+    hooks: {
+      enter: 'passage1Enter',
+    },
+  },
+  cavern1: {
+    isRoom: 'cavern1',
+    desc: { routine: 'descCavern1' },
+    objects: {
+      bones: ['inst_32',],
+      pickAxe: ['inst_15',],
+      rock: ['inst_21',],
+      stoneDoor: ['inst_35',],
+    },
+    vars: {
+    },
+    move: {
+      NORTH: { routine: 'cavern1North' },
+      SOUTH: { room: 'caveLake' },
+      WEST: { room: 'passage1' },
+    },
+    hooks: {
+    },
+  },
+  crypt: {
+    isRoom: 'crypt',
+    desc: { routine: 'descCrypt' },
+    objects: {
+      coffin: ['inst_36',],
+      rock: ['inst_25',],
+      sword: ['inst_16',],
+    },
+    vars: {
+    },
+    move: {
+      EAST: { room: 'waterfallPassage' },
+      SOUTH: { routine: 'cryptSouth' },
+    },
+    hooks: {
+    },
+  },
+  waterfallPassage: {
+    isRoom: 'waterfallPassage',
+    desc: { routine: 'descWaterfallPassage' },
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+      EAST: { routine: 'waterfallPassageUp' },
+      UP: { routine: 'waterfallPassageUp' },
+      WEST: { room: 'crypt' },
+    },
+    hooks: {
+      enter: 'waterfallPassageEnter',
+    },
+  },
+  caveLake: {
+    isRoom: 'caveLake',
+    desc: { routine: 'descCaveLake' },
+    objects: {
+      bones: ['inst_33',],
+      rock: ['inst_24',],
+      water: ['inst_67',],
+    },
+    vars: {
+    },
+    move: {
+      NORTH: { room: 'cavern1' },
+    },
+    hooks: {
+      always: 'caveLakeAlways',
     },
   },
   forest1: {
@@ -551,12 +684,14 @@ export const rooms = {
       WEST: { room: 'caveEntrance1' },
     },
     hooks: {
+      enter: 'forest1Enter',
     },
   },
   forest2: {
     isRoom: 'forest2',
-    desc: { text: "You're in a forest, the trees are thinner here. There's a trail heading NORTH (and back SOUTH).\n" },
+    desc: { routine: 'descForest2' },
     objects: {
+      stick: ['inst_44',],
     },
     vars: {
       aboveGround: 1,
@@ -566,12 +701,15 @@ export const rooms = {
       SOUTH: { room: 'forest1' },
     },
     hooks: {
+      enter: 'forest2Enter',
     },
   },
   forest3: {
     isRoom: 'forest3',
-    desc: { text: "You're in a lightly-populated forest, and a small stream burbles nearby.\n" },
+    desc: { routine: 'descForest3' },
     objects: {
+      fern: ['inst_52',],
+      riverStone: ['inst_53',],
     },
     vars: {
       aboveGround: 1,
@@ -579,17 +717,18 @@ export const rooms = {
     move: {
       EAST: { room: 'cabinExterior' },
       NORTH: { room: 'forest4' },
-      SOUTH: { room: 'forest2' },
-      WEST: { room: 'forest5' },
+      SOUTH: { room: 'forest5' },
+      WEST: { room: 'lake1' },
     },
     hooks: {
+      enter: 'forest3Enter',
     },
   },
   forest4: {
     isRoom: 'forest4',
-    desc: { text: "The forest is thicker again here, but the trail still looks good, and the you can hear a stream.\n" },
+    desc: { routine: 'descForest4' },
     objects: {
-      riverStone: ['inst_48',],
+      stick: ['inst_45',],
     },
     vars: {
       aboveGround: 1,
@@ -598,32 +737,36 @@ export const rooms = {
       EAST: { room: 'field2' },
       NORTH: { room: 'caveEntrance2' },
       SOUTH: { room: 'forest3' },
-      WEST: { room: 'forest5' },
+      WEST: { room: 'forest6' },
     },
     hooks: {
+      enter: 'forest4Enter',
     },
   },
   forest5: {
     isRoom: 'forest5',
-    desc: { text: "You're in the forest. The trail is faint here, and barely-worn.\n" },
+    desc: { routine: 'descForest5' },
     objects: {
     },
     vars: {
       aboveGround: 1,
     },
     move: {
-      EAST: { room: 'caveEntrance1' },
+      EAST: { room: 'forest2' },
       NORTH: { room: 'lake1' },
       SOUTH: { room: 'caveEntrance1' },
       WEST: { text: "Think again" },
     },
     hooks: {
+      enter: 'forest5Enter',
+      exit: 'forest5Exit',
     },
   },
   forest6: {
     isRoom: 'forest6',
-    desc: { text: "This is deep forest, but there is trail running SOUTH and EAST\n" },
+    desc: { routine: 'descForest6' },
     objects: {
+      nuts: ['inst_51',],
     },
     vars: {
       aboveGround: 1,
@@ -635,29 +778,36 @@ export const rooms = {
       WEST: { text: "Not a chance." },
     },
     hooks: {
+      enter: 'forest6Enter',
+      exit: 'forest6Exit',
     },
   },
   lake1: {
     isRoom: 'lake1',
-    desc: { text: "You find yourself at the edge a large, calm lake\n" },
+    desc: { routine: 'descLake1' },
     objects: {
+      boatFrame: ['inst_40',],
+      water: ['inst_66',],
     },
     vars: {
       aboveGround: 1,
     },
     move: {
-      EAST: { room: 'forest4' },
+      EAST: { room: 'forest3' },
       NORTH: { room: 'forest6' },
       SOUTH: { room: 'forest5' },
-      WEST: { room: 'forest5' },
+      WEST: { routine: 'lake1West' },
     },
     hooks: {
+      enter: 'lake1Enter',
+      always: 'lake1Always',
     },
   },
   field1: {
     isRoom: 'field1',
-    desc: { text: "A massive field stretches out all around you, with wild grass and sage." },
+    desc: { routine: 'descField1' },
     objects: {
+      herbs: ['inst_49',],
     },
     vars: {
       aboveGround: 1,
@@ -669,12 +819,15 @@ export const rooms = {
       WEST: { room: 'cabinExterior' },
     },
     hooks: {
+      enter: 'field1Enter',
     },
   },
   field2: {
     isRoom: 'field2',
-    desc: { text: "This field seems to go on forever, gently rolling past the horizon.\n" },
+    desc: { routine: 'descField2' },
     objects: {
+      berries: ['inst_48',],
+      herbs: ['inst_50',],
     },
     vars: {
       aboveGround: 1,
@@ -686,30 +839,35 @@ export const rooms = {
       WEST: { room: 'forest4' },
     },
     hooks: {
+      enter: 'field2Enter',
     },
   },
   cliff1: {
     isRoom: 'cliff1',
-    desc: { text: "Grassy fields abruptly stop at the edge of a cliff, a stream hurtling over. You can taste more adventure awaiting in the land below." },
+    desc: { routine: 'descCliff1' },
     objects: {
     },
     vars: {
       aboveGround: 1,
     },
     move: {
-      EAST: { text: "You're not yet prepared for climbing down this sheer drop." },
-      NORTH: { room: 'field2' },
+      DOWN: { routine: 'cliff1Down' },
+      EAST: { routine: 'cliff1East' },
       SOUTH: { room: 'field1' },
       WEST: { room: 'field1' },
     },
     hooks: {
+      enter: 'cliff1Enter',
     },
   },
   caveEntrance1: {
     isRoom: 'caveEntrance1',
-    desc: { text: "Amidst boulders and tree trunks a black space beckons you forward. A cave. You could GO DOWN, but there is no telling whether you would come back up. Some sort of light source might help.\n" },
+    desc: { routine: 'descCaveEntrance1' },
     objects: {
-      rock: ['inst_33',],
+      detritus: ['inst_42',],
+      rabbit: ['inst_57',],
+      rock: ['inst_26',],
+      stick: ['inst_46',],
     },
     vars: {
       aboveGround: 1,
@@ -726,8 +884,9 @@ export const rooms = {
   },
   caveEntrance2: {
     isRoom: 'caveEntrance2',
-    desc: { text: "Out of the forest appears a large, rocky hole in the ground. A cave. You could GO DOWN. Some sort of light source might help you navigate." },
+    desc: { routine: 'descCaveEntrance2' },
     objects: {
+      detritus: ['inst_43',],
     },
     vars: {
       aboveGround: 1,
@@ -742,10 +901,25 @@ export const rooms = {
     hooks: {
     },
   },
+  qStorage: {
+    isRoom: 'qStorage',
+    objects: {
+    },
+    vars: {
+    },
+    move: {
+    },
+    hooks: {
+    },
+  },
   storage: {
     isRoom: 'storage',
     objects: {
+      bear: ['inst_58','inst_59',],
+      childMonster: ['inst_13',],
+      parentMonster: ['inst_14',],
       sap: ['inst_47',],
+      treeHollow: ['inst_54',],
     },
     vars: {
     },

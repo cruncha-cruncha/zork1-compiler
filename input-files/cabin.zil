@@ -1,13 +1,16 @@
 <GLOBAL FIRST-SOUP 1>
 
+<GLOBAL FIRE-IN-DRAFTY-CABIN 0>
+
 <ROOM CABIN
-      (DESC "You're inside a log cabin. It's rustic, but has a lovely fireplace." CR)
+      (DESC <DESC-CABIN>)
       (VARS ABOVE-GROUND 1)
       (NORTH TO CABIN-EXTERIOR)
       (EAST TO CABIN-EXTERIOR)
       (SOUTH TO CABIN-EXTERIOR)
       (WEST TO CABIN-EXTERIOR)
-      (OUT TO CABIN-EXTERIOR)>
+      (OUT TO CABIN-EXTERIOR)
+      (ACT-ENTER <CABIN-ENTER>)>
 
 <ROOM CABIN-EXTERIOR
       (DESC <DESC-CABIN-EXTERIOR>)
@@ -15,20 +18,19 @@
       (NORTH TO FIELD-2)
       (EAST TO FIELD-1)
       (SOUTH TO FOREST-2)
-      (WEST TO FOREST-3)>
+      (WEST TO FOREST-3)
+      (ACT-ENTER <CABIN-EXTERIOR-ENTER>)>
 
 <OBJECT CABIN-DOOR
       (AKA DOOR CABIN-DOOR)
       (DESC "the cabin DOOR")
       (COPY <ROOM CABIN-EXTERIOR>)
-      ;(ACT-PRSO <PRSO-CABIN-DOOR>)
-      (VARS NO-TAKE 1 HEALTH 8 IS-LOCKED 1 HAS-BOARDS 3)>
+      (VARS NO-TAKE 1 HEALTH 6 IS-LOCKED 1 HAS-BOARDS 2 IS-SOFT 1)>
 
 <OBJECT CABIN-WINDOW
       (AKA WINDOW)
       (DESC <DESC-CABIN-WINDOW>)
       (VARS NO-TAKE 1 IS-BROKEN 0)
-      ;(ACT-PRSO <PRSO-CABIN-WINDOW>)
       (COPY <ROOM CABIN-EXTERIOR>)>
 
 <OBJECT CABIN-DOOR-KEY
@@ -39,45 +41,42 @@
 <OBJECT BOOK
     (AKA BOOK)
     (COPY <ROOM CABIN>)
-    (VARS HEALTH 2 TINDER 1)
-    ;(ACT-PRSO <PRSO-BOOK>)
+    (VARS HEALTH 2 TINDER 1 IS-SOFT 1)
     (DESC <DESC-BOOK>)>
 
 ;"can turn into a note"
 <OBJECT BOOK-PAGE
     (AKA PAPER PAGE BOOK-PAGE)
     (COPY <BOOK 1>)
-    (DESC "some PAPER")
-    (VARS TINDER 1)>
+    (DESC <DESC-BOOK-PAGE>)>
 
 <OBJECT NOTE
-    (AKA NOTE)
-    (DESC "a NOTE")
-    (VARS TINDER 1)>
+    (AKA MESSAGE NOTE)
+    (DESC <DESC-NOTE>)>
 
 <OBJECT TABLE
     (AKA TABLE)
     (COPY <ROOM CABIN>)
     (DESC "a wooden TABLE")
-    ;(ACT-PRSO <PRSO-TABLE>)
-    (VARS HEALTH 4 HAS-BOARDS 2)>
+    (VARS HEALTH 4 HAS-BOARDS 2 IS-SOFT 1)>
 
 <OBJECT CHAIR
     (AKA CHAIR)
     (COPY <ROOM CABIN>
           <ROOM CABIN>)
     (DESC "a wooden CHAIR")
-    ;(ACT-PRSO <PRSO-CHAIR>)
-    (VARS HEALTH 6 HAS-BOARDS 1)>
+    (VARS HEALTH 6 HAS-BOARDS 1 IS-SOFT 1)>
 
 <OBJECT BED-FRAME
     (AKA BED BED-FRAME)
     (COPY <ROOM CABIN>)
-    (DESC "a wooden BED frame")>
+    (DESC "a wooden BED frame")
+    (VARS HEALTH 6 HAS-BOARDS 2 IS-SOFT 1)>
 
 <OBJECT BUCKET
     (AKA BUCKET)
     (COPY <ROOM CABIN>)
+    (VARS IS-HARD 1)
     (DESC "a BUCKET")>
 
 <OBJECT NAILS
@@ -85,33 +84,45 @@
     (COPY <ROOM CABIN>)
     (DESC "some NAILS")>
 
-<OBJECT GLASS-SHARD>
-
 <OBJECT SOUP
     (AKA SOUP)
     (DESC "SOUP")
-    (VARS EDIBLE 1)>
+    (VARS IS-EDIBLE 1)>
 
 <OBJECT TEA
     (AKA TEA)
     (DESC "TEA")
-    (VARS EDIBLE 1)>
+    (VARS IS-EDIBLE 1)>
 
 <OBJECT FIRE
     (AKA FIRE)
-    (DESC "a FIRE")
-    (VARS FUEL 2 NO-TAKE 1)>
+    (DESC <DESC-FIRE>)
+    (VARS FUEL 3 NO-TAKE 1)>
 
-<OBJECT CHARCOAL> ;"special case where 1 + 1 = 1"
+<OBJECT CHARCOAL
+    (AKA COAL CHARCOAL)
+    (DESC "some CHARCOAL")>
+
+<ROUTINE DESC-CABIN ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "You're inside a rustic log cabin. It's well built. There's a window looking out over the fields.
+        The furnishings are spartan, but it's clearly been lived in. The smell of smoke lingers in the air." CR> 
+    )(
+        <IS-ASC WIN-ENTER-CABIN 1>
+        <TELL "You're inside a log cabin. There's signs of a previous occupant.
+        It's safe to make a fire in here." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "You're inside a log cabin." CR>
+    )>
+>
 
 <ROUTINE DESC-CABIN-EXTERIOR ()
       <COND (
             <IS-EQUAL <GET-VAR CABIN-EXTERIOR FIRST-TIME> 1>
             <SET-VAR CABIN-EXTERIOR FIRST-TIME 0>
-            <TELL "You're at the transition between a forest and a field.
-            There are trails in all directions, with a cabin at the center.
-            It's got a scenic window facing the fields. You could try to
-            OPEN DOOR" CR>
+            <TELL "You're outside a cabin. You could try to OPEN DOOR" CR>
             <RETURN 1>
       )>
       <TELL "You're outside a cabin on the edge of a forest, overlooking some fields." CR>
@@ -121,8 +132,42 @@
       )>
 >
 
+<ENTER () 
+    <COND (
+        <IS-IN CABIN-EXTERIOR PLAYER>
+        <COND (
+            <IS-EQUAL <GET-VAR <INST CABIN-EXTERIOR CABIN-DOOR> IS-LOCKED> 0>
+            <MOVE PLAYER CABIN>
+        )(
+            <IS-EQUAL <GET-VAR <INST CABIN-EXTERIOR CABIN-WINDOW> IS-BROKEN> 1>
+            <MOVE PLAYER CABIN>
+        )(
+            <IS-EQUAL 1 1>
+            <TELL "The door is locked. Where's the key?" CR>
+        )>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "You can't" CR>
+    )>
+>
+
+<EXIT ()
+    <COND (
+        <IS-IN CABIN PLAYER>
+        <SET-VAR <INST CABIN-EXTERIOR CABIN-DOOR> IS-LOCKED 0>
+        <MOVE PLAYER CABIN-EXTERIOR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "You're not in the cabin" CR>
+    )>
+>
+
 <OPEN CABIN-DOOR ()
     <COND (
+        <IS-EQUAL C-ROOM CABIN>
+        <SET-VAR <CMD 1> IS-LOCKED 0>
+        <MOVE PLAYER CABIN-EXTERIOR>
+    )(
         <OR
             <IS-ASC <GET-VAR <CMD 1> HEALTH> 1>
             <IS-EQUAL <GET-VAR <CMD 1> IS-LOCKED> 0>
@@ -159,12 +204,7 @@
             <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
             <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
         )(
-            ;"tools deal double damage to doors"
-            <IS-DES <GET-VAR <CMD 2> MAX-HEALTH> 0>
-            <SET-VAR COMBAT-DAMAGE <MULTIPLY <GET-VAR <CMD 2> HEALTH> 2>>
-            <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-HEALTH>>
-        )(
-            ;"can only hit with a weapon or tool"
+            ;"can only hit with a weapon"
             <IS-EQUAL 1 1>
             <RETURN 0>
         )>
@@ -186,7 +226,7 @@
                 <COPY-MOVE ROUGH-BOARD C-ROOM>
             >
             <SET-VAR <CMD 1> HAS-BOARDS 0>
-            <TELL "It's broken into some ROUGH-BOARDs" CR>
+            <TELL "It's broken into some rough BOARDs" CR>
         )>
     )(
         <IS-EQUAL 1 1>
@@ -199,8 +239,8 @@
         <NOT <IS-EQUAL <CMD 1> CABIN-DOOR>>
         <RETURN 0>
     )(
-        <NOT <IS-DES <GET-VAR <CMD 2> MAX-HEALTH> 0>>
-        <TELL "You can only work on this door with a tool." CR>
+        <NOT <IS-DES <GET-VAR <CMD 2> MAX-DAMAGE> 0>>
+        <TELL "You can only work on this door with a weapon." CR>
         <RETURN 0>
     )(
         <NOT <IS-ASC <GET-VAR <CMD 1> HAS-BOARDS> 3>>
@@ -208,13 +248,13 @@
         <RETURN 0>
     )>
     <COND (
-        ;"can work with a tool, increasing health by dmg"
         <AND
             <OR <IS-IN PLAYER ROUGH-BOARD> <IS-IN C-ROOM ROUGH-BOARD>>
             <OR <IS-IN PLAYER NAILS> <IS-IN C-ROOM NAILS>>
         >
-        <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> HEALTH>>
-        <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-HEALTH>>
+        ;"can work with a tool, increasing health by dmg"
+        <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
+        <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
         <SET-VAR DMG <ROLL-DMG>>
         <COND (
             <IS-EQUAL DMG 0>
@@ -224,27 +264,66 @@
 
         <SET-VAR <CMD 1> HEALTH <ADD <GET-VAR <CMD 1> HEALTH> DMG>>
         <SET-VAR <CMD 1> HAS-BOARDS <ADD <GET-VAR <CMD 1> HAS-BOARDS> 1>>
-        <MOVE <INST PLAYER ROUGH-BOARD>>
-        <TELL "You repair the door with a rough-board for " DMG " health." CR>
+        <COND (
+            <IS-IN PLAYER ROUGH-BOARD>
+            <MOVE <INST PLAYER ROUGH-BOARD>>
+        )(
+            <IS-EQUAL 1 1>
+            <MOVE <INST C-ROOM ROUGH-BOARD>>
+        )>
+        <TELL "You repair the door with a rough board for " DMG " health." CR>
     )(
         <IS-EQUAL 1 1>
-        <TELL "You need a rough-board and nails in order to repair this door." CR>
+        <TELL "You need a rough board and nails in order to repair this door." CR>
+    )>
+>
+
+<WORK CABIN-WINDOW (DMG)
+    <COND (
+        <NOT <IS-EQUAL <CMD 1> CABIN-WINDOW>>
+        <RETURN 0>
+    )(
+        <NOT <IS-DES <GET-VAR <CMD 2> MAX-DAMAGE> 0>>
+        <TELL "You can only work on this window with a weapon." CR>
+        <RETURN 0>
+    )(
+        <NOT <IS-EQUAL <GET-VAR <CMD 1> IS-BROKEN> 1>>
+        <TELL "Already as repaired as it's going to be." CR>
+        <RETURN 0>
+    )>
+    <COND (
+        <AND
+            <OR <IS-IN PLAYER ROUGH-BOARD> <IS-IN C-ROOM ROUGH-BOARD>>
+            <OR <IS-IN PLAYER NAILS> <IS-IN C-ROOM NAILS>>
+        >
+        <COND (
+            <IS-IN PLAYER ROUGH-BOARD>
+            <MOVE <INST PLAYER ROUGH-BOARD>>
+        )(
+            <IS-EQUAL 1 1>
+            <MOVE <INST C-ROOM ROUGH-BOARD>>
+        )>
+        <TELL "You repair the window with a rough board" CR>
+        <SET-VAR <CMD 1> IS-BROKEN 0>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "You need a rough board and nails in order to repair this window." CR>
     )>
 >
 
 <ROUTINE DESC-BOOK () 
     <COND (
-        <IS-ASC <GET-VAR <CMD 1> HEALTH> 1>
+        <IS-ASC <GET-VAR <CMD 0> HEALTH> 1>
         <TELL "a torn-up book">
         <RETURN 1>
     )(
         <IS-EQUAL DETAILED-DESC 1>
-        <TELL "This leather-bound journal's yellowing pages are covered in
+        <TELL "The delicate pages of this leather-bound journal are covered in
         scratchy handwriting, probably done with charcoal. You can make out a
         few passages:" CR>
-        <TELL "...boat is coming along, should be ready in..." CR>
+        <TELL "...boat is coming along, should be ready..." CR>
+        <TELL "...lost the gem, a crow must have..." CR>
         <TELL "...beast is hungry, what does it eat down there? No use mining any more..." CR>
-        <TELL "...lost the gem, a crow must have taken it..." CR>
         <RETURN 1>
     )>
     <TELL "a BOOK">
@@ -254,7 +333,7 @@
     <COND (
         <IS-IN <CMD 1> BOOK-PAGE>
         <MOVE <INST <CMD 1> BOOK-PAGE> PLAYER>
-        <TELL "You've ripped out some blank pages from the book" CR>
+        <TELL "You've ripped out some blank pages from the book." CR>
     )(
         <IS-EQUAL 1 1>
         <TELL "The book is already empty." CR>
@@ -299,12 +378,7 @@
             <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
             <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
         )(
-            ;"tools deal double damage to tables"
-            <IS-DES <GET-VAR <CMD 2> MAX-HEALTH> 0>
-            <SET-VAR COMBAT-DAMAGE <MULTIPLY <GET-VAR <CMD 2> HEALTH> 2>>
-            <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-HEALTH>>
-        )(
-            ;"can only hit with a weapon or tool"
+            ;"can only hit with a weapon"
             <IS-EQUAL 1 1>
             <RETURN 0>
         )>
@@ -326,7 +400,8 @@
                 <COPY-MOVE ROUGH-BOARD C-ROOM>
             >
             <SET-VAR <CMD 1> HAS-BOARDS 0>
-            <TELL "It's broken into some ROUGH-BOARDs" CR>
+            <TELL "It's broken into some rough BOARDs" CR>
+            <MOVE <CMD 1>>
         )>
     )>
 >
@@ -335,13 +410,13 @@
     <COND (
         ;"can work with a tool, increasing health by dmg"
         <AND
-            <IS-DES <GET-VAR <CMD 2> MAX-HEALTH> 0>
+            <IS-DES <GET-VAR <CMD 2> MAX-DAMAGE> 0>
             <OR <IS-IN PLAYER ROUGH-BOARD> <IS-IN C-ROOM ROUGH-BOARD>>
             <OR <IS-IN PLAYER NAILS> <IS-IN C-ROOM NAILS>>
             <IS-ASC <GET-VAR <CMD 1> HAS-BOARDS> 2>
         >
-        <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> HEALTH>>
-        <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-HEALTH>>
+        <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
+        <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
 
         <SET-VAR DMG <ROLL-DMG>>
         <COND (
@@ -352,8 +427,14 @@
 
         <SET-VAR <CMD 1> HEALTH <ADD <GET-VAR <CMD 1> HEALTH> DMG>>
         <SET-VAR <CMD 1> HAS-BOARDS <ADD <GET-VAR <CMD 1> HAS-BOARDS> 1>>
-        <MOVE <INST PLAYER ROUGH-BOARD>>
-        <TELL "You repair the table with a rough-board for " DMG " health." CR>
+        <COND (
+            <IS-IN PLAYER ROUGH-BOARD>
+            <MOVE <INST PLAYER ROUGH-BOARD>>
+        )(
+            <IS-EQUAL 1 1>
+            <MOVE <INST C-ROOM ROUGH-BOARD>>
+        )>
+        <TELL "You repair the table with a rough board for " DMG " health." CR>
     )>
 >
 
@@ -368,12 +449,7 @@
             <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
             <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
         )(
-            ;"tools deal double damage to chairs"
-            <IS-DES <GET-VAR <CMD 2> MAX-HEALTH> 0>
-            <SET-VAR COMBAT-DAMAGE <MULTIPLY <GET-VAR <CMD 2> HEALTH> 2>>
-            <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-HEALTH>>
-        )(
-            ;"can only hit with a weapon or tool"
+            ;"can only hit with a weapon"
             <IS-EQUAL 1 1>
             <RETURN 0>
         )>
@@ -393,7 +469,8 @@
             <IS-ASC <GET-VAR <CMD 1> HEALTH> 1>
             <SET-VAR <CMD 1> HAS-BOARDS 0>
             <COPY-MOVE ROUGH-BOARD C-ROOM>
-            <TELL "It's broken into a ROUGH-BOARD" CR>
+            <TELL "It's broken into a rough BOARD" CR>
+            <MOVE <CMD 1>>
         )>
     )>
 >
@@ -402,13 +479,13 @@
     <COND (
         ;"can work with a tool, increasing health by dmg"
         <AND
-            <IS-DES <GET-VAR <CMD 2> MAX-HEALTH> 0>
+            <IS-DES <GET-VAR <CMD 2> MAX-DAMAGE> 0>
             <OR <IS-IN PLAYER ROUGH-BOARD> <IS-IN C-ROOM ROUGH-BOARD>>
             <OR <IS-IN PLAYER NAILS> <IS-IN C-ROOM NAILS>>
             <IS-ASC <GET-VAR <CMD 1> HAS-BOARDS> 1>
         >
-        <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> HEALTH>>
-        <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-HEALTH>>
+        <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
+        <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
         <SET-VAR DMG <ROLL-DMG>>
         <COND (
             <IS-EQUAL DMG 0>
@@ -418,8 +495,88 @@
 
         <SET-VAR <CMD 1> HEALTH <ADD <GET-VAR <CMD 1> HEALTH> DMG>>
         <SET-VAR <CMD 1> HAS-BOARDS <ADD <GET-VAR <CMD 1> HAS-BOARDS> 1>>
-        <MOVE <INST PLAYER ROUGH-BOARD>>
-        <TELL "You repair the chair with a rough-board for " DMG " health." CR>
+                <COND (
+            <IS-IN PLAYER ROUGH-BOARD>
+            <MOVE <INST PLAYER ROUGH-BOARD>>
+        )(
+            <IS-EQUAL 1 1>
+            <MOVE <INST C-ROOM ROUGH-BOARD>>
+        )>
+        <TELL "You repair the chair with a rough board for " DMG " health." CR>
+    )>
+>
+
+;"identical to table"
+<HIT BED-FRAME (DMG)
+    <COND (
+        <NOT <IS-EQUAL <CMD 1> BED-FRAME>>
+        <RETURN 0>
+    )>
+    <COND (
+        <IS-DES <GET-VAR <CMD 1> HEALTH> 0>
+
+        <COND (
+            ;"weapons can deal damage to beds"
+            <IS-DES <GET-VAR <CMD 2> MAX-DAMAGE> 0>
+            <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
+            <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
+        )(
+            ;"can only hit with a weapon"
+            <IS-EQUAL 1 1>
+            <RETURN 0>
+        )>
+                
+        <SET-VAR DMG <ROLL-DMG>>
+        <COND (
+            <IS-EQUAL DMG 0>
+            <TELL "The bed takes no damage" CR>
+            <RETURN 1>
+        )>
+
+        <SET-VAR <CMD 1> HEALTH <SUBTRACT <GET-VAR <CMD 1> HEALTH> DMG>>
+        <TELL "You hit the bed for " DMG " damage." CR>
+
+        <COND (
+            ;"if dead, drop some rough-boards"
+            <IS-ASC <GET-VAR <CMD 1> HEALTH> 1>
+            <EACH-VAL <GET-VAR <CMD 1> HAS-BOARDS> (V)
+                <COPY-MOVE ROUGH-BOARD C-ROOM>
+            >
+            <SET-VAR <CMD 1> HAS-BOARDS 0>
+            <TELL "It's broken into some rough BOARDs" CR>
+        )>
+    )>
+>
+
+<WORK BED-FRAME (DMG)
+    <COND (
+        ;"can work with a tool, increasing health by dmg"
+        <AND
+            <IS-DES <GET-VAR <CMD 2> MAX-DAMAGE> 0>
+            <OR <IS-IN PLAYER ROUGH-BOARD> <IS-IN C-ROOM ROUGH-BOARD>>
+            <OR <IS-IN PLAYER NAILS> <IS-IN C-ROOM NAILS>>
+            <IS-ASC <GET-VAR <CMD 1> HAS-BOARDS> 2>
+        >
+        <SET-VAR COMBAT-DAMAGE <GET-VAR <CMD 2> DAMAGE>>
+        <SET-VAR COMBAT-MAX-DAMAGE <GET-VAR <CMD 2> MAX-DAMAGE>>
+
+        <SET-VAR DMG <ROLL-DMG>>
+        <COND (
+            <IS-EQUAL DMG 0>
+            <TELL "Nothing happens to the bed" CR>
+            <RETURN 1>
+        )>
+
+        <SET-VAR <CMD 1> HEALTH <ADD <GET-VAR <CMD 1> HEALTH> DMG>>
+        <SET-VAR <CMD 1> HAS-BOARDS <ADD <GET-VAR <CMD 1> HAS-BOARDS> 1>>
+        <COND (
+            <IS-IN PLAYER ROUGH-BOARD>
+            <MOVE <INST PLAYER ROUGH-BOARD>>
+        )(
+            <IS-EQUAL 1 1>
+            <MOVE <INST C-ROOM ROUGH-BOARD>>
+        )>
+        <TELL "You repair the bed with a rough board for " DMG " health." CR>
     )>
 >
 
@@ -428,17 +585,194 @@
         <NOT <IS-EQUAL <GET-VAR <CMD 1> IS-BROKEN> 1>>
         <TELL "You smash the window, taking 1 damage in the process." CR>
         <SET-VAR PLAYER HEALTH <SUBTRACT <GET-VAR PLAYER HEALTH> 1>>
-        <COPY-MOVE GLASS-SHARD CABIN>
+        <SET-VAR <CMD 1> IS-BROKEN 1>
+        <SET-VAR <INST CABIN-EXTERIOR CABIN-DOOR> IS-LOCKED 0>
         <MOVE PLAYER CABIN>
     )>
 >
 
 <ROUTINE DESC-CABIN-WINDOW ()
     <COND (
-        <IS-EQUAL <GET-VAR <CMD 1> IS-BROKEN> 1>
+        <IS-EQUAL <GET-VAR <CMD 0> IS-BROKEN> 1>
         <TELL "a broken WINDOW" CR>
     )(
         <IS-EQUAL 1 1>
         <TELL "a WINDOW" CR>
+    )>
+>
+
+<ROUTINE DESC-AXE ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "Your trusty axe. If you find one, you might be able to HIT TREE WITH AXE, get
+        some logs to keep the fire going. But be careful, tools dull with use." CR> 
+        <DESC-WEAPON-SHARPNESS> 
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "an AXE">
+    )>
+>
+
+<ROUTINE DESC-KNIFE ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "A long knife. When in danger, you can HIT <thing> WITH KNIFE. But be careful, weapons
+        dull with use." CR>
+        <DESC-WEAPON-SHARPNESS> 
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "a KNIFE">
+    )>
+>
+
+<ROUTINE DESC-FLINT ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "Can try to SPARK FLINT AT <something> to start a fire. The fire won't
+        last very long without more substantial fuel though." CR> 
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "FLINT">
+    )>
+>
+
+<ROUTINE DESC-CLOAK ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "This cloak keeps you warm, and is very comfortable for sleeping." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "a CLOAK">
+    )>
+>
+
+<ROUTINE DESC-KETTLE ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "You've cooked many a meal in this old, dented kettle. Start with ADD WATER TO KETTLE, then something edible." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "a KETTLE">
+    )>
+>
+
+<ROUTINE CABIN-ENTER ()
+    <SET-VAR WIN-ENTER-CABIN 1>
+    <MOVE <INST CABIN-EXTERIOR CABIN-WINDOW> C-ROOM>
+>
+
+<SPARK FLINT ()
+    <COND (
+        <NOT <IS-EQUAL FLINT <CMD 1>>>
+        ;"nothing happens"
+        <RETURN 0>
+    )>
+
+    <COND (
+        <OR
+            <IS-EQUAL STICK <CMD 2>>
+            <IS-EQUAL DETRITUS <CMD 2>>
+            <IS-EQUAL SAP <CMD 2>>
+            <IS-EQUAL BULRUSH <CMD 2>>
+            <IS-EQUAL BOOK <CMD 2>>
+            <IS-EQUAL BOOK-PAGE <CMD 2>>
+            <IS-EQUAL NOTE <CMD 2>>
+            <IS-EQUAL STRAP <CMD 2>>
+        >
+        <TELL "It catches. Keep the fire alive by ADDing some logs TO it." CR>
+        <MOVE <CMD 2>>
+        <COPY-MOVE FIRE C-ROOM>
+        <EACH-OBJ C-ROOM (OBJ)
+            <COND (
+                <IS-EQUAL CHARCOAL OBJ>
+                <MOVE OBJ>
+            )>
+        >
+        <COND (
+            <IS-EQUAL <GET-VAR C-ROOM ABOVE-GROUND> 0>
+            <TELL "You take 1 damage from smoke" CR>
+            <SET-VAR PLAYER HEALTH <SUBTRACT <GET-VAR PLAYER HEALTH> 1>>
+        )(
+            <AND
+                <IS-EQUAL C-ROOM CABIN>
+                <OR
+                    <IS-DES 1 <GET-VAR <INST CABIN-EXTERIOR CABIN-DOOR> HEALTH>>
+                    <AND
+                        ;"the cabin window moves around, so need to check both places"
+                        <IS-DES 1 <GET-VAR <INST CABIN CABIN-WINDOW> HEALTH>>
+                        <IS-DES 1 <GET-VAR <INST CABIN-EXTERIOR CABIN-WINDOW> HEALTH>>
+                    >
+                >
+            > 
+            <SET-VAR FIRE-IN-DRAFTY-CABIN 1>
+        )>
+    )(
+        <IS-EQUAL TORCH <CMD 2>>
+        <TELL "It catches, but torches burn up pretty quickly. You won't have light for long." CR>
+        <SET-VAR <CMD 2> IS-LIT 1>
+    )(
+        <IS-EQUAL <CMD 2> <CMD 3>>
+        <TELL "Nope." CR>
+    )>
+>
+
+<ROUTINE DESC-NOTE ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "I'm not sure what you wrote down, hopefully something meaningful. You could leave it
+        in the cabin for the next person who comes through here." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "a NOTE">
+    )>
+>
+
+<ROUTINE DESC-BOOK-PAGE ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "You could try to WRITE NOTE with this paper." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "some PAPER">
+    )>
+>
+
+<ROUTINE DESC-CUP ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "This cup can hold tea, and tea is just soup, but it's known to provide
+        strength beyond that of it's contents." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "a CUP">
+    )>
+>
+
+<ROUTINE DESC-TORCH ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <COND (
+            <IS-EQUAL <GET-VAR <CMD 0> IS-LIT> 1>
+            <TELL "This torch has " <GET-VAR <CMD 0> FUEL> " fuel, and is burning." CR>
+        )(
+            <IS-EQUAL 1 1>
+            <TELL "This unlit torch has " <GET-VAR <CMD 0> FUEL> " fuel." CR>
+        )>
+    )(
+        <IS-EQUAL <GET-VAR <CMD 0> IS-LIT> 1>
+        <TELL "a TORCH" CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "an unlit TORCH" CR>
+    )>
+>
+
+<ROUTINE DESC-FIRE ()
+    <COND (
+        <IS-EQUAL DETAILED-DESC 1>
+        <TELL "This fire has " <GET-VAR <CMD 0> FUEL> " fuel left." CR>
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "a FIRE" CR>
     )>
 >

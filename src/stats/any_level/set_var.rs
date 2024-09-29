@@ -157,7 +157,7 @@ impl CanValidate for SetVar {
                         self.scope = Some(Scope::Player);
                     } else if let Some(return_type) = v.has_local_var(&word) {
                         match return_type {
-                            ReturnValType::Inst => {
+                            ReturnValType::Inst | ReturnValType::RP => {
                                 self.scope = Some(Scope::Local(word));
                             }
                             _ => {

@@ -49,7 +49,7 @@ impl CanValidate for Inst {
                     self.scope = Scope::Player;
                 } else if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
-                        ReturnValType::Inst => self.scope = Scope::Local(word),
+                        ReturnValType::Inst | ReturnValType::RP => self.scope = Scope::Local(word),
                         _ => {
                             return Err(format!(
                                 "Variable {} is not a room or object\n{}",

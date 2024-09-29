@@ -16,6 +16,7 @@ import { newHooks } from "./hooks.js";
 export const getEmptyResource = () => ({
   isEmpty: true,
   objects: [],
+  desc: {},
   loc: {},
   vars: {},
   hooks: {},
@@ -48,6 +49,10 @@ const newGame = () => {
   // similar to but not quite the same as parser output
   let command = { prsa: "", cmds: [] };
 
+  // aka game over, set by <END>
+  // won't accept any more input if true (game over)
+  let is_over = false;
+
   // is safe to assume that all args are strings
   function log(...args) {
     logger(...args);
@@ -69,11 +74,16 @@ const newGame = () => {
       desc = fakePrso.desc;
     }
 
-    if ("text" in desc) {
+    if (!desc) {
+      return;
+    } else if ("text" in desc) {
       log(desc.text);
     } else if ("routine" in desc) {
       // is executed immediately
-      hooks.callDescription(routines[desc.routine], currentRoom, command.cmds);
+      hooks.callDescription(routines[desc.routine], currentRoom, [
+        fakePrso,
+        ...command.cmds.slice(1),
+      ]);
     }
   }
 
@@ -108,18 +118,18 @@ const newGame = () => {
 
       currentRoom = rooms[result.room];
 
-      if (currentRoom.hooks.enter) {
-        hooks.insert(
-          "ROOM-ACT-ENTER",
-          routines[currentRoom.hooks.enter],
-          currentRoom,
-          command.cmds
-        );
-      }
       if (player.hooks.enter) {
         hooks.insert(
           "PLAYER-ACT-ENTER",
           routines[player.hooks.enter],
+          currentRoom,
+          command.cmds
+        );
+      }
+      if (currentRoom.hooks.enter) {
+        hooks.insert(
+          "ROOM-ACT-ENTER",
+          routines[currentRoom.hooks.enter],
           currentRoom,
           command.cmds
         );
@@ -133,6 +143,7 @@ const newGame = () => {
       );
     }
 
+    hooks.callAll();
     return true;
   }
 
@@ -186,8 +197,9 @@ const newGame = () => {
           }
         }
       };
+      addCopies(thing);
 
-      for (const copy in delCopies) {
+      for (const copy of delCopies) {
         delete objects[copy.name].copies[copy.inst];
       }
 
@@ -215,6 +227,16 @@ const newGame = () => {
         );
       }
 
+      // set thing to empty
+      delete thing.isObject;
+      delete thing.isInst;
+      thing.isEmpty = true;
+      thing.objects = [];
+      thing.desc = {};
+      thing.loc = {};
+      thing.vars = {};
+      thing.hooks = {};
+
       return true;
     }
 
@@ -240,18 +262,18 @@ const newGame = () => {
 
         currentRoom = rooms[destination.isRoom];
 
-        if (currentRoom.hooks.enter) {
-          hooks.insert(
-            "ROOM-ACT-ENTER",
-            routines[currentRoom.hooks.enter],
-            currentRoom,
-            command.cmds
-          );
-        }
         if (player.hooks.enter) {
           hooks.insert(
             "PLAYER-ACT-ENTER",
             routines[player.hooks.enter],
+            currentRoom,
+            command.cmds
+          );
+        }
+        if (currentRoom.hooks.enter) {
+          hooks.insert(
+            "ROOM-ACT-ENTER",
+            routines[currentRoom.hooks.enter],
             currentRoom,
             command.cmds
           );
@@ -282,9 +304,9 @@ const newGame = () => {
         if (objHooks.enterPlayer) {
           hooks.insert(
             "OBJ-ACT-ADD",
-            objHooks.enterPlayer,
+            routines[objHooks.enterPlayer],
             currentRoom,
-            command.cmds
+            [thing, ...command.cmds.slice(1)]
           );
         }
 
@@ -299,9 +321,9 @@ const newGame = () => {
         if (scope == "player" && objHooks.exitPlayer) {
           hooks.insert(
             "OBJ-ACT-REMOVE",
-            objHooks.exitPlayer,
+            routines[objHooks.exitPlayer],
             currentRoom,
-            command.cmds
+            [thing, ...command.cmds.slice(1)]
           );
         }
 
@@ -318,9 +340,9 @@ const newGame = () => {
         if (scope == "player" && objHooks.exitPlayer) {
           hooks.insert(
             "OBJ-ACT-REMOVE",
-            objHooks.exitPlayer,
+            routines[objHooks.exitPlayer],
             currentRoom,
-            command.cmds
+            [thing, ...command.cmds.slice(1)]
           );
         }
 
@@ -371,10 +393,6 @@ const newGame = () => {
       typeof scope !== "object" ||
       typeof objName !== "string"
     ) {
-      console.error("Bad argument passed to engine.getInst", {
-        scope,
-        objName,
-      });
       return getEmptyResource();
     }
 
@@ -409,18 +427,18 @@ const newGame = () => {
 
     // the player enters the game
     start() {
-      if (currentRoom.hooks.enter) {
-        hooks.insert(
-          "ROOM-ACT-ENTER",
-          routines[currentRoom.hooks.enter],
-          currentRoom,
-          command.cmds
-        );
-      }
       if (player.hooks.enter) {
         hooks.insert(
           "PLAYER-ACT-ENTER",
           routines[player.hooks.enter],
+          currentRoom,
+          command.cmds
+        );
+      }
+      if (currentRoom.hooks.enter) {
+        hooks.insert(
+          "ROOM-ACT-ENTER",
+          routines[currentRoom.hooks.enter],
           currentRoom,
           command.cmds
         );
@@ -438,6 +456,18 @@ const newGame = () => {
     // parse user text input, expects a string, returns an object (see details below)
     handleRawInput(input) {
       let handled = false;
+      if (is_over) {
+        return {
+          handled,
+          syntax: {
+            prsa: "",
+            cmds: [],
+          },
+          goDirection: null,
+          playerVars: { ...player.vars },
+        };
+      }
+
       let result = parseInput(input);
       command = result;
 
@@ -455,19 +485,23 @@ const newGame = () => {
       }
 
       if ("handle" in result) {
-        // user command matches a syntax (and all it's OBJECTs)
+        // user command matches a syntax
         handled = true;
 
         // srh = syntax routine handlers
         const srh = handlers[result.prsa];
 
+        let alreadySeen = [];
         for (const inst of command.cmds) {
-          console.log("inst", inst);
           if (inst.isObject in srh.objHandlers) {
+            if (alreadySeen.includes(inst.isObject)) {
+              continue;
+            } else {
+              alreadySeen.push(inst.isObject);
+            }
+
             const objHandle = srh.objHandlers[inst.isObject];
-            console.log("objHandle", objHandle);
             if ("before" in objHandle) {
-              console.log("before", objHandle.before);
               hooks.insert(
                 "BEFORE-ACTION",
                 objHandle.before,
@@ -482,13 +516,20 @@ const newGame = () => {
           hooks.insert("SYNTAX-ACTION", srh.func, currentRoom, command.cmds);
         }
 
+        alreadySeen = [];
         for (const inst of command.cmds) {
           if (inst.isObject in srh.objHandlers) {
+            if (alreadySeen.includes(inst.isObject)) {
+              continue;
+            } else {
+              alreadySeen.push(inst.isObject);
+            }
+
             const objHandle = srh.objHandlers[inst.isObject];
             if ("after" in objHandle) {
               hooks.insert(
                 "AFTER-ACTION",
-                objHandle.before,
+                objHandle.after,
                 currentRoom,
                 command.cmds
               );
@@ -515,7 +556,7 @@ const newGame = () => {
             "OBJ-ACT-IN-ROOM",
             routines[object.hooks.inRoom],
             currentRoom,
-            command.cmds
+            [inst, ...command.cmds.slice(1)]
           );
         }
 
@@ -543,7 +584,7 @@ const newGame = () => {
             "OBJ-ACT-IN-PLAYER",
             routines[object.hooks.inPlayer],
             currentRoom,
-            command.cmds
+            [inst, ...command.cmds.slice(1)]
           );
         }
 
@@ -589,14 +630,14 @@ const newGame = () => {
       return {
         handled,
         syntax: {
-          prsa: result.prsa,
+          prsa: result?.prsa ?? "",
           // first elem is always an emptyResource, can remove it
-          cmds: result.cmds.slice(1).map((cmd) => ({
+          cmds: (result?.cmds || []).slice(1).map((cmd) => ({
             word: cmd.word,
             hasVal: !!cmd.val,
           })),
         },
-        goDirection: result.move ?? null,
+        goDirection: result?.move ?? null,
         playerVars: { ...player.vars },
       };
     },
@@ -670,8 +711,8 @@ const newGame = () => {
         }
       };
 
-      addInstances(currentRoom.objects);
       addInstances(player.objects);
+      addInstances(currentRoom.objects);
 
       // objectsMatching is an object[]
       const objectsMatching = objectsAccessible.filter((obj) =>
@@ -692,11 +733,34 @@ const newGame = () => {
     // if nested, returns a room
     getParent(thing, nested = false) {
       if (!thing || typeof thing !== "object") {
-        console.error("Bad argument passed to engine.getParent", { thing });
         return getEmptyResource();
       }
 
-      // TODO: nested
+      if (nested) {
+        if ("isPlayer" in thing) {
+          return currentRoom;
+        } else if ("isRoom" in thing) {
+          return thing;
+        }
+
+        let parent = thing;
+        while (true) {
+          if ("isObject" in parent && "isInst" in parent) {
+            const { scope = "", name = "", inst = "" } = parent.loc;
+            if (scope === "player") {
+              return currentRoom;
+            } else if (scope === "room" && !!name) {
+              return rooms[name];
+            } else if (scope === "object" && !!name && !!inst) {
+              parent = objects[name].copies[inst];
+            } else {
+              return getEmptyResource();
+            }
+          } else {
+            return getEmptyResource();
+          }
+        }
+      }
 
       if ("isPlayer" in thing) {
         return player;
@@ -814,7 +878,6 @@ const newGame = () => {
     // returns a boolean
     copyMove(thing, destination) {
       if (!thing || typeof thing !== "object") {
-        console.error("Bad argument passed to engine.copyMove", { thing });
         return false;
       }
 
@@ -827,6 +890,9 @@ const newGame = () => {
         loc: {},
         objects: {},
       };
+
+      // add new copy to the parent object
+      objects[thing.isObject].copies[newId] = copy;
 
       // we can't copy the player, which means the current room won't change, which means we can pass {} as locals
       return move({}, copy, destination);
@@ -860,6 +926,10 @@ const newGame = () => {
       });
 
       return [...new Set(normalized)].length === 1;
+    },
+
+    close() {
+      is_over = true;
     },
   };
 };

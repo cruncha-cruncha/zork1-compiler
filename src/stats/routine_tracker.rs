@@ -60,7 +60,7 @@ pub enum ReturnValType {
 impl<'a> Validator<'a> {
     pub fn new(cross_ref: &'a CrossRef) -> Validator<'a> {
         let mut vars: HashMap<String, ReturnValType> = HashMap::new();
-        vars.insert("C-ROOM".to_string(), ReturnValType::Inst);
+        vars.insert("C-ROOM".to_string(), ReturnValType::RP);
         vars.insert("CMD".to_string(), ReturnValType::Text);
 
         let base_stack = StackFrame {
@@ -325,6 +325,17 @@ impl<'a> Validator<'a> {
             }
             "EACH-OBJ" => {
                 let mut v = super::any_level::each_obj::EachObj::new();
+                match v.validate(self, n) {
+                    Ok(_) => {
+                        self.set_return_type(v.return_type());
+                        self.last_writer = Some(Box::new(v));
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+            "END" => {
+                let mut v = super::any_level::end::End::new();
                 match v.validate(self, n) {
                     Ok(_) => {
                         self.set_return_type(v.return_type());

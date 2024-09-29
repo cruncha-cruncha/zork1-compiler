@@ -69,7 +69,7 @@ This cluster defines the player character. Every child (after the first) must be
 (DESC <DESC-PLAYER>)
 ```
 
-The last example assumes the existence (definition exists) of a routine called `DESC-PLAYER`. The word `CR` can optionally be added after text in a description group, to represent a newline. A valid room group might look like:
+The word `CR` can optionally be added after text in a description group, to represent a newline. The last example assumes the existence (definition exists) of a routine called `DESC-PLAYER`. A valid room group might look like:
 
 ```
 (ROOM HIGH-PLAINS)
@@ -89,11 +89,15 @@ Multiple examples have been provided for illustrative purposes, but in general o
 
 ## `ROOM`
 
-All children (after the first and second) must be a group. The second child is the name of the room, and it must be unique. For example, `<ROOM GARAGE-1 ... >`.
+All children (after the first and second) must be a group. The second child is the name of the room, and it must be unique. For example,
+
+```
+<ROOM GARAGE-1 ... >
+```
 
 Can define a `DESC` and `VARS` group for each room. Can also define all possible directions of travel out of this room.
 
-### `DIRECTIONS`
+## `DIRECTIONS`
 
 Directions is a special top-level keyword that should only be defined once. For example:
 
@@ -113,7 +117,7 @@ Back to `ROOM`, any room can define one group per direction. For example:
 
 The first example has some text: that text will always be shown (logged) if the player tries to `GO NORTH` while in this room. As a consequence, the player can never travel north from this room (at least not using the `GO` command). Note that a `CR` after the text (as in a `DESC` group) is always implied and never allowed explicitly.
 
-The second example specifies another room to go to: `KITCHEN`. If the player enters command `GO KITCHEN` while in this room, the engine will attempt to move the player to the kitchen. As with the first example, this cannot change at game-time.
+The second example specifies another room to go to: `KITCHEN`. If the player enters command `GO EAST` while in this room, the engine will attempt to move the player to the kitchen. As with the first example, this cannot change at game-time.
 
 The third example indicates that the routine `BEDROOM-1-SOUTH` should be run when the player enters command `GO SOUTH`. This routine can do anything at all; it may or may not move the player. It may move the player to the `ELEVATOR` in some cases, or the `STAIRCASE` in others. This allows the game map to change at game-time.
 
@@ -135,16 +139,18 @@ Like player and room, can define a `DESC` and `VARS` group. Can also define an `
     (AKA BOARD BOARDS ROUGH-BOARD ROUGH-BOARDS)>
 ```
 
-`AKA` defines words that can be used in a syntax for refering to this object. The second child (`AXE` or `ROUGH-BOARDS` above) is used internally (by the zil-like source code) to unambiguously refer to an object. But the user might forget to always enter `AXE` with an E, so `AX` will be treated the same way for convenience. `AKA` is kind of like defining synonyms for an object, but it also defines the root word: the user can never refer to an object if it doesn't have an `AKA` group. Below is entirely valid but not advised.
+The second child of an object cluster (`AXE` or `ROUGH-BOARDS` above) is used internally (in zil-like source code) to unambiguously refer to an object. `AKA` defines words that can be used externally (in a command) for refering to this object. But the user might forget to always enter `AXE` with an E, so `AX` will be treated the same way for convenience. `AKA` is kind of like defining synonyms for an object, but it also defines the root word: the user can never refer to an object if it doesn't have an `AKA` group. Below is entirely valid but not advised.
 
 ```
 <OBJECT RED-BOOK
     (AKA BLUE-TV)>
+
+<OBJECT REALLY-IMPORTANT>
 ```
 
 It's good practice to always define an `AKA` group, and include the object name (second child) in it. If the user can never ever ever interact with an object, it's ok to omit.
 
-Let's move on to the `COPY` group now. Earlier, in the 'Concepts' section, it was mentioned that the player can interact with object instances but not a prototypical object. The top-level object keyword defines a prototypical object, and `COPY` group defines instances that are present at the start of the game. For example:
+Let's move on to the `COPY` group now. Earlier, in the 'Concepts' section, it was mentioned that the player can interact with object instances but not a prototypical object. The top-level object keyword defines a prototypical object, and the `COPY` group defines instances that are present at the start of the game. For example:
 
 ```
 <OBJECT FLOUR
@@ -161,17 +167,17 @@ Let's move on to the `COPY` group now. Earlier, in the 'Concepts' section, it wa
 
 At the start of the game, an instance of the flour object will exist in some rooms with variables:
 
-- `KITCHEN-1`: AMOUNT = 10 (the default variable)
+- `KITCHEN-1`: AMOUNT = 10 (the default variable and value)
 - `KITCHEN-2`: AMOUNT = 5 (overrides the default variable value)
-- `KITCHEN-3`: AMOUNT = 10, MOLDY = 1 (the default variable and a custom variable)
+- `KITCHEN-3`: AMOUNT = 10, MOLDY = 1 (the defaults and a custom variable)
 
-Hopefully this illustrates how copies inherit and override default variables from the prototypical object. The last copy of flour is nested inside the second instance of the `BAG` object: it winds up inside a `BAG`, inside the room `LARGE-GROCER`. There is no `<BAG 0>` (indexing starts at 1).
+Hopefully this illustrates how copies can inherit and override default variables from the prototypical object. The last copy of flour is nested inside the second instance of the `BAG` object: flour winds up inside a `BAG`, inside the room `LARGE-GROCER`. There is no `<BAG 0>` (indexing starts at 1).
 
 Instances can be created, destroyed, and nested at game-time. Default object variables cannot be changed at game-time.
 
 ## `GLOBAL`
 
-Aka a global (integer-only) variable. New global variables cannot be created at game-time (unlike variable in the player, an object instance, or a room). Can define any number of global variables, but each must have a unique name. For example:
+Aka a global (integer-only) variable. New global variables cannot be created at game-time (unlike variables in the player, an object instance, or a room). Can define any number of global variables, but each must have a unique name. For example:
 
 ```
 <GLOBAL HOUR 3>
@@ -193,7 +199,7 @@ Syntax defines an input command the user can enter. It could look like:
 <SYNTAX EAT NEAREST OBJECT>
 ```
 
-### `BUZZ`
+## `BUZZ`
 
 When the user enters some text, it's passed as a string to the parser. The parser splits this string on whitespace, then looks at each word individually, starting from the first word. If some words can be ignored, `BUZZ` them: they will be completely removed after splitting the string. In the demo game, buzz is defined as:
 
@@ -205,7 +211,7 @@ So if the user enters the command `TAKE ALL OF THE APPLES`, it'll be split then 
 
 If `BUZZ` is defined multiple times, it's treated as if there is only one definition, with a set of all words built from combining all the different definitions. It's easiest just to define it once.
 
-### `SYNONYM`
+## `SYNONYM`
 
 In order to provide flexibility to the user, synonyms can be defined for any word. The synonyms apply to that word in any syntax.
 
@@ -229,7 +235,7 @@ Assuming that no words are buzzed, the above definitions match the following com
 - `HOW FAST AM I GOING`
 - `HOW FASTER AM I GOING`
 
-The order of syntax and synonym definitions don't matter: the second child in a synonym (like `FAST`) is applied to all instances of that word in all syntaxes. We end up matching `HOW FASTER AM I GOING` which doesn't make a lot of sense, but should actually be ok: it doesn't have to make sense grammatically (because the user will never see it) as long as it makes sense programatically.
+The order of syntax and synonym definitions don't matter: the second child in a synonym (like `FAST`) is used to find all instances of that word in all syntaxes. We end up matching `HOW FASTER AM I GOING` which doesn't make a lot of sense, but should actually be ok: it doesn't have to make sense grammatically (because the user will never see it) as long as it makes sense programatically.
 
 Commands can quickly become unwieldy between `SYNTAX`, `BUZZ`, and `SYNONYM`, but let's get back to `SYNTAX` for now.
 
@@ -265,7 +271,9 @@ What about object handlers? Earlier, we saw this example:
 <SYNTAX EAT NEAREST OBJECT>
 ```
 
-`OBJECT` has special meaning in a syntax. It will match any object in the player or current room (nested at any depth), based on the object's `AKA` (see earlier). So if there's candy in the current room, and the user enters command `EAT NEAREST CANDY`, this syntax will match. If there's no candy in the room or in the player, the syntax will not match, and the action handler won't execute. It's possible to not define an action handler and still execute code if the command matches, by using an object handler.
+`OBJECT` has special meaning in a syntax. It will match any object in the player or current room (nested at any depth), based on the object's `AKA` (see earlier). So if there's candy in the current room, and the user enters command `EAT NEAREST CANDY`, this syntax will match. If there's no candy in the player or in the room, the syntax will not match, and the action handler won't execute. The parser looks for instances first in the player, then in the current room.
+
+It's possible to not define an action handler and still execute code if the command matches, by using an object handler.
 
 ```
 <EAT CANDY ()
@@ -275,16 +283,78 @@ What about object handlers? Earlier, we saw this example:
 
 This object handler will execute if all of the following is true:
 
-- there is a syntax that starts with `EAT`
-- the syntax has at least one `OBJECT`
-- any `OBJECT` in the syntax is in the same place as `CANDY` in the user's command. It could be the first `OBJECT`, could be the fifth `OBJECT`, doesn't matter
+- there is a syntax that starts with `EAT`, and has at least one `OBJECT`
+- at least one `OBJECT` in the syntax is in the same place as `CANDY` in the user's command. It could be the first `OBJECT`, could be the fifth `OBJECT`, doesn't matter
 - an instance of an object with `CANDY` in it's `AKA` exists in the player or current room (at any level of nesting)
 
 Maybe `EAT` doesn't have an action handler, and instead this command is handled exclusively by object handlers. Eating some objects will make the player sick. Others will give them health. Others will do nothing.
 
-If `EAT` does have an action handler, the `EAT CANDY ()` object handler will execute before the action handler. The `EAT () CANDY` object handler will execute after the action handler: the position of the parenthesis dictates whether an object handler is executed before or after the action handler.
+If `EAT` does have an action handler, the `EAT CANDY ()` object handler will execute before the action handler. An `EAT () CANDY` object handler will execute _after_ the action handler: the position of the group dictates whether an object handler is executed before or after the action handler.
 
-Each syntax can have one action handler, and two object handlers (one before and one after) for every object, if the syntax has at least one `OBJECT`. So if there are 20 objects in the game, and a `<SYNTAX KICK OBJECT AT OBJECT USING OBJECT>`, there is potentially one action handler and 40 object handlers.
+Each syntax can have one action handler, and two object handlers (one before and one after) for every object, if the syntax has at least one `OBJECT`. So if there are 20 objects (not instances, actual objects) in the game, and a `<SYNTAX KICK OBJECT AT OBJECT USING OBJECT>`, there is potentially one action handler and 40 object handlers.
+
+# an Aside on Limitations of the Parser
+
+## Limitation 1
+
+If the parser encounters an `OBJECT` but can't find a suitable instance in the immediate vicinity, it just keeps right on going. This means that `<CMD 1>` in zil-like code could be empty (null), even if the syntax has an `OBJECT` in it.
+
+For example, consider:
+
+```
+<SYNTAX TAKE OBJECT>
+<OBJECT BOOK>
+
+<TAKE ()
+    <COND (
+        <IS-EQUAL <CMD 1> <CMD 2>>
+        <TELL "Unable">
+    )(
+        <IS-EQUAL 1 1>
+        <TELL "Do something">
+    )>
+>
+```
+
+The syntax corresponding to the `TAKE` action only has one `OBJECT`, so `<CMD 2>` will always be empty (null). We can use it to check if `<CMD 1>` is also empty.
+
+If the user tries to `TAKE A-BREAK`, the game will log out "Unable"; there's no object named `A-BREAK` defined anywhere in the code. If the user tries to `TAKE BOOK` and there's an instance of `BOOK` in their vicinity, the game will log out "Do something".
+
+If the user tries to `TAKE BOOK` and there aren't any around, the game will log out "Unable". There's no difference between an object not existing at all (`A-BREAK`) and an object being unavailable in this context (`BOOK`). Further, there is no mechanism to discern between these options: if `<CMD 1>` is undefined, it could be because
+
+- there's no `OBJECT` in the syntax, or
+- the object the user is looking for doesn't exist at all, or
+- the object the user is looking for doesn't exist here
+
+## Limitation 2
+
+Consider now:
+
+```
+<SYNTAX NEST OBJECT IN OBJECT>
+```
+
+And the player enters command `NEST DOLL IN DOLL`. If there's a `DOLL` around, `CMD` 1 and 2 will both get the same instance. This is because the parser's object-finder is essentially stateless; it doesn't keep track of previously-found object instances. We can work around this in zil code: if expecting 2+ objects, go looking for 2+ objects in the `PLAYER` and `C-ROOM`.
+
+## Limitation 3
+
+Consider:
+
+```
+<SYNTAX TAKE ALL OBJECT FROM OBJECT>
+<SYNTAX TAKE ALL OBJECT AND PUT IN OBJECT>
+<SYNTAX TAKE OUT THE TRASH>
+```
+
+Here the first syntax will always match before the second; the parser works from left-to-right, and `OBJECT` essentially matches anything. The compiler will generate a warning about redundant syntax.
+
+The third syntax is perfectly valid, but will be handled by the same functions that handle the first syntax (because they both start with action `TAKE`), even though their semantic intentions are different. Checking if `<CMD 1>` is empty (null) might not work to differentiate (see above). In general, it's best to design a syntax so that each unique first word corresponds to a single intent.
+
+## Limitation 4
+
+This one is actually a feature. An object handler will be called at most once per command (or twice if you count before and after as the same handler). So if the user commands `NEST DOLL IN DOLL IN DOLL`, then `<NEST DOLL ()>` will be called once, and `<NEST () DOLL>` will be called once.
+
+Now back to top-level keywords.
 
 ## `ROUTINE`
 
@@ -299,7 +369,7 @@ Handlers are just routines with special triggers. Let's look at an example of a 
 
 This defines a routine called `SET-PLAYER-ON-FIRE`. Routines can only be defined at the top-level. This routine assigns the value 1 to a variable called `BURNING` in the player, then tells the user (logs out) that they're on fire. Every child of a routine (after the first three) must be a cluster.
 
-Variables cannot be passed into a routine. The parenthesis (third child) is used to define variables that are local to a routine. So we could write:
+Variables cannot be passed into a routine. The group (third child) is used to define variables that are local to a routine. So we could write:
 
 ```
 <ROUTINE BURN-PLAYER (DMG)
@@ -309,11 +379,13 @@ Variables cannot be passed into a routine. The parenthesis (third child) is used
 >
 ```
 
+`DMG` has an initial value of zero. All routine-local variables have an initial value of zero. Numeric values can be 'passed' to a function via global variables.
+
 `PLAYER` and `C-ROOM` (current room) is always accessible to every handler and routine, as well as the syntax `CMDS` (aka object instances from the parsed syntax, explained more in the the next section).
 
 # Handlers and Routines
 
-There are 25 clusters available to use as building blocks inside a routine (or handler). They use [polish notation](https://en.wikipedia.org/wiki/Polish_notation), for example:
+There are 26 clusters available to use as building blocks inside a routine (or handler). They use [prefix notation](https://en.wikipedia.org/wiki/Polish_notation), for example:
 
 ```
 <SUBTRACT <MULTIPLY 2 3> <ADD 9 1>>
@@ -321,7 +393,7 @@ There are 25 clusters available to use as building blocks inside a routine (or h
 
 Resolves to `(2 x 3) - (9 + 1)`.
 
-Many clusters accept arguments of a certain type, the types are:
+Many clusters accept arguments of a certain type. The types are:
 
 - INST: an object instance
 - ROOM: the name of a room
@@ -335,7 +407,7 @@ Many clusters accept arguments of a certain type, the types are:
 
 A boolean cannot be expressed literally, it only shows up as the return value of a cluster: there is no explicit 'true' or 'false' in the code. A (local or global) variable, or any routine, that returns type T is equivalent to type T and can be used in it's place as an argument to a cluster.
 
-Any handler or routine returns a NUM, zero if no explicit `RETURN` is called.
+Any handler or routine returns a NUM, value zero if no explicit `RETURN` is called. The clusters are as follows:
 
 ```
 ;"various"
@@ -346,6 +418,7 @@ Any handler or routine returns a NUM, zero if no explicit `RETURN` is called.
 <DESC IRP>         ;"describe the IRP (see DESC group), returns nothing"
 <CMD NUM>          ;"get the NUMth object instance matching this syntax/command, starts from 1"
 ;"<CMD 1> would return a specific instance of the CANDY object if called while handling EAT NEAREST CANDY"
+<END>              ;"ends the game: will not accept any more input from the user"
 
 ;"get/set variables"
 ;"there is no GET-VAR VAR: just use VAR directly instead"
@@ -357,18 +430,18 @@ Any handler or routine returns a NUM, zero if no explicit `RETURN` is called.
 <ADD NUM NUM NUM>      ;"as many NUMS as you want"
 <SUBTRACT NUM NUM>     ;"exactly two NUMS"
 <MULTIPLY NUM NUM NUM> ;"as many NUMS as you want"
-<DIVIDE NUM NUM>       ;"exactly two NUMS"
+<DIVIDE NUM NUM>       ;"exactly two NUMS, takes the floor"
 
 ;"conditionals, all return a BOOL"
 <IS-DES NUM NUM NUM>      ;"any number of NUMs, returns true if they're all in descending order (3,2,1), otherwise false"
 <IS-ASC NUM NUM NUM>      ;"any number of NUMs, returns true if they're all in ascending order (1,2,3), otherwise false"
-<IS-EQUAL INST INST INST> ;"any number of args (regardless of type), returns true if all the same instance"
-<IS-EQUAL INST INST OBJ>  ;"if one or more OBJ and one or more INST, returns true if all INSTs are copies of OBJ, and all OBJs are the same"
+<IS-EQUAL INST INST INST> ;"any number of args (regardless of type), returns true if all the same object type (doesn't care about instance, unlike IS-IN)"
+<IS-EQUAL OBJ INST INST>  ;"returns true if all the same object type (all are / are copies of the same object)"
 <IS-EQUAL OBJ OBJ>        ;"returns true if all the same OBJ"
 <IS-EQUAL NUM NUM>        ;"returns true if all the same number"
 <IS-EQUAL TEXT TEXT>      ;"returns true if all the same text"
 ;"mixing and matching types in IS-EQUAL will just return false"
-<IS-IN IRP IRP/OBJ>       ;"IRP is in IRP, or an instance of OBJ is in IRP, not nested. returns true if IRP == IRP"
+<IS-IN IRP IRP/OBJ>       ;"IRP is in IRP, or an instance of OBJ is in IRP, not nested. returns true if IRP == IRP."
 <IS-IN IRP IRP/OBJ N>     ;"same as above, but allow nesting. returns false if IRP == IRP"
 
 ;"logic, all return a BOOL"
@@ -379,10 +452,10 @@ Any handler or routine returns a NUM, zero if no explicit `RETURN` is called.
 ;"objects"
 <LOC INST>       ;"return the IRP which contains INST"
 <LOC INST N>     ;"return the containing room of INST"
-<INST IRP OBJ>   ;"return the first instance of OBJ in IRP, cannot be nested. Returns an empty object if none found"
+<INST IRP OBJ>   ;"return the first instance of OBJ in IRP, cannot be nested. Returns an empty object if none found."
 <INST IRP OBJ N> ;"return the first instance (breadth-first) of OBJ in IRP, can be nested. Returns an empty object if none found"
-;"Empty objects have no variables, no container, no description, and no nested objects"
-;"Empty objects are equal to eachother but nothing else"
+;"The empty object has no variables, no container, no description, and no nested objects"
+;"Empty objects are equal to eachother, but nothing else"
 
 
 ;"move stuff, all return a BOOL"
@@ -400,9 +473,14 @@ Any handler or routine returns a NUM, zero if no explicit `RETURN` is called.
 <EACH-VAL NUM (VAR) ... >       ;"loops from zero up to (but not including) NUM, setting VAR to value on each loop"
 ```
 
+The `<CMD NUM>` cluster will sometimes have a secret zero-th object:
+
+- inside a routine called as a description, will be the room/player/object instance
+-
+
 # Hooks
 
-Hooks have been omitted thus far to avoid overwhelming the reader. Hooks add more interaction to the game, by firing (executing) routines in response to different events. Three hooks can be assigned to the player:
+Hooks haven't been mentioned so far. Hooks add more interaction to the game by firing (executing) routines in response to different events. Three hooks can be assigned to the player:
 
 - ACT-ENTER: fires when the player enters any room
 - ACT-EXIT: fires when the player exits any room
@@ -414,21 +492,23 @@ Zero, one, two, or all three of the hooks can be defined. Every room can be assi
 - ACT-EXIT: fires when the player leaves this room
 - ACT-ALWAYS: fires after every command while the player is in this room
 
-A hook is defined by adding it as a group. For example, a `TRAP-1` room might be on fire, and we want to set the player on fire whenever they enter the room, using a routine called `SET-PLAYER-ON-FIRE`.
+The `C-ROOM` inside a room hook is always that room. A hook is defined by adding it as a group. For example, a `TRAP-1` room might be on fire, and we want to set the player on fire whenever they enter the room, using a routine called `SET-PLAYER-ON-FIRE`.
 
 ```
 
 <ROOM TRAP-1
-(ACT-ENTER <SET-PLAYER-ON-FIRE>)>
+    (ACT-ENTER <SET-PLAYER-ON-FIRE>)>
 
 ```
 
-Every object can be assigned any number of four hooks:
+Every object has four hooks:
 
 - ACT-IN-ROOM: fires after every command while this object is in the same room as the player (fires even if the object is nested)
 - ACT-IN-PLAYER: fires after every command while this object is in the player's inventory (fires even if the object is nested)
 - ACT-ADD: fires when this object is added to the player's inventory
-- ACT-REMOVE: fires when this object is removed from the player's inventory
+- ACT-REMOVE: fires when this object is removed from the player's inventory. Does not fire on delete.
+
+For convenience, `<CMD 0>` inside an object hook (or rather the routine, when called by an object hook) is always an instance of that object.
 
 ## Firing order
 
@@ -438,8 +518,8 @@ Many hooks can be triggered during the course of a routine, but they don't fire 
 - objects ACT-ADD
 - room ACT-EXIT
 - player ACT-EXIT
-- room ACT-ENTER
 - player ACT-ENTER
+- room ACT-ENTER
 - objects ACT-IN-ROOM
 - objects ACT-IN-PLAYER
 - room ACT-ALWAYS
@@ -449,7 +529,44 @@ Object hooks generally fire for every object that was moved (including objects n
 
 When a hook is inserted, it removes all upcoming hook calls of lower priority. This an opaque process which can lead to unexpected behaviour, so always test your hooks. Details of exactly when hooks are inserted (and more importantly, called) can muddled out of `./js-boilerplate/engine.js`, see especially `// run all queued hooks to ensure...`.
 
-# Illegal Names
+# Naming Conventions
+
+These are just suggestions.
+
+Suppose there's a room called `LIBRARY`. If it has a description routine, it should be called `DESC-LIBRARY`. If it has a `ACT-ALWAYS` hook, it should be called `LIBRARY-ALWAYS`.
+
+The demo game defines
+
+```
+<SYNTAX HIT OBJECT>
+<SYNTAX ADD OBJECT TO OBJECT>
+<SYNTAX PUT OBJECT IN OBJECT>
+<SYNTAX TAKE OBJECT>
+```
+
+The action handler for `HIT` is small; it cleans up a previous command, and that's it. So by convention, if an object is hittable and will take damage, it must define it's own object handler (like `<HIT RABBIT ()>`). If an object can be used to hit but might damage itself in the process, it defines an object handler like `<HIT () SWORD>`. If both handlers TELL something, the logs will come out in a sensible order. This is similar to the concept of in/direct objects (PRSI and PRSO) in the original ZIL language.
+
+By contrast, `ADD` and `PUT` are distinct commands but should really do the same thing in-game. It would be annoying to define `<ADD name ()>` and `<PUT name ()>` for every object, so instead both commands are sent to one large routine:
+
+```
+<ADD () <ADD-TO>>
+<PUT () <ADD-TO>>
+<ROUTINE ADD-TO () ... >
+```
+
+And in actual fact, the routine got so large that `<ADD-TO>` now calls `<ADD-TO-STONE>` or `<ADD-TO-FIRE>` if required, just so the code is split into manageable chunks for debugging.
+
+The last syntax, `TAKE`, is a hybrid implementation. The action handler looks for an `OWN-TAKE` variable in `<CMD 1>` with a value of 1, and exits early (`<RETURN 0>`) if found, hoping that an object handler is defined. If not found, the action handler proceeds to do some generic action handling.
+
+Each syntax in the demo game is handled by one of three different strategies:
+
+- only define object handlers
+- only define an action handler
+- define an action handler, but silently fallback to object handlers as needed
+
+But of course there are always exceptions, and hooks called every which way. Try to use the minimum amount of hooks so as not to get confused. Side-effects can be very hard to debug, especially if there's no consistent naming convention.
+
+## Illegal Names
 
 The following names (for variables or routines) are illegal:
 
