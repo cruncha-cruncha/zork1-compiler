@@ -16,7 +16,10 @@
         <div class="flex flex-col p-2">
             <ul id="output" class="grow overflow-y-scroll"></ul>
             <div class="flex justify-center mt-2">
-                <form onSubmit="handleInput(event)">
+                <a class="px-2 py-1 mr-1 rounded-md text-sky-800 hover:bg-sky-800 hover:text-white"
+                    href="https://github.com/cruncha-cruncha/zork1-compiler" target="_blank"
+                    rel="noopener noreferrer">?</a>
+                <form onSubmit=" handleInput(event)">
                     <input id="input" type="text" placeholder="command"
                         class="px-2 py-1 border-2 border-gray-400 rounded-md" />
                     <input type="submit" value="EXEC"
@@ -93,11 +96,11 @@
                     logger("You can't go that way.\n");
                 } else if (result.syntax.cmds.length > 0) {
                     logger("Couldn't find anything to do with that.\n");
+                } else if (result.playerVars.health <= 0) {
+                    logger("There's nothing more to be done.\n");
                 } else {
                     logger("I don't understand that command.\n");
                 }
-            } else if (result.playerVars.health < 0) {
-                // do something
             }
 
             if (noOutputLogs) {

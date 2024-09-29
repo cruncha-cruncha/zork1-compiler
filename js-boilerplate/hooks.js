@@ -19,9 +19,9 @@ const getPriority = (hookType) => {
       return 8;
     case "PLAYER-ACT-EXIT":
       return 7;
-    case "ROOM-ACT-ENTER":
-      return 6;
     case "PLAYER-ACT-ENTER":
+      return 6;
+    case "ROOM-ACT-ENTER":
       return 5;
     // hooks 4 and 3 are called with the currentRoom at this moment in time
     // they're fired at most once per object per command

@@ -1,6 +1,6 @@
 use crate::{
     stats::{
-        helpers::{get_token_as_word, num_children_between},
+        helpers::{get_token_as_word, num_children},
         routine_tracker::{CanValidate, HasReturnType, ReturnValType, Validator},
     },
     zil::{
@@ -13,12 +13,10 @@ use super::set_var::Scope;
 
 // if len 2: not allowed, use the local / global variable directly
 // if len 3: get IRP variable
-// if len 4: get variable on first object instance in IRP
 // IRP = object instance, or room, or player
 
 pub struct GetVar {
     pub scope: Scope,
-    pub object: Option<String>,
     pub var: Scope,
 }
 
@@ -26,7 +24,6 @@ impl GetVar {
     pub fn new() -> Self {
         Self {
             scope: Scope::TBD,
-            object: None,
             var: Scope::TBD,
         }
     }
@@ -41,7 +38,7 @@ impl HasReturnType for GetVar {
 
 impl CanValidate for GetVar {
     fn validate<'a>(&mut self, v: &mut Validator<'a>, n: &'a ZilNode) -> Result<(), String> {
-        num_children_between(n, 3, 4)?;
+        num_children(n, 3)?;
 
         v.expect_vals(vec![ReturnValType::Inst, ReturnValType::RP]);
 
@@ -52,7 +49,7 @@ impl CanValidate for GetVar {
                 let word = get_token_as_word(&second_child).unwrap();
                 if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
-                        ReturnValType::Inst => {
+                        ReturnValType::Inst | ReturnValType::RP => {
                             self.scope = Scope::Local(word);
                         }
                         _ => {
@@ -88,31 +85,6 @@ impl CanValidate for GetVar {
                     second_child.node_type,
                     format_file_location(&second_child)
                 ));
-            }
-        }
-
-        if n.children.len() == 4 {
-            let third_child = &n.children[2];
-            match third_child.node_type {
-                ZilNodeType::Token(TokenType::Word) => {
-                    let word = get_token_as_word(&third_child).unwrap();
-                    if v.is_object(&word) {
-                        self.object = Some(word);
-                    } else {
-                        return Err(format!(
-                            "Word {} not found in objects\n{}",
-                            word,
-                            format_file_location(&third_child)
-                        ));
-                    }
-                }
-                _ => {
-                    return Err(format!(
-                        "Expected a word, found {}\n{}",
-                        third_child.node_type,
-                        format_file_location(&third_child)
-                    ));
-                }
             }
         }
 

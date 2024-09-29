@@ -158,7 +158,8 @@ impl CanValidate for IsEqual {
                     } else if v.is_room(&word) {
                         if expect != ReturnValType::RP {
                             return Err(format!(
-                                "Variable {} is not a room\n{}",
+                                "Expected {:?}, found variable {} (a room)\n{}",
+                                expect,
                                 word,
                                 format_file_location(&child)
                             ));
@@ -167,7 +168,7 @@ impl CanValidate for IsEqual {
                     } else if v.is_object(&word) {
                         if expect != ReturnValType::Inst {
                             return Err(format!(
-                                "Variable {} is not an object\n{}",
+                                "Variable {} is not an object instance\n{}",
                                 word,
                                 format_file_location(&child)
                             ));

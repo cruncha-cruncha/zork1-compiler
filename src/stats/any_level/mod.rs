@@ -7,6 +7,7 @@ pub mod desc;
 pub mod divide;
 pub mod each_obj;
 pub mod each_val;
+pub mod end;
 pub mod get_var;
 pub mod inst;
 pub mod is_asc;

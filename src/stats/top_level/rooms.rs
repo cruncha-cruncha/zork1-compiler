@@ -199,10 +199,7 @@ impl Populator for RoomStats {
 
             for c in node.children.iter().skip(2) {
                 if c.node_type != ZilNodeType::Group {
-                    room_errors.push(format!(
-                        "Expected group, found \n{}",
-                        format_file_location(&c)
-                    ));
+                    room_errors.push(format!("Expected group\n{}", format_file_location(&c)));
                     continue;
                 }
 

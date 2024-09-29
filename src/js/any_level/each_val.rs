@@ -8,9 +8,9 @@ impl CanWriteOutput for EachVal {
         formatter.newline()?;
 
         if self.iterate {
-            formatter.write("for (let i of Array.from(Array(", true)?;
+            formatter.write("for (let i of Array.from(Array(Math.max(0, ", true)?;
             self.scope.write_output(formatter)?;
-            formatter.write(").keys())) {", false)?;
+            formatter.write(")).keys())) {", false)?;
             formatter.indent();
             formatter.newline()?;
             formatter.write(

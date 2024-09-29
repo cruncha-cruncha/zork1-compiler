@@ -7,21 +7,7 @@ impl CanWriteOutput for GetVar {
     fn write_output<'a>(&self, formatter: &mut Formatter) -> Result<(), std::io::Error> {
         formatter.write("(", false)?;
 
-        if self.object.is_some() {
-            formatter.write("game.getInst(", false)?;
-        }
-
         self.scope.write_output(formatter)?;
-
-        if self.object.is_some() {
-            formatter.write(
-                &format!(
-                    ", '{}')",
-                    Formatter::safe_case(self.object.as_ref().unwrap())
-                ),
-                false,
-            )?;
-        }
 
         formatter.write(".vars[", false)?;
 

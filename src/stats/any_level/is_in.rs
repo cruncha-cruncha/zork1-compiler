@@ -49,7 +49,9 @@ impl CanValidate for IsIn {
                     self.container = Scope::Player;
                 } else if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
-                        ReturnValType::Inst => self.container = Scope::Local(word),
+                        ReturnValType::Inst | ReturnValType::RP => {
+                            self.container = Scope::Local(word)
+                        }
                         _ => {
                             return Err(format!(
                                 "Variable {} is not an object instance\n{}",

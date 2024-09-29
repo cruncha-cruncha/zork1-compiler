@@ -115,7 +115,7 @@ impl CanValidate for CopyMove {
                     self.destination = Scope::Room(word);
                 } else if let Some(return_type) = v.has_local_var(&word) {
                     match return_type {
-                        ReturnValType::Inst => {
+                        ReturnValType::Inst | ReturnValType::RP => {
                             self.destination = Scope::Local(word);
                         }
                         _ => {

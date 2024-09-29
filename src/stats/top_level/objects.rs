@@ -330,10 +330,7 @@ impl Populator for ObjectStats {
 
             for c in node.children.iter().skip(2) {
                 if c.node_type != ZilNodeType::Group {
-                    object_errors.push(format!(
-                        "Expected group, found \n{}",
-                        format_file_location(&c)
-                    ));
+                    object_errors.push(format!("Expected group\n{}", format_file_location(&c)));
                     continue;
                 }
 

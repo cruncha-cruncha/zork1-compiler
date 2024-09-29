@@ -8,9 +8,10 @@ export const objects = {
         isInst: 'inst_1',
         loc: { scope: 'room', name: 'cabinExterior' },
         vars: {
-          hasBoards: 3,
-          health: 8,
+          hasBoards: 2,
+          health: 6,
           isLocked: 1,
+          isSoft: 1,
           noTake: 1,
         },
         objects: {
@@ -18,9 +19,10 @@ export const objects = {
       },
     },
     vars: {
-      hasBoards: 3,
-      health: 8,
+      hasBoards: 2,
+      health: 6,
       isLocked: 1,
+      isSoft: 1,
       noTake: 1,
     },
     hooks: {
@@ -56,7 +58,7 @@ export const objects = {
       inst_3: {
         isObject: 'cabinDoorKey',
         isInst: 'inst_3',
-        loc: { scope: 'object', name: 'detritus', inst: 'inst_46' },
+        loc: { scope: 'object', name: 'detritus', inst: 'inst_41' },
         vars: {
         },
         objects: {
@@ -78,6 +80,7 @@ export const objects = {
         loc: { scope: 'room', name: 'cabin' },
         vars: {
           health: 2,
+          isSoft: 1,
           tinder: 1,
         },
         objects: {
@@ -87,6 +90,7 @@ export const objects = {
     },
     vars: {
       health: 2,
+      isSoft: 1,
       tinder: 1,
     },
     hooks: {
@@ -94,32 +98,29 @@ export const objects = {
   },
   bookPage: {
     isObject: 'bookPage',
-    desc: { text: "some PAPER" },
+    desc: { routine: 'descBookPage' },
     copies: {
       inst_5: {
         isObject: 'bookPage',
         isInst: 'inst_5',
         loc: { scope: 'object', name: 'book', inst: 'inst_4' },
         vars: {
-          tinder: 1,
         },
         objects: {
         },
       },
     },
     vars: {
-      tinder: 1,
     },
     hooks: {
     },
   },
   note: {
     isObject: 'note',
-    desc: { text: "a NOTE" },
+    desc: { routine: 'descNote' },
     copies: {
     },
     vars: {
-      tinder: 1,
     },
     hooks: {
     },
@@ -135,6 +136,7 @@ export const objects = {
         vars: {
           hasBoards: 2,
           health: 4,
+          isSoft: 1,
         },
         objects: {
         },
@@ -143,6 +145,7 @@ export const objects = {
     vars: {
       hasBoards: 2,
       health: 4,
+      isSoft: 1,
     },
     hooks: {
     },
@@ -158,6 +161,7 @@ export const objects = {
         vars: {
           hasBoards: 1,
           health: 6,
+          isSoft: 1,
         },
         objects: {
         },
@@ -169,6 +173,7 @@ export const objects = {
         vars: {
           hasBoards: 1,
           health: 6,
+          isSoft: 1,
         },
         objects: {
         },
@@ -177,6 +182,7 @@ export const objects = {
     vars: {
       hasBoards: 1,
       health: 6,
+      isSoft: 1,
     },
     hooks: {
     },
@@ -190,12 +196,18 @@ export const objects = {
         isInst: 'inst_9',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
+          hasBoards: 2,
+          health: 6,
+          isSoft: 1,
         },
         objects: {
         },
       },
     },
     vars: {
+      hasBoards: 2,
+      health: 6,
+      isSoft: 1,
     },
     hooks: {
     },
@@ -209,12 +221,14 @@ export const objects = {
         isInst: 'inst_10',
         loc: { scope: 'room', name: 'cabin' },
         vars: {
+          isHard: 1,
         },
         objects: {
         },
       },
     },
     vars: {
+      isHard: 1,
     },
     hooks: {
     },
@@ -238,22 +252,13 @@ export const objects = {
     hooks: {
     },
   },
-  glassShard: {
-    isObject: 'glassShard',
-    copies: {
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
   soup: {
     isObject: 'soup',
     desc: { text: "SOUP" },
     copies: {
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
@@ -264,18 +269,18 @@ export const objects = {
     copies: {
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
   },
   fire: {
     isObject: 'fire',
-    desc: { text: "a FIRE" },
+    desc: { routine: 'descFire' },
     copies: {
     },
     vars: {
-      fuel: 2,
+      fuel: 3,
       noTake: 1,
     },
     hooks: {
@@ -283,6 +288,7 @@ export const objects = {
   },
   charcoal: {
     isObject: 'charcoal',
+    desc: { text: "some CHARCOAL" },
     copies: {
     },
     vars: {
@@ -300,41 +306,14 @@ export const objects = {
     hooks: {
     },
   },
-  caveSpider: {
-    isObject: 'caveSpider',
-    copies: {
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
-  monsterTooth: {
-    isObject: 'monsterTooth',
-    copies: {
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
-  monster: {
-    isObject: 'monster',
-    copies: {
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
-  wire: {
-    isObject: 'wire',
-    desc: { text: "some WIRE" },
+  rockPile: {
+    isObject: 'rockPile',
+    desc: { text: "a large rock pile" },
     copies: {
       inst_12: {
-        isObject: 'wire',
+        isObject: 'rockPile',
         isInst: 'inst_12',
-        loc: { scope: 'room', name: 'cavern1' },
+        loc: { scope: 'room', name: 'mazeRest2' },
         vars: {
         },
         objects: {
@@ -344,42 +323,122 @@ export const objects = {
     vars: {
     },
     hooks: {
+      inRoom: 'rockPileInRoom',
+    },
+  },
+  caveSpider: {
+    isObject: 'caveSpider',
+    desc: { text: "a SPIDER" },
+    copies: {
+    },
+    vars: {
+      health: 2,
+      ownTake: 1,
+    },
+    hooks: {
+      inRoom: 'caveSpiderInRoom',
+    },
+  },
+  childMonster: {
+    isObject: 'childMonster',
+    desc: { routine: 'descChildMonster' },
+    copies: {
+      inst_13: {
+        isObject: 'childMonster',
+        isInst: 'inst_13',
+        loc: { scope: 'room', name: 'storage' },
+        vars: {
+          health: 100,
+          isSoft: 1,
+          maxHealth: 100,
+          noTake: 1,
+        },
+        objects: {
+        },
+      },
+    },
+    vars: {
+      health: 100,
+      isSoft: 1,
+      maxHealth: 100,
+      noTake: 1,
+    },
+    hooks: {
+      inRoom: 'childMonsterInRoom',
+    },
+  },
+  parentMonster: {
+    isObject: 'parentMonster',
+    desc: { routine: 'descParentMonster' },
+    copies: {
+      inst_14: {
+        isObject: 'parentMonster',
+        isInst: 'inst_14',
+        loc: { scope: 'room', name: 'storage' },
+        vars: {
+          health: 60,
+          isSoft: 1,
+          maxHealth: 70,
+          noTake: 1,
+        },
+        objects: {
+        },
+      },
+    },
+    vars: {
+      health: 60,
+      isSoft: 1,
+      maxHealth: 70,
+      noTake: 1,
+    },
+    hooks: {
+      inRoom: 'parentMonsterInRoom',
     },
   },
   pickAxe: {
     isObject: 'pickAxe',
-    desc: { text: "a PICK-AXE" },
+    desc: { routine: 'descPickAxe' },
     copies: {
-      inst_13: {
+      inst_15: {
         isObject: 'pickAxe',
-        isInst: 'inst_13',
+        isInst: 'inst_15',
         loc: { scope: 'room', name: 'cavern1' },
         vars: {
+          damage: 10,
+          maxDamage: 4,
         },
         objects: {
         },
       },
     },
     vars: {
+      damage: 10,
+      maxDamage: 4,
     },
     hooks: {
     },
   },
   sword: {
     isObject: 'sword',
-    desc: { text: "a SWORD" },
+    desc: { routine: 'descSword' },
     copies: {
-      inst_14: {
+      inst_16: {
         isObject: 'sword',
-        isInst: 'inst_14',
-        loc: { scope: 'room', name: 'cavern1' },
+        isInst: 'inst_16',
+        loc: { scope: 'room', name: 'crypt' },
         vars: {
+          damage: 30,
+          maxDamage: 30,
+          ownTake: 1,
         },
         objects: {
         },
       },
     },
     vars: {
+      damage: 30,
+      maxDamage: 30,
+      ownTake: 1,
     },
     hooks: {
     },
@@ -388,29 +447,14 @@ export const objects = {
     isObject: 'rock',
     desc: { text: "a ROCK" },
     copies: {
-      inst_15: {
-        isObject: 'rock',
-        isInst: 'inst_15',
-        loc: { scope: 'room', name: 'longHall1' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_16: {
-        isObject: 'rock',
-        isInst: 'inst_16',
-        loc: { scope: 'room', name: 'longHall1' },
-        vars: {
-        },
-        objects: {
-        },
-      },
       inst_17: {
         isObject: 'rock',
         isInst: 'inst_17',
         loc: { scope: 'room', name: 'longHall1' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -420,6 +464,9 @@ export const objects = {
         isInst: 'inst_18',
         loc: { scope: 'room', name: 'longHall1' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -429,6 +476,9 @@ export const objects = {
         isInst: 'inst_19',
         loc: { scope: 'room', name: 'longHall1' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -438,6 +488,9 @@ export const objects = {
         isInst: 'inst_20',
         loc: { scope: 'room', name: 'longHall1' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -445,8 +498,11 @@ export const objects = {
       inst_21: {
         isObject: 'rock',
         isInst: 'inst_21',
-        loc: { scope: 'room', name: 'longHall1' },
+        loc: { scope: 'room', name: 'cavern1' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -454,8 +510,11 @@ export const objects = {
       inst_22: {
         isObject: 'rock',
         isInst: 'inst_22',
-        loc: { scope: 'room', name: 'longHall1' },
+        loc: { scope: 'room', name: 'den2' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -463,8 +522,11 @@ export const objects = {
       inst_23: {
         isObject: 'rock',
         isInst: 'inst_23',
-        loc: { scope: 'room', name: 'longHall1' },
+        loc: { scope: 'room', name: 'den3' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -472,8 +534,11 @@ export const objects = {
       inst_24: {
         isObject: 'rock',
         isInst: 'inst_24',
-        loc: { scope: 'room', name: 'longHall1' },
+        loc: { scope: 'room', name: 'caveLake' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -481,8 +546,11 @@ export const objects = {
       inst_25: {
         isObject: 'rock',
         isInst: 'inst_25',
-        loc: { scope: 'room', name: 'cavern1' },
+        loc: { scope: 'room', name: 'crypt' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
@@ -490,168 +558,111 @@ export const objects = {
       inst_26: {
         isObject: 'rock',
         isInst: 'inst_26',
-        loc: { scope: 'room', name: 'cavern1' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_27: {
-        isObject: 'rock',
-        isInst: 'inst_27',
-        loc: { scope: 'room', name: 'den2' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_28: {
-        isObject: 'rock',
-        isInst: 'inst_28',
-        loc: { scope: 'room', name: 'den3' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_29: {
-        isObject: 'rock',
-        isInst: 'inst_29',
-        loc: { scope: 'room', name: 'caveLake' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_30: {
-        isObject: 'rock',
-        isInst: 'inst_30',
-        loc: { scope: 'room', name: 'caveLake' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_31: {
-        isObject: 'rock',
-        isInst: 'inst_31',
-        loc: { scope: 'room', name: 'caveLake' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_32: {
-        isObject: 'rock',
-        isInst: 'inst_32',
-        loc: { scope: 'room', name: 'crypt' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-      inst_33: {
-        isObject: 'rock',
-        isInst: 'inst_33',
         loc: { scope: 'room', name: 'caveEntrance1' },
         vars: {
+          damage: 2,
+          isHard: 1,
+          maxDamage: 2,
         },
         objects: {
         },
       },
     },
     vars: {
+      damage: 2,
+      isHard: 1,
+      maxDamage: 2,
     },
     hooks: {
     },
   },
   bones: {
     isObject: 'bones',
-    desc: { text: "some BONES" },
+    desc: { routine: 'descBones' },
     copies: {
+      inst_27: {
+        isObject: 'bones',
+        isInst: 'inst_27',
+        loc: { scope: 'room', name: 'den1' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
+      inst_28: {
+        isObject: 'bones',
+        isInst: 'inst_28',
+        loc: { scope: 'room', name: 'den1' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
+      inst_29: {
+        isObject: 'bones',
+        isInst: 'inst_29',
+        loc: { scope: 'room', name: 'den1' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
+      inst_30: {
+        isObject: 'bones',
+        isInst: 'inst_30',
+        loc: { scope: 'room', name: 'den2' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
+      inst_31: {
+        isObject: 'bones',
+        isInst: 'inst_31',
+        loc: { scope: 'room', name: 'den3' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
+      inst_32: {
+        isObject: 'bones',
+        isInst: 'inst_32',
+        loc: { scope: 'room', name: 'cavern1' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
+      inst_33: {
+        isObject: 'bones',
+        isInst: 'inst_33',
+        loc: { scope: 'room', name: 'caveLake' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
       inst_34: {
         isObject: 'bones',
         isInst: 'inst_34',
-        loc: { scope: 'room', name: 'den1' },
+        loc: { scope: 'object', name: 'coffin', inst: 'inst_36' },
         vars: {
-          edible: 1,
-        },
-        objects: {
-        },
-      },
-      inst_35: {
-        isObject: 'bones',
-        isInst: 'inst_35',
-        loc: { scope: 'room', name: 'den1' },
-        vars: {
-          edible: 1,
-        },
-        objects: {
-        },
-      },
-      inst_36: {
-        isObject: 'bones',
-        isInst: 'inst_36',
-        loc: { scope: 'room', name: 'den1' },
-        vars: {
-          edible: 1,
-        },
-        objects: {
-        },
-      },
-      inst_37: {
-        isObject: 'bones',
-        isInst: 'inst_37',
-        loc: { scope: 'room', name: 'den2' },
-        vars: {
-          edible: 1,
-        },
-        objects: {
-        },
-      },
-      inst_38: {
-        isObject: 'bones',
-        isInst: 'inst_38',
-        loc: { scope: 'room', name: 'den3' },
-        vars: {
-          edible: 1,
-        },
-        objects: {
-        },
-      },
-      inst_39: {
-        isObject: 'bones',
-        isInst: 'inst_39',
-        loc: { scope: 'room', name: 'cavern1' },
-        vars: {
-          edible: 1,
-        },
-        objects: {
-        },
-      },
-      inst_40: {
-        isObject: 'bones',
-        isInst: 'inst_40',
-        loc: { scope: 'room', name: 'caveLake' },
-        vars: {
-          edible: 1,
-        },
-        objects: {
-        },
-      },
-      inst_41: {
-        isObject: 'bones',
-        isInst: 'inst_41',
-        loc: { scope: 'object', name: 'coffin', inst: 'inst_43' },
-        vars: {
-          edible: 1,
+          isEdible: 1,
         },
         objects: {
         },
       },
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
@@ -659,15 +670,6 @@ export const objects = {
   masterKey: {
     isObject: 'masterKey',
     desc: { text: "a MASTER-KEY" },
-    copies: {
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
-  bat: {
-    isObject: 'bat',
     copies: {
     },
     vars: {
@@ -687,12 +689,117 @@ export const objects = {
   },
   stoneDoor: {
     isObject: 'stoneDoor',
-    desc: { text: "a stone DOOR" },
+    desc: { routine: 'descStoneDoor' },
     copies: {
-      inst_42: {
+      inst_35: {
         isObject: 'stoneDoor',
-        isInst: 'inst_42',
+        isInst: 'inst_35',
         loc: { scope: 'room', name: 'cavern1' },
+        vars: {
+          health: 10,
+          isHard: 1,
+          isLocked: 1,
+          noTake: 1,
+        },
+        objects: {
+        },
+      },
+    },
+    vars: {
+      health: 10,
+      isHard: 1,
+      isLocked: 1,
+      noTake: 1,
+    },
+    hooks: {
+    },
+  },
+  coffin: {
+    isObject: 'coffin',
+    desc: { text: "a COFFIN" },
+    copies: {
+      inst_36: {
+        isObject: 'coffin',
+        isInst: 'inst_36',
+        loc: { scope: 'room', name: 'crypt' },
+        vars: {
+          isHard: 1,
+        },
+        objects: {
+          bones: ['inst_34',],
+          cursedSkull: ['inst_37',],
+        },
+      },
+    },
+    vars: {
+      isHard: 1,
+    },
+    hooks: {
+    },
+  },
+  cursedSkull: {
+    isObject: 'cursedSkull',
+    desc: { routine: 'descCursedSkull' },
+    copies: {
+      inst_37: {
+        isObject: 'cursedSkull',
+        isInst: 'inst_37',
+        loc: { scope: 'object', name: 'coffin', inst: 'inst_36' },
+        vars: {
+        },
+        objects: {
+        },
+      },
+    },
+    vars: {
+    },
+    hooks: {
+      inPlayer: 'cursedSkullInPlayer',
+      exitPlayer: 'cursedSkullExitPlayer',
+    },
+  },
+  obsidianShard: {
+    isObject: 'obsidianShard',
+    desc: { routine: 'descObsidian' },
+    copies: {
+      inst_38: {
+        isObject: 'obsidianShard',
+        isInst: 'inst_38',
+        loc: { scope: 'room', name: 'subGrotto8' },
+        vars: {
+          damage: 50,
+          maxDamage: 50,
+        },
+        objects: {
+        },
+      },
+      inst_39: {
+        isObject: 'obsidianShard',
+        isInst: 'inst_39',
+        loc: { scope: 'object', name: 'water', inst: 'inst_67' },
+        vars: {
+          damage: 50,
+          maxDamage: 50,
+        },
+        objects: {
+        },
+      },
+    },
+    vars: {
+      damage: 50,
+      maxDamage: 50,
+    },
+    hooks: {
+    },
+  },
+  boatFrame: {
+    isObject: 'boatFrame',
+    desc: { routine: 'descBoatFrame' },
+    copies: {
+      inst_40: {
+        isObject: 'boatFrame',
+        isInst: 'inst_40',
+        loc: { scope: 'room', name: 'lake1' },
         vars: {
           noTake: 1,
         },
@@ -706,80 +813,9 @@ export const objects = {
     hooks: {
     },
   },
-  coffin: {
-    isObject: 'coffin',
-    desc: { text: "a COFFIN" },
-    copies: {
-      inst_43: {
-        isObject: 'coffin',
-        isInst: 'inst_43',
-        loc: { scope: 'room', name: 'crypt' },
-        vars: {
-        },
-        objects: {
-          bones: ['inst_41',],
-          cursedSkull: ['inst_44',],
-        },
-      },
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
-  cursedSkull: {
-    isObject: 'cursedSkull',
-    desc: { text: "a cursed SKULL" },
-    copies: {
-      inst_44: {
-        isObject: 'cursedSkull',
-        isInst: 'inst_44',
-        loc: { scope: 'object', name: 'coffin', inst: 'inst_43' },
-        vars: {
-        },
-        objects: {
-        },
-      },
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
-  obsidianShard: {
-    isObject: 'obsidianShard',
-    desc: { routine: 'descObsidian' },
-    copies: {
-      inst_45: {
-        isObject: 'obsidianShard',
-        isInst: 'inst_45',
-        loc: { scope: 'room', name: 'subGrotto7' },
-        vars: {
-          damage: 60,
-          maxDamage: 60,
-        },
-        objects: {
-        },
-      },
-    },
-    vars: {
-      damage: 60,
-      maxDamage: 60,
-    },
-    hooks: {
-    },
-  },
-  boatFrame: {
-    isObject: 'boatFrame',
-    copies: {
-    },
-    vars: {
-    },
-    hooks: {
-    },
-  },
   boat: {
     isObject: 'boat',
+    desc: { text: "a BOAT" },
     copies: {
     },
     vars: {
@@ -794,6 +830,7 @@ export const objects = {
     },
     vars: {
       health: 20,
+      isSoft: 1,
     },
     hooks: {
     },
@@ -804,6 +841,8 @@ export const objects = {
     copies: {
     },
     vars: {
+      health: 10,
+      isSoft: 1,
     },
     hooks: {
     },
@@ -814,28 +853,49 @@ export const objects = {
     copies: {
     },
     vars: {
+      isSoft: 1,
     },
     hooks: {
     },
   },
   detritus: {
     isObject: 'detritus',
-    desc: { text: "leafy DETRITUS" },
+    desc: { routine: 'descDetritus' },
     copies: {
-      inst_46: {
+      inst_41: {
         isObject: 'detritus',
-        isInst: 'inst_46',
+        isInst: 'inst_41',
         loc: { scope: 'room', name: 'cabinExterior' },
         vars: {
-          tinder: 1,
+          ownTake: 1,
         },
         objects: {
           cabinDoorKey: ['inst_3',],
         },
       },
+      inst_42: {
+        isObject: 'detritus',
+        isInst: 'inst_42',
+        loc: { scope: 'room', name: 'caveEntrance1' },
+        vars: {
+          ownTake: 1,
+        },
+        objects: {
+        },
+      },
+      inst_43: {
+        isObject: 'detritus',
+        isInst: 'inst_43',
+        loc: { scope: 'room', name: 'caveEntrance2' },
+        vars: {
+          ownTake: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
-      tinder: 1,
+      ownTake: 1,
     },
     hooks: {
     },
@@ -844,22 +904,51 @@ export const objects = {
     isObject: 'stick',
     desc: { text: "a STICK" },
     copies: {
+      inst_44: {
+        isObject: 'stick',
+        isInst: 'inst_44',
+        loc: { scope: 'room', name: 'forest2' },
+        vars: {
+          isSoft: 1,
+        },
+        objects: {
+        },
+      },
+      inst_45: {
+        isObject: 'stick',
+        isInst: 'inst_45',
+        loc: { scope: 'room', name: 'forest4' },
+        vars: {
+          isSoft: 1,
+        },
+        objects: {
+        },
+      },
+      inst_46: {
+        isObject: 'stick',
+        isInst: 'inst_46',
+        loc: { scope: 'room', name: 'caveEntrance1' },
+        vars: {
+          isSoft: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
-      tinder: 1,
+      isSoft: 1,
     },
     hooks: {
     },
   },
   torch: {
     isObject: 'torch',
-    desc: { text: "a makeshift TORCH" },
+    desc: { routine: 'descTorch' },
     copies: {
     },
     vars: {
       fuel: 8,
-      lit: 1,
-      tinder: 1,
+      isLit: 0,
     },
     hooks: {
     },
@@ -870,7 +959,6 @@ export const objects = {
     copies: {
     },
     vars: {
-      tinder: 1,
     },
     hooks: {
     },
@@ -881,7 +969,6 @@ export const objects = {
     copies: {
     },
     vars: {
-      tinder: 1,
     },
     hooks: {
     },
@@ -895,14 +982,12 @@ export const objects = {
         isInst: 'inst_47',
         loc: { scope: 'room', name: 'storage' },
         vars: {
-          tinder: 1,
         },
         objects: {
         },
       },
     },
     vars: {
-      tinder: 1,
     },
     hooks: {
     },
@@ -921,9 +1006,19 @@ export const objects = {
     isObject: 'berries',
     desc: { text: "some BERRIES" },
     copies: {
+      inst_48: {
+        isObject: 'berries',
+        isInst: 'inst_48',
+        loc: { scope: 'room', name: 'field2' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
@@ -932,9 +1027,29 @@ export const objects = {
     isObject: 'herbs',
     desc: { text: "some HERBS" },
     copies: {
+      inst_49: {
+        isObject: 'herbs',
+        isInst: 'inst_49',
+        loc: { scope: 'room', name: 'field1' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
+      inst_50: {
+        isObject: 'herbs',
+        isInst: 'inst_50',
+        loc: { scope: 'room', name: 'field2' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
@@ -943,9 +1058,19 @@ export const objects = {
     isObject: 'nuts',
     desc: { text: "some NUTS" },
     copies: {
+      inst_51: {
+        isObject: 'nuts',
+        isInst: 'inst_51',
+        loc: { scope: 'room', name: 'forest6' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
@@ -956,29 +1081,39 @@ export const objects = {
     copies: {
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
   },
-  roots: {
-    isObject: 'roots',
+  root: {
+    isObject: 'root',
     desc: { text: "a ROOT" },
     copies: {
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
   },
-  ferns: {
-    isObject: 'ferns',
+  fern: {
+    isObject: 'fern',
     desc: { text: "a FERN" },
     copies: {
+      inst_52: {
+        isObject: 'fern',
+        isInst: 'inst_52',
+        loc: { scope: 'room', name: 'forest3' },
+        vars: {
+          isEdible: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
-      edible: 1,
+      isEdible: 1,
     },
     hooks: {
     },
@@ -987,79 +1122,155 @@ export const objects = {
     isObject: 'riverStone',
     desc: { routine: 'descRiverStone' },
     copies: {
-      inst_48: {
+      inst_53: {
         isObject: 'riverStone',
-        isInst: 'inst_48',
-        loc: { scope: 'room', name: 'forest4' },
+        isInst: 'inst_53',
+        loc: { scope: 'room', name: 'forest3' },
         vars: {
-          isWet: 0,
+          isHard: 1,
+          wetness: 0,
         },
         objects: {
         },
       },
     },
     vars: {
-      isWet: 0,
+      isHard: 1,
+      wetness: 0,
     },
     hooks: {
     },
   },
   treeHollow: {
     isObject: 'treeHollow',
+    desc: { text: "a tree HOLLOW" },
     copies: {
+      inst_54: {
+        isObject: 'treeHollow',
+        isInst: 'inst_54',
+        loc: { scope: 'room', name: 'storage' },
+        vars: {
+          noTake: 1,
+        },
+        objects: {
+          gem: ['inst_55',],
+        },
+      },
     },
     vars: {
+      noTake: 1,
     },
     hooks: {
     },
   },
   gem: {
     isObject: 'gem',
+    desc: { routine: 'descGem' },
+    copies: {
+      inst_55: {
+        isObject: 'gem',
+        isInst: 'inst_55',
+        loc: { scope: 'object', name: 'treeHollow', inst: 'inst_54' },
+        vars: {
+        },
+        objects: {
+        },
+      },
+    },
+    vars: {
+    },
+    hooks: {
+      enterPlayer: 'gemEnterPlayer',
+    },
+  },
+  bat: {
+    isObject: 'bat',
+    desc: { text: "a BAT" },
     copies: {
     },
     vars: {
+      health: 1,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
     },
     hooks: {
     },
   },
   owl: {
     isObject: 'owl',
+    desc: { text: "an OWL" },
     copies: {
     },
     vars: {
+      health: 1,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
     },
     hooks: {
     },
   },
   crow: {
     isObject: 'crow',
+    desc: { text: "a CROW" },
     copies: {
     },
     vars: {
+      health: 1,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
     },
     hooks: {
     },
   },
   fish: {
     isObject: 'fish',
+    desc: { text: "a FISH" },
     copies: {
+      inst_56: {
+        isObject: 'fish',
+        isInst: 'inst_56',
+        loc: { scope: 'object', name: 'water', inst: 'inst_66' },
+        vars: {
+          health: 1,
+          isAnimal: 1,
+          isSoft: 1,
+          ownTake: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
+      health: 1,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
     },
     hooks: {
+      inRoom: 'drownFish',
+      inPlayer: 'drownFish',
     },
   },
   frog: {
     isObject: 'frog',
+    desc: { text: "a FROG" },
     copies: {
     },
     vars: {
+      health: 1,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
     },
     hooks: {
     },
   },
   beetle: {
     isObject: 'beetle',
+    desc: { text: "a BEETLE" },
     copies: {
     },
     vars: {
@@ -1069,43 +1280,112 @@ export const objects = {
   },
   rabbit: {
     isObject: 'rabbit',
+    desc: { text: "a RABBIT" },
     copies: {
+      inst_57: {
+        isObject: 'rabbit',
+        isInst: 'inst_57',
+        loc: { scope: 'room', name: 'caveEntrance1' },
+        vars: {
+          health: 1,
+          isAnimal: 1,
+          isSoft: 1,
+          ownTake: 1,
+        },
+        objects: {
+        },
+      },
     },
     vars: {
+      health: 1,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
     },
     hooks: {
     },
   },
   snake: {
     isObject: 'snake',
+    desc: { text: "a SNAKE" },
     copies: {
     },
     vars: {
+      health: 1,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
     },
     hooks: {
+      inPlayer: 'snakeInPlayer',
     },
   },
   bear: {
     isObject: 'bear',
+    desc: { text: "a BEAR" },
+    copies: {
+      inst_58: {
+        isObject: 'bear',
+        isInst: 'inst_58',
+        loc: { scope: 'room', name: 'storage' },
+        vars: {
+          asked: 0,
+          health: 20,
+          isAnimal: 1,
+          isSoft: 1,
+          ownTake: 1,
+        },
+        objects: {
+        },
+      },
+      inst_59: {
+        isObject: 'bear',
+        isInst: 'inst_59',
+        loc: { scope: 'room', name: 'storage' },
+        vars: {
+          asked: 0,
+          health: 20,
+          isAnimal: 1,
+          isSoft: 1,
+          ownTake: 1,
+        },
+        objects: {
+        },
+      },
+    },
+    vars: {
+      asked: 0,
+      health: 20,
+      isAnimal: 1,
+      isSoft: 1,
+      ownTake: 1,
+    },
+    hooks: {
+      inRoom: 'bearInRoom',
+    },
+  },
+  ynQ: {
+    isObject: 'ynQ',
     copies: {
     },
     vars: {
+      exp: 1,
     },
     hooks: {
     },
   },
   axe: {
     isObject: 'axe',
-    desc: { text: "an AXE" },
+    desc: { routine: 'descAxe' },
     copies: {
-      inst_49: {
+      inst_60: {
         isObject: 'axe',
-        isInst: 'inst_49',
+        isInst: 'inst_60',
         loc: { scope: 'player' },
         vars: {
-          damage: 3,
+          damage: 8,
           health: 10,
-          maxDamage: 5,
+          maxDamage: 10,
           maxHealth: 10,
         },
         objects: {
@@ -1113,9 +1393,9 @@ export const objects = {
       },
     },
     vars: {
-      damage: 3,
+      damage: 8,
       health: 10,
-      maxDamage: 5,
+      maxDamage: 10,
       maxHealth: 10,
     },
     hooks: {
@@ -1123,11 +1403,11 @@ export const objects = {
   },
   cloak: {
     isObject: 'cloak',
-    desc: { text: "a CLOAK" },
+    desc: { routine: 'descCloak' },
     copies: {
-      inst_50: {
+      inst_61: {
         isObject: 'cloak',
-        isInst: 'inst_50',
+        isInst: 'inst_61',
         loc: { scope: 'player' },
         vars: {
         },
@@ -1142,11 +1422,11 @@ export const objects = {
   },
   flint: {
     isObject: 'flint',
-    desc: { text: "FLINT" },
+    desc: { routine: 'descFlint' },
     copies: {
-      inst_51: {
+      inst_62: {
         isObject: 'flint',
-        isInst: 'inst_51',
+        isInst: 'inst_62',
         loc: { scope: 'player' },
         vars: {
         },
@@ -1161,11 +1441,11 @@ export const objects = {
   },
   cup: {
     isObject: 'cup',
-    desc: { text: "a CUP" },
+    desc: { routine: 'descCup' },
     copies: {
-      inst_52: {
+      inst_63: {
         isObject: 'cup',
-        isInst: 'inst_52',
+        isInst: 'inst_63',
         loc: { scope: 'player' },
         vars: {
         },
@@ -1180,35 +1460,37 @@ export const objects = {
   },
   kettle: {
     isObject: 'kettle',
-    desc: { text: "a KETTLE" },
+    desc: { routine: 'descKettle' },
     copies: {
-      inst_53: {
+      inst_64: {
         isObject: 'kettle',
-        isInst: 'inst_53',
+        isInst: 'inst_64',
         loc: { scope: 'player' },
         vars: {
+          isHard: 1,
         },
         objects: {
         },
       },
     },
     vars: {
+      isHard: 1,
     },
     hooks: {
     },
   },
   knife: {
     isObject: 'knife',
-    desc: { text: "a KNIFE" },
+    desc: { routine: 'descKnife' },
     copies: {
-      inst_54: {
+      inst_65: {
         isObject: 'knife',
-        isInst: 'inst_54',
+        isInst: 'inst_65',
         loc: { scope: 'player' },
         vars: {
-          damage: 2,
+          damage: 4,
           health: 10,
-          maxDamage: 2,
+          maxDamage: 4,
           maxHealth: 10,
         },
         objects: {
@@ -1216,9 +1498,9 @@ export const objects = {
       },
     },
     vars: {
-      damage: 2,
+      damage: 4,
       health: 10,
-      maxDamage: 2,
+      maxDamage: 4,
       maxHealth: 10,
     },
     hooks: {
@@ -1226,10 +1508,33 @@ export const objects = {
   },
   water: {
     isObject: 'water',
-    desc: { text: "water" },
+    desc: { text: "WATER" },
     copies: {
+      inst_66: {
+        isObject: 'water',
+        isInst: 'inst_66',
+        loc: { scope: 'room', name: 'lake1' },
+        vars: {
+          ownTake: 1,
+        },
+        objects: {
+          fish: ['inst_56',],
+        },
+      },
+      inst_67: {
+        isObject: 'water',
+        isInst: 'inst_67',
+        loc: { scope: 'room', name: 'caveLake' },
+        vars: {
+          ownTake: 1,
+        },
+        objects: {
+          obsidianShard: ['inst_39',],
+        },
+      },
     },
     vars: {
+      ownTake: 1,
     },
     hooks: {
     },
@@ -1241,12 +1546,22 @@ export const translateSynonym = (word) => {
   case 'AX':
   case 'AXE':
     return ['axe'];
+  case 'BAT':
+    return ['bat'];
+  case 'BEAR':
+    return ['bear'];
   case 'BED':
   case 'BED-FRAME':
     return ['bedFrame'];
+  case 'BEETLE':
+    return ['beetle'];
   case 'BERRIES':
   case 'BERRY':
     return ['berries'];
+  case 'BOAT':
+  case 'BOAT-FRAME':
+  case 'FRAME':
+    return ['boatFrame'];
   case 'BOILED-SAP':
     return ['boiledSap'];
   case 'BONE':
@@ -1278,13 +1593,23 @@ export const translateSynonym = (word) => {
     return ['cabinDoorKey'];
   case 'WINDOW':
     return ['cabinWindow'];
+  case 'CAVE-SPIDER':
+  case 'SPIDER':
+    return ['caveSpider'];
   case 'CHAIR':
     return ['chair'];
+  case 'CHARCOAL':
+  case 'COAL':
+    return ['charcoal'];
+  case 'MONSTER':
+    return ['childMonster', 'parentMonster'];
   case 'CLOAK':
   case 'COAT':
     return ['cloak'];
   case 'COFFIN':
     return ['coffin'];
+  case 'CROW':
+    return ['crow'];
   case 'CUP':
     return ['cup'];
   case 'CURSED-SKULL':
@@ -1295,11 +1620,17 @@ export const translateSynonym = (word) => {
     return ['detritus'];
   case 'FERN':
   case 'FERNS':
-    return ['ferns'];
+    return ['fern'];
   case 'FIRE':
     return ['fire'];
+  case 'FISH':
+    return ['fish'];
   case 'FLINT':
     return ['flint'];
+  case 'FROG':
+    return ['frog'];
+  case 'GEM':
+    return ['gem'];
   case 'GOLD':
   case 'GOLD-LUMP':
     return ['goldLump'];
@@ -1324,6 +1655,7 @@ export const translateSynonym = (word) => {
     return ['mushroom'];
   case 'NAILS':
     return ['nails'];
+  case 'MESSAGE':
   case 'NOTE':
     return ['note'];
   case 'NUT':
@@ -1332,24 +1664,30 @@ export const translateSynonym = (word) => {
   case 'OBSIDIAN':
   case 'OBSIDIAN-SHARD':
     return ['obsidianShard'];
+  case 'OWL':
+    return ['owl'];
   case 'PICK':
   case 'PICK-AXE':
     return ['pickAxe'];
+  case 'RABBIT':
+    return ['rabbit'];
   case 'RIVER-STONE':
   case 'STONE':
   case 'WHETSTONE':
     return ['riverStone'];
   case 'ROCK':
   case 'ROCKS':
-    return ['rock'];
+    return ['rock', 'rockPile'];
   case 'ROOT':
   case 'ROOTS':
-    return ['roots'];
+    return ['root'];
   case 'BOARD':
   case 'ROUGH-BOARD':
     return ['roughBoard'];
   case 'SAP':
     return ['sap'];
+  case 'SNAKE':
+    return ['snake'];
   case 'SOUP':
     return ['soup'];
   case 'BRANCH':
@@ -1369,9 +1707,12 @@ export const translateSynonym = (word) => {
     return ['torch'];
   case 'TREE':
     return ['tree'];
-  case 'WIRE':
-  case 'WIRES':
-    return ['wire'];
+  case 'HOLE':
+  case 'HOLLOW':
+  case 'TREE-HOLLOW':
+    return ['treeHollow'];
+  case 'WATER':
+    return ['water'];
   default:
     return null;
   }
