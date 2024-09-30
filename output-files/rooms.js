@@ -421,7 +421,7 @@ export const rooms = {
     vars: {
     },
     move: {
-      NORTH: { room: 'mazeGridPink' },
+      NORTH: { room: 'mazeGridRed' },
       SOUTH: { room: 'btnRm1' },
     },
     hooks: {
@@ -435,9 +435,9 @@ export const rooms = {
     vars: {
     },
     move: {
-      EAST: { room: 'mazeGridBlue' },
+      EAST: { room: 'mazeGridTeal' },
       NORTH: { room: 'mazeGridBlue' },
-      SOUTH: { room: 'mazeGridBlue' },
+      SOUTH: { room: 'mazeRest2' },
       WEST: { room: 'mazeGridBlue' },
     },
     hooks: {
@@ -453,24 +453,8 @@ export const rooms = {
     move: {
       EAST: { room: 'mazeGridRed' },
       NORTH: { room: 'mazeGridRed' },
-      SOUTH: { room: 'mazeGridPink' },
+      SOUTH: { room: 'mazeRest2' },
       WEST: { room: 'mazeGridRed' },
-    },
-    hooks: {
-    },
-  },
-  mazeGridPink: {
-    isRoom: 'mazeGridPink',
-    desc: { text: "a red room\n" },
-    objects: {
-    },
-    vars: {
-    },
-    move: {
-      EAST: { room: 'mazeGridBlue' },
-      NORTH: { room: 'mazeGridBlue' },
-      SOUTH: { room: 'mazeGridBlue' },
-      WEST: { room: 'mazeGridTeal' },
     },
     hooks: {
     },
@@ -485,7 +469,7 @@ export const rooms = {
     move: {
       EAST: { room: 'mazeGridRed' },
       NORTH: { room: 'mazeRest3' },
-      SOUTH: { room: 'mazeGridRed' },
+      SOUTH: { room: 'mazeRest2' },
       WEST: { room: 'mazeGridRed' },
     },
     hooks: {
