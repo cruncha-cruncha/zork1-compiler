@@ -1,6 +1,6 @@
 # Zil-Like
 
-This is actually more like a game engine. It accepts a zil-like (zork implementation language -like) syntax, not actually zil (anywhere you read 'zil', think 'zil-like'). Takes source code and converts it to javascript, doing some error checking in the process. It uses a recursive-descent parser (I think).
+This is actually more like a game engine. It accepts a zil-like (zork implementation language -like) syntax, not actual zil. Takes source code and converts it to javascript, doing some error checking in the process. It uses a recursive-descent parser (I think).
 
 ## Further Reading
 
