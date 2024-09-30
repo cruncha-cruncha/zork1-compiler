@@ -170,7 +170,7 @@
         >
         <TELL "Assuming you typed OPEN DOOR, try 'GO ...' instead" CR>
         <COND (
-            <IS-DES 10 <RAND>>
+            <IS-DES 5 <RAND>>
             <TELL "You see, an instance can only exist in one room at a time. That leaves us with two options; A: one 
             CABIN-DOOR in CABIN and a second CABIN-DOOR in CABIN-EXTERIOR; and B: one CABIN-DOOR that follows the player
             back-and-forth between CABIN and CABIN-EXTERIOR (this is what CABIN-WINDOW does). Option A is annoying if
