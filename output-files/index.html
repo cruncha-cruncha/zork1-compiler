@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang=en style="height:100dvh;box-sizing:border-box;">
+<!DOCTYPE html>
+<html lang=en style="box-sizing:border-box;">
 
 <!-- python3 -m http.server -->
 
@@ -12,10 +12,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
-<body class="m-0 p-0 h-full">
-    <div class="h-full max-w-lg mx-auto flex">
-        <div class="flex flex-col p-2">
-            <ul id="output" class="grow overflow-y-scroll"></ul>
+<body class="m-0 p-0">
+    <div class="max-w-lg mx-auto flex">
+        <div class="p-2">
+            <ul id="output"></ul>
             <div class="flex justify-center mt-2">
                 <a class="px-2 py-1 mr-1 rounded-md text-sky-800 hover:bg-sky-800 hover:text-white"
                     href="https://github.com/cruncha-cruncha/zork1-compiler" target="_blank"
@@ -35,6 +35,7 @@
         let logBuffer = [];
         let noOutputLogs = true;
 
+        const inputElement = document.getElementById("input");
         const outputElement = document.getElementById("output");
 
         const logCommand = (command) => {
@@ -43,6 +44,9 @@
             const textElement = document.createTextNode(`$ ${command}`);
             itemElement.appendChild(textElement);
             outputElement.appendChild(itemElement);
+
+            const rect = itemElement.getBoundingClientRect();
+            window.scrollBy(0, rect.height);
         };
 
         // all args are typeof string
@@ -63,9 +67,10 @@
                     const textElement = document.createTextNode("> " + text);
                     itemElement.appendChild(textElement);
                     outputElement.appendChild(itemElement);
-                }
 
-                outputElement.scrollTop = outputElement.scrollHeight;
+                    const rect = itemElement.getBoundingClientRect();
+                    window.scrollBy(0, rect.height);
+                }
 
                 logBuffer = [];
             } else {
@@ -80,10 +85,10 @@
 
         window.handleInput = function handleInput(event) {
             event.preventDefault();
-            document.querySelector("#input").focus();
+            inputElement.focus();
 
-            let input = document.getElementById("input").value;
-            document.getElementById("input").value = "";
+            let input = inputElement.value;
+            inputElement.value = "";
             logCommand(input);
             noOutputLogs = true;
 
