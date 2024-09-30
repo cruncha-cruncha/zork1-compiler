@@ -80,6 +80,7 @@
 
         window.handleInput = function handleInput(event) {
             event.preventDefault();
+            document.querySelector("#input").focus();
 
             let input = document.getElementById("input").value;
             document.getElementById("input").value = "";
