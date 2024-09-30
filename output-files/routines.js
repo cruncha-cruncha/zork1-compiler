@@ -309,6 +309,7 @@ export const handlers = {
     },
   },
   open: {
+    func: open,
     objHandlers: {
       cabinDoor: {
         before: cabinDoor_open,
@@ -3825,6 +3826,17 @@ function no(cRoom, cmd) {
     game.log("The bear shrugs, then sits down to forage", '\n');
     game.getInst(locals['cRoom'], 'bear', false).vars['asked'] = 1;
     game.move(locals, game.getInst(rooms['qStorage'], 'ynQ', false), );
+  };
+  return 0;
+}
+
+function open(cRoom, cmd) {
+  const locals = {cRoom, cmd, };
+  if ((game.isEqual(locals['cRoom'], rooms['cabin'])) && (game.isEqual((locals['cmd']?.[1] ?? getEmptyResource()), (locals['cmd']?.[2] ?? getEmptyResource())))) {
+    game.log("Assuming you typed OPEN DOOR, try 'GO ...' instead", '\n');
+    if (10 > Math.floor(Math.random() * 100)) {
+      game.log("You see, an instance can only exist in one room at a time. That leaves us with two options; A: one CABIN-DOOR in CABIN and a second CABIN-DOOR in CABIN-EXTERIOR; and B: one CABIN-DOOR that follows the player back-and-forth between CABIN and CABIN-EXTERIOR (this is what CABIN-WINDOW does). Option A is annoying if the player HITs a door. Option B is annoying because the instance could get lost. Having already spent too much time on this game, I chose option C.", '\n');
+    };
   };
   return 0;
 }
