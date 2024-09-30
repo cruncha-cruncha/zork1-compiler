@@ -231,9 +231,8 @@
       <COND (
             <IS-EQUAL <GET-VAR FOREST-1 FIRST-TIME> 1>
             <SET-VAR FOREST-1 FIRST-TIME 0>
-            <TELL "It's the end of summer, and you're in a dense forest. Birds
-            and other small creatures can be heard rustling through the undergrowth.
-            Light filters down through needles and leaves, and the smell of pine
+            <TELL "It's the end of summer. Birds and other small creatures are rustling through
+            the forest undergrowth. Light filters down through long green needles, and the smell of pine
             hangs thick in the air." CR>
             <WEATHER-REPORT>
             <TELL "There's a trail up ahead, it looks like you could GO NORTH" CR>

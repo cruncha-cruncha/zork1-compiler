@@ -1167,7 +1167,7 @@ function descForest1(cRoom, cmd) {
   const locals = {cRoom, cmd, };
   if ((rooms['forest1'].vars['firstTime'] || 0) === 1) {
     rooms['forest1'].vars['firstTime'] = 0;
-    game.log("It's the end of summer, and you're in a dense forest. Birds and other small creatures can be heard rustling through the undergrowth. Light filters down through needles and leaves, and the smell of pine hangs thick in the air.", '\n');
+    game.log("It's the end of summer. Birds and other small creatures are rustling through the forest undergrowth. Light filters down through long orange needles, and the smell of pine hangs thick in the air.", '\n');
     routines['weatherReport'](locals['cRoom'], locals['cmd'], locals['prso'], locals['prsi']);
     game.log("There's a trail up ahead, it looks like you could GO NORTH", '\n');
   } else if ((globals['detailedDesc'] === 1) || (10 > Math.floor(Math.random() * 100))) {
