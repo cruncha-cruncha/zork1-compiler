@@ -15,11 +15,34 @@
 <body class="m-0 p-0">
     <div class="max-w-lg mx-auto flex">
         <div class="p-2">
-            <ul id="output"></ul>
+            <ul id="output" class="relative">
+                <div id="help-container"
+                    class="text-right absolute top-0 bottom-0 left-0 right-0 invisible bg-white/90 flex flex-col justify-end">
+                    <div id="help-text" class="overflow-y-auto">
+                        <p>SLEEP</p>
+                        <p>EAT item</p>
+                        <p>SPARK FLINT AT item</p>
+                        <p>WORK thing WITH item</p>
+                        <p>HIT thing WITH item</p>
+                        <p>ADD thing TO item</p>
+                        <p>DROP item</p>
+                        <p>TAKE item</p>
+                        <p>EMPTY item</p>
+                        <p>EXAMINE item</p>
+                        <p>LOOK AROUND</p>
+                        <p>GO direction</p>
+                        <p>WEATHER</p>
+                        <div class="flex justify-between"><a class="underline text-sky-800"
+                                href="https://github.com/cruncha-cruncha/zork1-compiler" target="_blank"
+                                rel="noopener noreferrer">about</a>
+                            <p>INVENTORY</p>
+                        </div>
+                    </div>
+                </div>
+            </ul>
             <div class="flex justify-center mt-2">
-                <a class="px-2 py-1 mr-1 rounded-md text-sky-800 hover:bg-sky-800 hover:text-white"
-                    href="https://github.com/cruncha-cruncha/zork1-compiler" target="_blank"
-                    rel="noopener noreferrer">?</a>
+                <button class="px-2 py-1 mr-1 rounded-md text-sky-800 hover:bg-sky-800 hover:text-white"
+                    onclick="toggleHelp()">?</button>
                 <form onSubmit=" handleInput(event)">
                     <input id="input" type="text" placeholder="command"
                         class="px-2 py-1 border-2 border-gray-400 rounded-md" />
@@ -81,11 +104,13 @@
         game.setLogger(logger);
         game.start();
 
-        // TODO: list of commands the player has discovered so far?
-
         window.handleInput = function handleInput(event) {
             event.preventDefault();
             inputElement.focus();
+
+            // hide help if shown
+            const helpContainerElement = document.getElementById("help-container");
+            helpContainerElement.classList.add("invisible");
 
             let input = inputElement.value;
             inputElement.value = "";
@@ -113,6 +138,15 @@
             if (noOutputLogs) {
                 logger("Nothing happens\n");
             }
+        }
+
+        window.toggleHelp = function toggleHelp() {
+            const helpContainerElement = document.getElementById("help-container");
+            helpContainerElement.classList.toggle("invisible");
+            // set scroll to bottom
+            const helpTextElement = document.getElementById("help-text");
+            const rect = helpTextElement.getBoundingClientRect();
+            helpTextElement.scrollTop = rect.height;
         }
     </script>
 </body>
