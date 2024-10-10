@@ -368,7 +368,7 @@ Variables cannot be passed into a routine. The group (third child) is used to de
 
 # Handlers and Routines
 
-There are 26 clusters available to use as building blocks inside a routine (or handler). They use [prefix notation](https://en.wikipedia.org/wiki/Polish_notation), for example:
+There are 27 clusters available to use as building blocks inside a routine (or handler). They use [prefix notation](https://en.wikipedia.org/wiki/Polish_notation), for example:
 
 ```
 <SUBTRACT <MULTIPLY 2 3> <ADD 9 1>>
@@ -395,6 +395,7 @@ Any handler or routine returns a NUM, value zero if no explicit `RETURN` is call
 ```
 ;"various"
 <RAND>             ;"returns a random integer from 0 to 99 (inclusive)"
+<TIME>             ;"returns unix time (aka unix epoch), rounded to the nearest second"
 <RETURN NUM>       ;"exit handler/routine, returns nothing, but sets the return value of the handler/routine"
 <TELL TEXT/NUM>    ;"any number of TEXT/NUM args, returns nothing"
 <TELL TEXT/NUM CR> ;"any number of TEXT/NUM args, followed by CR (newline), return nothing"
