@@ -24,3 +24,4 @@ pub mod return_;
 pub mod set_var;
 pub mod subtract;
 pub mod tell;
+pub mod time;

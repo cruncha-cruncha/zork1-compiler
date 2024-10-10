@@ -532,6 +532,17 @@ impl<'a> Validator<'a> {
                     Err(e) => return Err(e),
                 }
             }
+            "TIME" => {
+                let mut v = super::any_level::time::Time::new();
+                match v.validate(self, n) {
+                    Ok(_) => {
+                        self.set_return_type(v.return_type());
+                        self.last_writer = Some(Box::new(v));
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
             _ => (),
         }
 
